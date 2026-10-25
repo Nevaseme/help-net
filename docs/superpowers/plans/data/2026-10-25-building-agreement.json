@@ -1,0 +1,204 @@
+{
+  "modelId": "pland-cabinet-2025-digitized-v1",
+  "copied_curve_nodes": {
+    "equal": 882,
+    "total": 882
+  },
+  "manual_or_policy_nodes": 205,
+  "raster": {
+    "nodes": {
+      "attempted": 462,
+      "compared": 443,
+      "excluded": 19,
+      "mean_absolute_difference_pp": 0.3948957004220615,
+      "median_absolute_difference_pp": 0.32489451476793363,
+      "p95_absolute_difference_pp": 1.0233268030434217,
+      "max_absolute_difference_pp": 2.0466101694915153,
+      "within_1pp": 419,
+      "within_2pp": 442
+    },
+    "midpoints": {
+      "attempted": 420,
+      "compared": 401,
+      "excluded": 19,
+      "mean_absolute_difference_pp": 0.25682620136525075,
+      "median_absolute_difference_pp": 0.21621621621621623,
+      "p95_absolute_difference_pp": 0.6276595744680833,
+      "max_absolute_difference_pp": 0.9067796610169492,
+      "within_1pp": 401,
+      "within_2pp": 401
+    },
+    "scope": "42 curves; intensity 6.0-7.0 only; excluded points are not passes",
+    "limitations": "Same raster/axes/colors as production; not an independent truth set or original coefficients; marker overlap and raster thickness remain. A single remaining color component does not prove that the marker center is visible: partially occluded markers can bias the slice median. Do not interpret these diagnostics as a model-error bound.",
+    "worst": [
+      {
+        "image": 11,
+        "profile": "w0",
+        "metric": "fullHalf",
+        "intensity": 6.5,
+        "point_kind": "node",
+        "status": "compared",
+        "table_percent": 97,
+        "raster_percent": 99.04661016949152,
+        "absolute_difference_pp": 2.0466101694915153
+      },
+      {
+        "image": 13,
+        "profile": "s1h",
+        "metric": "full",
+        "intensity": 6.0,
+        "point_kind": "node",
+        "status": "compared",
+        "table_percent": 3,
+        "raster_percent": 4.957805907172996,
+        "absolute_difference_pp": 1.9578059071729959
+      },
+      {
+        "image": 13,
+        "profile": "s1h",
+        "metric": "full",
+        "intensity": 6.1,
+        "point_kind": "node",
+        "status": "compared",
+        "table_percent": 4,
+        "raster_percent": 5.80168776371308,
+        "absolute_difference_pp": 1.8016877637130797
+      },
+      {
+        "image": 21,
+        "profile": "r2h",
+        "metric": "full",
+        "intensity": 6.3,
+        "point_kind": "node",
+        "status": "compared",
+        "table_percent": 6,
+        "raster_percent": 7.657657657657657,
+        "absolute_difference_pp": 1.6576576576576567
+      },
+      {
+        "image": 21,
+        "profile": "r2h",
+        "metric": "full",
+        "intensity": 6.1,
+        "point_kind": "node",
+        "status": "compared",
+        "table_percent": 4,
+        "raster_percent": 5.63063063063063,
+        "absolute_difference_pp": 1.6306306306306304
+      },
+      {
+        "image": 18,
+        "profile": "r1h",
+        "metric": "full",
+        "intensity": 6.0,
+        "point_kind": "node",
+        "status": "compared",
+        "table_percent": 6,
+        "raster_percent": 7.585470085470085,
+        "absolute_difference_pp": 1.5854700854700852
+      },
+      {
+        "image": 13,
+        "profile": "s1m",
+        "metric": "full",
+        "intensity": 6.1,
+        "point_kind": "node",
+        "status": "compared",
+        "table_percent": 3,
+        "raster_percent": 4.5358649789029535,
+        "absolute_difference_pp": 1.5358649789029535
+      },
+      {
+        "image": 21,
+        "profile": "r2m",
+        "metric": "full",
+        "intensity": 6.1,
+        "point_kind": "node",
+        "status": "compared",
+        "table_percent": 3,
+        "raster_percent": 4.504504504504505,
+        "absolute_difference_pp": 1.5045045045045047
+      },
+      {
+        "image": 21,
+        "profile": "r2h",
+        "metric": "full",
+        "intensity": 6.2,
+        "point_kind": "node",
+        "status": "compared",
+        "table_percent": 5,
+        "raster_percent": 6.418918918918918,
+        "absolute_difference_pp": 1.4189189189189184
+      },
+      {
+        "image": 21,
+        "profile": "r2h",
+        "metric": "full",
+        "intensity": 6.5,
+        "point_kind": "node",
+        "status": "compared",
+        "table_percent": 10,
+        "raster_percent": 11.373873873873874,
+        "absolute_difference_pp": 1.3738738738738743
+      },
+      {
+        "image": 21,
+        "profile": "r2m",
+        "metric": "full",
+        "intensity": 6.2,
+        "point_kind": "node",
+        "status": "compared",
+        "table_percent": 4,
+        "raster_percent": 5.292792792792793,
+        "absolute_difference_pp": 1.2927927927927927
+      },
+      {
+        "image": 21,
+        "profile": "r2h",
+        "metric": "full",
+        "intensity": 6.4,
+        "point_kind": "node",
+        "status": "compared",
+        "table_percent": 8,
+        "raster_percent": 9.234234234234235,
+        "absolute_difference_pp": 1.2342342342342345
+      }
+    ]
+  },
+  "predictive_accuracy": "Not measured: no matched observed-damage labels.",
+  "source": {
+    "counts": {
+      "source_buildings": 513815,
+      "matched_buildings": 513815,
+      "meshes": 242
+    },
+    "issues": [],
+    "profiles": {
+      "w3": 36474,
+      "w5": 87676,
+      "w4": 58381,
+      "unknown": 120648,
+      "s1l": 40495,
+      "w2": 45765,
+      "s0l": 9884,
+      "w0": 53302,
+      "r2l": 18939,
+      "r1l": 5185,
+      "w1": 28946,
+      "s1m": 1726,
+      "s1h": 516,
+      "r2h": 433,
+      "r0l": 2692,
+      "r1m": 322,
+      "r2m": 1882,
+      "s0m": 314,
+      "r1h": 111,
+      "r0m": 61,
+      "highrise-zero": 15,
+      "s0h": 45,
+      "r0h": 3
+    },
+    "limitations": "Attribute/class join only; not a second geometry audit, source-year ground truth check, or observed-damage validation."
+  },
+  "auditDate": "2026-10-25"
+}

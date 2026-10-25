@@ -1,11 +1,16 @@
 import {validateRoster,memberFor,validateQuake,validateQuakeCommand,formationCandidates,quakeStates,validateResponse,validateResponseCommand,responseHeads,sameRecord,canonicalIncidentId} from './managed-records.mjs';
 import {regionalSummary} from './regions.mjs';
+import {operationRows,operationCsv} from './operations-export.mjs';
 
 export class ManagedStore {
  constructor(db){this.db=db;}
  roster(group){return this.read('rosters',group);}
  async quakeEvents(group){return (await this.read('quakes')).filter(e=>e.groupId===group);}
  async responseEvents(group){return (await this.read('responses')).filter(e=>e.groupId===group);}
+ exportCsv(group,incidentId,regions={}){return this.managedTransaction(tables=>{
+  const roster=tables.rosters.find(r=>r.groupId===group);if(!roster)throw Error('参加者設定を読み込んでください');
+  return operationCsv(operationRows(roster,incidentId,tables.residents,tables.incidents,tables.quakes,tables.responses,regions));
+ });}
  reportRegionSummary(group,incidentId,catalog,assignments={}){return this.managedTransaction(tables=>{
   const roster=tables.rosters.find(r=>r.groupId===group);if(!roster)throw Error('参加者設定を読み込んでください');
   const quakes=tables.quakes.filter(e=>e.groupId===group),selected=canonicalIncidentId(roster,quakes,incidentId);

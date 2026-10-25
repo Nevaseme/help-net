@@ -1,1 +1,11 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"><application android:networkSecurityConfig="@xml/lab_network_security" /></manifest>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <queries><package android:name="com.google.android.apps.maps" /></queries>
+    <application android:networkSecurityConfig="@xml/lab_network_security">
+        <receiver android:name=".diagnostics.MotionObservationProbe" android:exported="true" android:permission="android.permission.DUMP" />
+        <!-- Explicit shell-only experiment; absent from release builds. -->
+        <service android:name=".diagnostics.PowerComparisonService" android:exported="true"
+            android:permission="android.permission.DUMP" android:foregroundServiceType="location" />
+    </application>
+</manifest>

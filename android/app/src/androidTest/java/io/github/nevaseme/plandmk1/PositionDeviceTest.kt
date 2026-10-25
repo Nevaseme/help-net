@@ -30,9 +30,10 @@ class PositionDeviceTest {
         val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
         automation.grantRuntimePermission(app.packageName, Manifest.permission.ACCESS_COARSE_LOCATION)
         automation.grantRuntimePermission(app.packageName, Manifest.permission.ACCESS_FINE_LOCATION)
+        if(Build.VERSION.SDK_INT >= 29) automation.grantRuntimePermission(app.packageName, Manifest.permission.ACCESS_BACKGROUND_LOCATION)
         if(Build.VERSION.SDK_INT >= 33) automation.grantRuntimePermission(app.packageName, Manifest.permission.POST_NOTIFICATIONS)
         runBlocking { app.store.updateOwn(group, app.installation.localId) { Resident(group, app.installation.localId, 1, 0, "測位試験", 35.0, 139.0, "2階", "北の寝室") } }
-        compose.runOnIdle { app.installation.setGroup(group) }
+        compose.runOnIdle { app.position.stop(); app.positionSourceFactory = { { fix } }; app.installation.setGroup(group) }
         compose.waitUntil(10_000) { app.position.foreground }
     }
     @After fun restore() {
@@ -52,10 +53,9 @@ class PositionDeviceTest {
         compose.onNodeWithText("位置記録").performScrollTo().performClick()
     }
 
-    @Test fun menuServiceNotificationStorageAndStopPreserveLastPosition() {
+    @Test fun menuServiceNotificationStorageAndNextVisitResumePreserveLastPosition() {
         app.positionSourceFactory = { { fix } }
         openPosition()
-        compose.onNodeWithText("位置記録を開始").performClick()
         val saved=awaitPosition()
         assertEquals(fix.latitude,saved.latitude,0.000001)
         assertEquals(fix.acquiredAt,saved.acquiredAt)
@@ -67,13 +67,15 @@ class PositionDeviceTest {
         compose.waitUntil(10_000) { !app.position.state.value.active }
         assertEquals(saved,runBlocking { app.store.positions(group).single() })
         compose.activityRule.scenario.recreate()
-        compose.onNodeWithText("位置記録を開始").assertExists()
-        assertTrue(app.position.state.value.message.contains("停止"))
+        compose.waitUntil(10_000) { app.position.state.value.active }
+        compose.onNodeWithText("位置記録を停止").assertExists()
+        assertEquals(saved,runBlocking { app.store.positions(group).single() })
     }
 
     @Test fun androidGpsProviderReachesRoomAndMapProjection() {
-        compose.runOnIdle { app.position.start() }
-        val saved=awaitPosition()
+        compose.runOnIdle { app.position.stop(); sourceFactory?.let { app.positionSourceFactory = it }; app.position.start() }
+        compose.waitUntil(40_000) { runBlocking { app.store.positions(group).singleOrNull()?.latitude?.let { kotlin.math.abs(it-32.7904)<0.002 } == true } }
+        val saved=runBlocking { app.store.positions(group).single() }
         assertEquals(32.7904,saved.latitude,0.002)
         assertEquals(130.819,saved.longitude,0.002)
         assertTrue(saved.acquiredAt > now - 60_000)
@@ -87,12 +89,12 @@ class PositionDeviceTest {
 
     @Test fun storageRejectsOlderMeasurementsAndGroupChangeStopsRecording() {
         runBlocking {
-            assertTrue(app.store.recordOwnPosition(group,app.installation.localId,fix))
+            app.store.recordOwnPosition(group,app.installation.localId,fix)
             assertFalse(app.store.recordOwnPosition(group,app.installation.localId,fix.copy(acquiredAt=now-1,latitude=0.0)))
             assertEquals(fix.latitude,app.store.positions(group).single().latitude,0.000001)
         }
         app.positionSourceFactory = { { delay(10_000);fix.copy(acquiredAt=now+1) } }
-        compose.runOnIdle { app.position.start() }
+        compose.runOnIdle { app.position.stop(); app.position.start() }
         compose.waitUntil(10_000) { app.position.state.value.message == "位置を取得しています" }
         compose.runOnIdle { app.installation.setGroup("another-group") }
         compose.waitUntil(10_000) { !app.position.state.value.active }
@@ -101,14 +103,19 @@ class PositionDeviceTest {
     }
 
     @Test fun rapidStartStopStartAndRejectedFixKeepTheCurrentSession() {
-        app.positionSourceFactory = { { delay(500); fix } }
-        compose.runOnIdle { app.position.start(); app.position.stop(); app.position.start() }
-        awaitPosition()
+        val initial = awaitPosition()
+        val newer = fix.copy(acquiredAt = initial.acquiredAt + 1)
+        compose.runOnIdle {
+            app.position.stop()
+            app.positionSourceFactory = { { delay(500); newer } }
+            app.position.start(); app.position.stop(); app.position.start()
+        }
+        compose.waitUntil(10_000) { runBlocking { app.store.positions(group).single().acquiredAt == newer.acquiredAt } }
         compose.waitUntil(10_000) { app.position.state.value.message == "位置を保存しました" }
         compose.runOnIdle { app.position.refresh() }
         compose.waitUntil(10_000) { app.position.state.value.message == "最後の保存位置を保持しています" }
         assertTrue(app.position.state.value.active)
-        assertEquals(1L,runBlocking { app.store.positions(group).single().revision })
+        assertEquals(initial.revision + 1,runBlocking { app.store.positions(group).single().revision })
         compose.runOnIdle { app.position.stop() }
         compose.waitUntil(10_000) { app.getSystemService(NotificationManager::class.java).activeNotifications.none { it.id == 51 } }
     }

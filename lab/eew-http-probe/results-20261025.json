@@ -1,0 +1,172 @@
+{
+  "state": {
+    "runId": "http-20261025-a",
+    "startAt": 1792928153520,
+    "phase": 3,
+    "phaseStartAt": 1792929653520,
+    "nextAt": 1792929693538,
+    "count": 156,
+    "seen": [
+      "6ad19ea2e88ee598246bf3f1",
+      "6ad19cb9e88ee598246bf3ef",
+      "6ad19c93e88ee598246bf3ed"
+    ],
+    "completed": true,
+    "completedAt": 1792929693550
+  },
+  "phases": [
+    {
+      "index": 0,
+      "intervalMs": 5000,
+      "durationMs": 600000,
+      "samples": 65,
+      "statusCounts": {
+        "200": 60,
+        "429": 5
+      },
+      "firstAt": 1792928153520,
+      "lastAt": 1792928752510,
+      "communicationMs": {
+        "n": 60,
+        "min": 14,
+        "mean": 3192.133333333333,
+        "p50": 3590,
+        "p95": 4796,
+        "max": 4860
+      },
+      "startGapMs": {
+        "n": 64,
+        "min": 4965,
+        "mean": 9296.890625,
+        "p50": 5000,
+        "p95": 60019,
+        "max": 60035
+      },
+      "successfulStartGapMs": {
+        "n": 59,
+        "min": 4965,
+        "mean": 10084.762711864407,
+        "p50": 5000,
+        "p95": 65024,
+        "max": 65034
+      },
+      "plannedSlotLagMs": {
+        "n": 65,
+        "min": 0,
+        "mean": 1.123076923076923,
+        "p50": 1,
+        "p95": 1,
+        "max": 15
+      },
+      "estimatedPublishedToReadMs": {
+        "assumption": "Uniform publication times, API snapshot at request start; inferred from actual request gaps and durations. Not a measured earthquake latency.",
+        "mean": 21814.181170283748,
+        "maximumWithinObservedGaps": 69830
+      },
+      "bytes": 1628790,
+      "newLiveRecords": []
+    },
+    {
+      "index": 1,
+      "intervalMs": 2000,
+      "durationMs": 300000,
+      "samples": 26,
+      "statusCounts": {
+        "200": 22,
+        "429": 4
+      },
+      "firstAt": 1792928753520,
+      "lastAt": 1792929033540,
+      "communicationMs": {
+        "n": 22,
+        "min": 797,
+        "mean": 3716.5,
+        "p50": 3938,
+        "p95": 4880,
+        "max": 4903
+      },
+      "startGapMs": {
+        "n": 25,
+        "min": 1967,
+        "mean": 11200,
+        "p50": 5999,
+        "p95": 60025,
+        "max": 60034
+      },
+      "successfulStartGapMs": {
+        "n": 21,
+        "min": 1967,
+        "mean": 10381.238095238095,
+        "p50": 5999,
+        "p95": 64025,
+        "max": 64034
+      },
+      "plannedSlotLagMs": {
+        "n": 26,
+        "min": 0,
+        "mean": 1.2307692307692308,
+        "p50": 0,
+        "p95": 11,
+        "max": 11
+      },
+      "estimatedPublishedToReadMs": {
+        "assumption": "Uniform publication times, API snapshot at request start; inferred from actual request gaps and durations. Not a measured earthquake latency.",
+        "mean": 22244.585795803785,
+        "maximumWithinObservedGaps": 65574
+      },
+      "bytes": 597574,
+      "newLiveRecords": []
+    },
+    {
+      "index": 2,
+      "intervalMs": 5000,
+      "durationMs": 600000,
+      "samples": 65,
+      "statusCounts": {
+        "200": 60,
+        "429": 5
+      },
+      "firstAt": 1792929093541,
+      "lastAt": 1792929633538,
+      "communicationMs": {
+        "n": 60,
+        "min": 526,
+        "mean": 3087.6833333333334,
+        "p50": 3025,
+        "p95": 4610,
+        "max": 4645
+      },
+      "startGapMs": {
+        "n": 64,
+        "min": 4896,
+        "mean": 8437.171875,
+        "p50": 5000,
+        "p95": 60024,
+        "max": 60105
+      },
+      "successfulStartGapMs": {
+        "n": 59,
+        "min": 4896,
+        "mean": 9067.440677966102,
+        "p50": 5000,
+        "p95": 65025,
+        "max": 65105
+      },
+      "plannedSlotLagMs": {
+        "n": 65,
+        "min": 0,
+        "mean": 616.8615384615384,
+        "p50": 0,
+        "p95": 11,
+        "max": 40021
+      },
+      "estimatedPublishedToReadMs": {
+        "assumption": "Uniform publication times, API snapshot at request start; inferred from actual request gaps and durations. Not a measured earthquake latency.",
+        "mean": 19842.724446193217,
+        "maximumWithinObservedGaps": 69581
+      },
+      "bytes": 1628790,
+      "newLiveRecords": []
+    }
+  ]
+}

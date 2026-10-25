@@ -1,0 +1,1222 @@
+{
+  "cityCode": "26100",
+  "cityName": "京都市",
+  "year": 2025,
+  "registrationYear": 2025,
+  "spec": "5.0",
+  "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op.zip",
+  "files": {
+    "bldg": [
+      {
+        "code": "52352558",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52352558_bldg_6697_op.gml"
+      },
+      {
+        "code": "52352567",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52352567_bldg_6697_op.gml"
+      },
+      {
+        "code": "52352568",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52352568_bldg_6697_op.gml"
+      },
+      {
+        "code": "52352576",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52352576_bldg_6697_op.gml"
+      },
+      {
+        "code": "52352577",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52352577_bldg_6697_op.gml"
+      },
+      {
+        "code": "52352586",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52352586_bldg_6697_op.gml"
+      },
+      {
+        "code": "52352587",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52352587_bldg_6697_op.gml"
+      },
+      {
+        "code": "52352588",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52352588_bldg_6697_op.gml"
+      },
+      {
+        "code": "52352597",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52352597_bldg_6697_op.gml"
+      },
+      {
+        "code": "52352598",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52352598_bldg_6697_op.gml"
+      },
+      {
+        "code": "52352599",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52352599_bldg_6697_op.gml"
+      },
+      {
+        "code": "52352690",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52352690_bldg_6697_op.gml"
+      },
+      {
+        "code": "52352691",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52352691_bldg_6697_op.gml"
+      },
+      {
+        "code": "52352692",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52352692_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353507",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353507_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353508",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353508_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353509",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353509_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353517",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353517_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353518",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353518_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353519",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353519_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353527",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353527_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353528",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353528_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353529",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353529_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353534",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353534_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353535",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353535_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353537",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353537_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353538",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353538_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353539",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353539_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353543",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353543_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353544",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353544_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353545",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353545_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353546",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353546_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353547",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353547_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353548",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353548_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353549",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353549_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353553",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353553_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353554",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353554_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353555",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353555_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353556",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353556_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353557",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353557_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353558",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353558_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353559",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353559_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353562",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353562_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353563",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353563_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353564",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353564_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353565",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353565_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353566",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353566_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353567",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353567_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353568",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353568_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353569",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353569_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353572",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353572_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353573",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353573_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353574",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353574_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353575",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353575_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353576",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353576_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353577",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353577_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353578",
+        "maxLod": 2,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353578_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353579",
+        "maxLod": 2,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353579_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353582",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353582_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353583",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353583_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353584",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353584_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353585",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353585_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353586",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353586_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353587",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353587_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353588",
+        "maxLod": 2,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353588_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353589",
+        "maxLod": 2,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353589_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353594",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353594_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353595",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353595_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353596",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353596_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353597",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353597_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353598",
+        "maxLod": 2,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353598_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353599",
+        "maxLod": 2,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353599_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353600",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353600_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353601",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353601_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353602",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353602_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353603",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353603_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353610",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353610_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353611",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353611_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353612",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353612_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353613",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353613_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353615",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353615_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353620",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353620_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353621",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353621_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353622",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353622_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353623",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353623_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353624",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353624_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353625",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353625_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353630",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353630_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353631",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353631_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353632",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353632_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353633",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353633_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353634",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353634_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353635",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353635_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353640",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353640_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353641",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353641_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353642",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353642_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353643",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353643_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353644",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353644_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353645",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353645_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353650",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353650_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353651",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353651_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353652",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353652_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353653",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353653_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353654",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353654_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353655",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353655_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353660",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353660_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353661",
+        "maxLod": 2,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353661_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353662",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353662_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353663",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353663_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353664",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353664_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353665",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353665_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353666",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353666_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353670",
+        "maxLod": 2,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353670_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353671",
+        "maxLod": 2,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353671_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353672",
+        "maxLod": 2,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353672_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353673",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353673_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353674",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353674_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353675",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353675_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353676",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353676_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353677",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353677_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353680",
+        "maxLod": 2,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353680_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353681",
+        "maxLod": 2,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353681_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353682",
+        "maxLod": 2,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353682_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353683",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353683_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353684",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353684_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353685",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353685_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353686",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353686_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353687",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353687_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353690",
+        "maxLod": 2,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353690_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353691",
+        "maxLod": 2,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353691_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353692",
+        "maxLod": 2,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353692_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353693",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353693_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353694",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353694_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353695",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353695_bldg_6697_op.gml"
+      },
+      {
+        "code": "52353696",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52353696_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354504",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354504_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354505",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354505_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354506",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354506_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354507",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354507_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354508",
+        "maxLod": 2,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354508_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354509",
+        "maxLod": 2,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354509_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354513",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354513_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354514",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354514_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354515",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354515_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354516",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354516_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354517",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354517_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354518",
+        "maxLod": 2,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354518_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354519",
+        "maxLod": 2,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354519_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354523",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354523_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354524",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354524_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354525",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354525_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354526",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354526_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354527",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354527_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354528",
+        "maxLod": 2,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354528_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354529",
+        "maxLod": 2,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354529_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354532",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354532_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354533",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354533_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354534",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354534_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354535",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354535_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354536",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354536_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354537",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354537_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354538",
+        "maxLod": 2,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354538_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354539",
+        "maxLod": 2,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354539_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354544",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354544_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354545",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354545_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354546",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354546_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354547",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354547_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354548",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354548_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354549",
+        "maxLod": 2,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354549_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354554",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354554_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354556",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354556_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354557",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354557_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354558",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354558_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354559",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354559_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354567",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354567_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354568",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354568_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354569",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354569_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354578",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354578_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354579",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354579_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354589",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354589_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354599",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354599_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354600",
+        "maxLod": 2,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354600_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354601",
+        "maxLod": 3,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354601_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354602",
+        "maxLod": 2,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354602_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354603",
+        "maxLod": 2,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354603_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354604",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354604_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354605",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354605_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354606",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354606_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354610",
+        "maxLod": 2,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354610_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354611",
+        "maxLod": 2,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354611_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354612",
+        "maxLod": 2,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354612_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354613",
+        "maxLod": 2,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354613_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354620",
+        "maxLod": 2,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354620_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354621",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354621_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354622",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354622_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354623",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354623_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354624",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354624_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354630",
+        "maxLod": 2,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354630_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354631",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354631_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354632",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354632_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354633",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354633_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354634",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354634_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354640",
+        "maxLod": 2,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354640_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354641",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354641_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354642",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354642_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354643",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354643_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354644",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354644_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354650",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354650_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354651",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354651_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354652",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354652_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354653",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354653_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354654",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354654_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354660",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354660_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354661",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354661_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354662",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354662_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354663",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354663_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354664",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354664_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354670",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354670_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354671",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354671_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354672",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354672_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354673",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354673_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354674",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354674_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354675",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354675_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354680",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354680_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354681",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354681_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354682",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354682_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354683",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354683_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354684",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354684_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354685",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354685_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354690",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354690_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354691",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354691_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354692",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354692_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354693",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354693_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354694",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354694_bldg_6697_op.gml"
+      },
+      {
+        "code": "52354695",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52354695_bldg_6697_op.gml"
+      },
+      {
+        "code": "52355600",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52355600_bldg_6697_op.gml"
+      },
+      {
+        "code": "52355601",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52355601_bldg_6697_op.gml"
+      },
+      {
+        "code": "52355602",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52355602_bldg_6697_op.gml"
+      },
+      {
+        "code": "52355603",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52355603_bldg_6697_op.gml"
+      },
+      {
+        "code": "52355605",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52355605_bldg_6697_op.gml"
+      },
+      {
+        "code": "52355611",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52355611_bldg_6697_op.gml"
+      },
+      {
+        "code": "52355615",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c8/4c6540-2bcf-4773-b21d-74ad2d9f1ba1/26100_kyoto-shi_city_2025_citygml_1_op/udx/bldg/52355615_bldg_6697_op.gml"
+      }
+    ]
+  }
+}

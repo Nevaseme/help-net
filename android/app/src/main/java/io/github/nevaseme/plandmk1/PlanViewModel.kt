@@ -53,6 +53,8 @@ class PlanViewModel(application: Application) : AndroidViewModel(application) {
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
     val sharing = app.sharing
     val position = app.position
+    val motion = app.motion.state
+    fun motionCalibration() = app.motion.snapshot(group.value)
     val lab = app.lab
     val careEvents = combine(group,incidentUi) { g,s -> if(g==s.groupId) s.care else emptyList() }.stateIn(viewModelScope,SharingStarted.Eagerly,emptyList())
     val responseEvents=group.flatMapLatest {g->combine(app.responses.observe(g),app.quakes.observeRoster(g),app.quakes.observe(g)) {rows,roster,quakes->
@@ -79,6 +81,9 @@ class PlanViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
     val maps = app.offlineMaps
+    // Explicit intensity required: no unconfirmed earthquake scenario or map-rating thresholds.
+    suspend fun assessBuildingsAt(latitude: Double, longitude: Double, instrumentalIntensity: Double) =
+        app.buildingAssessments.atPoint(latitude, longitude, instrumentalIntensity)
     val saving = MutableStateFlow(false)
     private val saveOperations = SaveOperations(saving)
     val saveStates = saveOperations.states

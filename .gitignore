@@ -15,6 +15,10 @@ AGENTS.md
 **/.externalNativeBuild/
 **/captures/
 **/local.properties
+**/google-services.json
+**/.wrangler/
+**/.dev.vars
+**/*service-account*.json
 *.iml
 *.apk
 *.aab
@@ -44,6 +48,10 @@ AGENTS.md
 !/android/app/src/debug/res/raw/plan_lab_ca.pem
 
 # OS files
+# User-supplied device inventory contains local network and installed-app information.
+/Device Info.txt
+**/__pycache__/
+*.pyc
 .DS_Store
 Thumbs.db
 Desktop.ini
