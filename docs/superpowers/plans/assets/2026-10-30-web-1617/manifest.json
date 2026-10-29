@@ -1,0 +1,298 @@
+{
+  "version": "1.6.17",
+  "date": "2026-10-30",
+  "sourceCommit": "aee4413cc8bf5a551b99e7a6a2586c79bea94b6f",
+  "screenshots": 27,
+  "glossaryRows": 433,
+  "webDictionaryEntries": 512,
+  "contextExamples": 27,
+  "sourceArchive": "Only demo/ from fixed commit; excludes Android, local configuration, keys and dependencies. External map/font/CDN resources not bundled.",
+  "files": [
+    {
+      "file": ".gitattributes",
+      "bytes": 147,
+      "sha256": "92fe5133905d3a772c6b5cee6b3f1db877c7e761093a5b38b68a28b1d46b2274"
+    },
+    {
+      "file": "01-map-ja.jpg",
+      "bytes": 56636,
+      "sha256": "9e78bab9e3189adc241e062528383c7e1e035bb28248ab5278af7f973c8a7fb6",
+      "format": "JPEG",
+      "width": 440,
+      "height": 1000
+    },
+    {
+      "file": "02-menu-ja.jpg",
+      "bytes": 37790,
+      "sha256": "bd82ffe5aa8a1a4a1d8e101b274f71be07bee71639e89076002983f19e4449a4",
+      "format": "JPEG",
+      "width": 440,
+      "height": 1000
+    },
+    {
+      "file": "03-settings-ja.jpg",
+      "bytes": 48948,
+      "sha256": "97507be0a320476a20cce5adfd793882b5728c12bfc99e5d78dc2e8c845fcdcc",
+      "format": "JPEG",
+      "width": 440,
+      "height": 1000
+    },
+    {
+      "file": "04-settings-en.jpg",
+      "bytes": 49652,
+      "sha256": "08785327f8141220b7920b8ab1b9502f07a2b92853782e2306452e69e3393787",
+      "format": "JPEG",
+      "width": 440,
+      "height": 1000
+    },
+    {
+      "file": "05-people-ja.jpg",
+      "bytes": 43465,
+      "sha256": "d77d4e3a72892a2e4fe8ffa010b375e0dea252d5921e0ca565e961a2c91127ff",
+      "format": "JPEG",
+      "width": 440,
+      "height": 1000
+    },
+    {
+      "file": "06-sos-known-ja.jpg",
+      "bytes": 43426,
+      "sha256": "264f3e6ded4196c00ad48cb27299ef1aab53801393adb375a7eb9f7da808f880",
+      "format": "JPEG",
+      "width": 440,
+      "height": 1000
+    },
+    {
+      "file": "07-no-response-known-ja.jpg",
+      "bytes": 42907,
+      "sha256": "9309d399f1e6888fb946b0d57c220351ad376da7ebd6e9b57a0dfb05344284d7",
+      "format": "JPEG",
+      "width": 440,
+      "height": 1000
+    },
+    {
+      "file": "08-building-ja.jpg",
+      "bytes": 38790,
+      "sha256": "d25a7dbe0364c379707cf2c070958c828b289ff8cf15ae362e83a81e46298f0d",
+      "format": "JPEG",
+      "width": 440,
+      "height": 1000
+    },
+    {
+      "file": "09-no-response-unknown-ja.jpg",
+      "bytes": 42382,
+      "sha256": "095d1a1edb21dcdd52ba123e204b6a8cd2a9136012fb491357a996881312d092",
+      "format": "JPEG",
+      "width": 440,
+      "height": 1000
+    },
+    {
+      "file": "10-response-ja.jpg",
+      "bytes": 42621,
+      "sha256": "b55d9d745bda1c3e9f335b1a39cd6c5b64a92a79a9263552c6945a654de1468f",
+      "format": "JPEG",
+      "width": 440,
+      "height": 1000
+    },
+    {
+      "file": "11-report-detail-ja.jpg",
+      "bytes": 40852,
+      "sha256": "4e456424cc34b363d256271565d4614271968876a968e074364e76e87d542593",
+      "format": "JPEG",
+      "width": 440,
+      "height": 1000
+    },
+    {
+      "file": "12-progress-ja.jpg",
+      "bytes": 39128,
+      "sha256": "3c0fa97479715cad667c6a7661070703cd4e34cd198649fe45f504498fbe748e",
+      "format": "JPEG",
+      "width": 440,
+      "height": 1000
+    },
+    {
+      "file": "13-material-ja.jpg",
+      "bytes": 36214,
+      "sha256": "1c6f48a8283e8f658301d6b4353d1f76beb3d9c99061f12d52049eac8145e59e",
+      "format": "JPEG",
+      "width": 440,
+      "height": 1000
+    },
+    {
+      "file": "14-report-new-ja.jpg",
+      "bytes": 34516,
+      "sha256": "65c18231fd328c45d19ec2cf7f205ed821d00f4744b28320d0720c6f4ddd3a64",
+      "format": "JPEG",
+      "width": 440,
+      "height": 1000
+    },
+    {
+      "file": "15-area-summary-ja.jpg",
+      "bytes": 40146,
+      "sha256": "6832399b854d84bd45d7c17ea5346337d44c406ae8df12778fadec000428a1c4",
+      "format": "JPEG",
+      "width": 440,
+      "height": 1000
+    },
+    {
+      "file": "16-town-summary-ja.jpg",
+      "bytes": 41354,
+      "sha256": "ebaad1657972a6a94a6fcd29a73cfa809bfdf4d2bd688cc097043ba980558da4",
+      "format": "JPEG",
+      "width": 440,
+      "height": 1000
+    },
+    {
+      "file": "17-town-details-ja.jpg",
+      "bytes": 41456,
+      "sha256": "dcfeb513352c0dc26ef3a470b62abb695905586039aa163ebfc0fa4df4d20666",
+      "format": "JPEG",
+      "width": 440,
+      "height": 1000
+    },
+    {
+      "file": "18-my-status-ja.jpg",
+      "bytes": 34770,
+      "sha256": "d3254e71de63af3fb03f9cea15569a02e2ab1070f58d47fda7334ec17a724544",
+      "format": "JPEG",
+      "width": 440,
+      "height": 1000
+    },
+    {
+      "file": "19-response-en.jpg",
+      "bytes": 45164,
+      "sha256": "2821d091beaca44aa5815d32c38f6668e249877d75e7b7a47ce3a1cb8dc2dc9f",
+      "format": "JPEG",
+      "width": 440,
+      "height": 1000
+    },
+    {
+      "file": "20-progress-en.jpg",
+      "bytes": 41846,
+      "sha256": "d89cbe1bc1780ca9f7dc0a48b7b37f18962df7b7a2e478afc7fdd9bbd5119ebd",
+      "format": "JPEG",
+      "width": 440,
+      "height": 1000
+    },
+    {
+      "file": "21-no-response-en.jpg",
+      "bytes": 48005,
+      "sha256": "4b29e2fbcf68294ad51c22052f34d9dd55b887d8acb2b6504a84b00153d4f15c",
+      "format": "JPEG",
+      "width": 440,
+      "height": 1000
+    },
+    {
+      "file": "22-municipal-map-en.jpg",
+      "bytes": 63601,
+      "sha256": "46382f6d0f87ea91c190f97d742e76b2bfa0e9cf0008478f462f470445b63089",
+      "format": "JPEG",
+      "width": 440,
+      "height": 1000
+    },
+    {
+      "file": "23-municipal-statistics-en.jpg",
+      "bytes": 35883,
+      "sha256": "3817c6546aedaf00a0d126f099dafd2e13b7c66918f24bac84686d885ee05dce",
+      "format": "JPEG",
+      "width": 440,
+      "height": 1000
+    },
+    {
+      "file": "24-waiting-map-ja.jpg",
+      "bytes": 64505,
+      "sha256": "b6c716d20c93a2a2ab59cefb4433639253150777d576e0d85cd4068e38eac783",
+      "format": "JPEG",
+      "width": 440,
+      "height": 1000
+    },
+    {
+      "file": "25-waiting-notice-ja.jpg",
+      "bytes": 59480,
+      "sha256": "7afb6ab0c6ac4f67064fce29ca232d9827eeea975967757aa4887784fb55de49",
+      "format": "JPEG",
+      "width": 440,
+      "height": 1000
+    },
+    {
+      "file": "26-preview-settings-ja.jpg",
+      "bytes": 46797,
+      "sha256": "eecc8b5c592a986aa5c0ebebf0ae7295aef645c621371e96f39b555cb9150b9e",
+      "format": "JPEG",
+      "width": 440,
+      "height": 1000
+    },
+    {
+      "file": "27-map-legend-ja.jpg",
+      "bytes": 30147,
+      "sha256": "12657648ed0ebd8a59eaef358740fa3d09d63ad616e73fb3873ca40baa3aa755",
+      "format": "JPEG",
+      "width": 440,
+      "height": 1000
+    },
+    {
+      "file": "english-ui-glossary.csv",
+      "bytes": 57757,
+      "sha256": "3028b829d6e492f88f66c65e607562c3e33aa01864875e89b7f70912a9bf017e"
+    },
+    {
+      "file": "english-ui-glossary.md",
+      "bytes": 51298,
+      "sha256": "ce1cd7adf7cf1d9de1bbc8e60aa79ef3f4c19a38cffced1d89b8a2e082d516e4"
+    },
+    {
+      "file": "icons/LICENSES.md",
+      "bytes": 1357,
+      "sha256": "ec7df9c75284d48de01653ca7fe22050b52d1274e23435d65c3e96a26eea62dd"
+    },
+    {
+      "file": "icons/enclosed.png",
+      "bytes": 17874,
+      "sha256": "7de567eecf78a819bda0dab9344ee90461c6b24f73e11bdbd0edd14e9e74df3b"
+    },
+    {
+      "file": "icons/impact-collision.svg",
+      "bytes": 2566,
+      "sha256": "39e2e96b61531f4003f9ff01ef08ad469aa14d12672e6c936afc2271c8e70030"
+    },
+    {
+      "file": "icons/impact.svg",
+      "bytes": 969,
+      "sha256": "5020ae0ee2b49248d29118456b09fe8e7edfb57586bf7b4bbed490e2a97fc5fd"
+    },
+    {
+      "file": "icons/report-emergency.png",
+      "bytes": 22882,
+      "sha256": "be4552965c4c0bc159f3007df357887b8ed138fca49ef16cd2abc8953f28faa3"
+    },
+    {
+      "file": "icons/report-normal.png",
+      "bytes": 22620,
+      "sha256": "e1d5e8b0bc6e1a8399d533327cc1fa66b6900822cd9d947ddbf4c880407afc04"
+    },
+    {
+      "file": "index.html",
+      "bytes": 7925,
+      "sha256": "55968e6cc93c9c497ba20e207a5d77fb33279c2b64a6dba968fb01226919961e"
+    },
+    {
+      "file": "screenshots.json",
+      "bytes": 5341,
+      "sha256": "c7ae6924f1bf5e84b97ed9eccae5a65f22d6773a471501e36c845740497b3e99"
+    },
+    {
+      "file": "source.zip",
+      "bytes": 150756,
+      "sha256": "3e861f2987cb3f67c3afc4bb233667327b29aa44adfa12472cb921b0fe744bd1"
+    },
+    {
+      "file": "translation-examples.csv",
+      "bytes": 1072,
+      "sha256": "3ca4c21329a5aebbc6e8feee0c1fc78197892488a4dfce196d7628db4b5d5404"
+    },
+    {
+      "file": "web-dictionary.csv",
+      "bytes": 26798,
+      "sha256": "5c160988f55928c932abbc97de063863b0f699317f13ef8cf2b2504534618b2e"
+    }
+  ]
+}
