@@ -35,3 +35,12 @@ User instruction, 2026-11-03: finish search/picker performance and UX; then issu
 - Node243/243 passed including40-client Worker test; scoped native unit/build passed. New native device community test and publication pending. Separate final reviewer dispatched per executing-plans skill.
 - Ruling: response commands recognize active venue participants/sample identities without writing fictional resident profiles into real-home tables. Membership/incident authorization unchanged; new injury wire17/cloudcapability6 prevents older decoders receiving unknown types.
 - Backup1 pushed284b576 to codex/2026-11-03-community-demo. Comparison pages and plan.txt/add.txt untouched.
+
+## Final verification / release
+- Reviewer found prior-incident contamination and stale open PWA summary; fixed by current-incident filtering and content-signature updates that preserve disclosures/scroll. Added second-drill and open-summary remote update browser regressions; both passed locally and against published PWA. BUILDING_DAMAGE label corrected separately.
+- Final native unit tests259/259; Node243/243. Emulator CommunityDeviceTest + HomeUxTest4/4. Published-service CommunityCloudDeviceTest1/1: imports12 injury records/3 reports, updates injury, old capability5 gets426 without consuming unsupported records.
+- Published PWA1.6.24/r46 on existing Worker: deployment86efe242b3814e96acb8cc17f4035f41; bundle SHA25650051861c763b816f07d0fb9980376bfbe68798c9f2e55a492a3cce2daa63b83. Public full-flow browser pass in `.implementation/community-public/result.json`.
+- Android1.5.50/code63 APK built. Vivo install rejected while locked (INSTALL_FAILED_ABORTED); no unlock bypass, reboot, repeated prompt or user question. Earlier speed measurement succeeded. Latest physical UI check remains unperformed.
+- No new iPhone or Mi9T interactions possible while user sleeps. Multi-device radio safety/report/screen-off/reconnect remains separate unfinished verification, not claimed by simulated/browser tests.
+- Completion steps follow finishing-a-development-branch skill with user's explicit backup/no-questions choice: keep named worktree/branch, push checkpoints, no merge or comparison-site changes. User-owned working tree and prior unrelated WIP retained.
+- Operation guide and limitations saved in docs/community-demo-2026-11-03.md. No paid service operations.

@@ -170,7 +170,7 @@ document.querySelector('[data-menu="settings"]').onclick=()=>{$('app-menu').clos
  }
  async function render(){const epoch=++renderEpoch,s=snapshot();applyLanguage();const localRows=await Promise.all([getStore().positions(s.group),getStore().memos(s.group),getStore().read('meta','cloud-session:'+s.group)]);if(epoch!==renderEpoch||s.group!==snapshot().group||s.incidentId!==snapshot().incidentId)return;[positions,memos]=localRows;if(s.venue)positions=venuePositions(s.venue,positions);groupLabel=localRows[2]?.groupName||'';groupLabelId=s.group;applyLanguage();renderPeople();renderSafety();
   const responseRows=s.roster?await Promise.all([getStore().responseHeads(s.group),getStore().responseEvents(s.group)]):[[],[]];
-  if(epoch!==renderEpoch||s.group!==snapshot().group||s.incidentId!==snapshot().incidentId)return;[heads,history]=responseRows;renderResponse();renderMap();if(personSheet.open)renderPerson(personSheet.dataset.personId);if(incidentSheet.open)renderIncidentDetails();if(caseSheet.open)showCase(false);
+  if(epoch!==renderEpoch||s.group!==snapshot().group||s.incidentId!==snapshot().incidentId)return;[heads,history]=responseRows;renderResponse();renderMap();if(personSheet.open)renderPerson(personSheet.dataset.personId);if(incidentSheet.open)renderIncidentDetails();if(caseSheet.open)showCase(false);if(summary.open)showSummary(false);
  }
  function currentCase(){return cases.find(r=>r.target.kind===target?.kind&&r.target.id===target?.id);}
  function showCase(open=true){const row=currentCase();if(!row)return;caseSheet.querySelector('h2').innerHTML=`${row.target.kind==='REPORT'?`<img class="sheet-title-icon" src="${reportAsset(urgencyFor(row))}" alt="">`:''}${escape(row.target.kind==='REPORT'?t(row.title):row.title)}`;
@@ -223,10 +223,12 @@ document.querySelector('[data-menu="settings"]').onclick=()=>{$('app-menu').clos
   form.onsubmit=e=>{e.preventDefault();const d=new FormData(form);save(async()=>{await onSubmit(d);draft.clear();},form.querySelector('.feedback'));};
   if(!editor.open)editor.show();
  }
- function showSummary(){const s=snapshot(),v=s.venue;const fictional=new Set((v?.scenario?.people||[]).map(p=>p.deviceId));
+ let communitySignature="";
+ function showSummary(force=true){const s=snapshot(),v=s.venue;summary.dataset.incidentId=s.incidentId||"";const fictional=new Set((v?.scenario?.people||[]).map(p=>p.deviceId));
   const communities=v?.scenario?[...v.scenario.communities,...(v.positionMode==='ACTUAL'?[{id:'venue',nameJa:'会場参加者',nameEn:'Venue participants'}]:[])]:[{id:'group',nameJa:groupName(),nameEn:groupName()}];
   const people=s.records.map(p=>({id:p.originId,name:p.name,communityId:v?.scenario?(v.positionMode==='ACTUAL'&&!fictional.has(p.originId)?'venue':demoCommunityFor(p.longitude)):'group',status:personPresentation(p,s.events,s.view,s.id).status,fictional:fictional.has(p.originId),buildingId:(v?.placements.find(x=>x.deviceId===p.originId)?.home||v?.scenario?.people.find(x=>x.deviceId===p.originId)?.home)?.buildingId||null}));
-  const input={groupId:s.group,groupName:groupName(),incidentId:s.incidentId,demo:!!v,communities,people,heads,sourceIds:[...s.events.map(e=>e.eventId),...Object.values(s.view?.answers||{}).map(e=>e.eventId)]};
+  const input={groupId:s.group,groupName:groupName(),incidentId:s.incidentId,demo:!!v,communities,people,heads:heads.filter(e=>e.groupId===s.group&&e.incidentId===s.incidentId),sourceIds:[...s.events.map(e=>e.eventId),...Object.values(s.view?.answers||{}).map(e=>e.eventId)]};
+  const signature=JSON.stringify([language,input]);if(!force&&signature===communitySignature)return;communitySignature=signature;
   showCommunityScreen({dialog:summary,input,language,store:getStore(),editable:canWrite(),saveInjury:async(id,state)=>{const event=await append({type:'INJURY',target:{kind:'PERSON',id},state});await changed();return event;}}).catch(e=>{$('message').textContent=e.message;});
  }
  activity.onclick=()=>edit('availability');const beginReport=()=>{if(!canWrite())return;tab('buildings');map.pickLocation(position=>edit('new-report',null,position),{language});};$('report-add').onclick=beginReport;
