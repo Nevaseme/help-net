@@ -1,0 +1,104 @@
+[
+  {
+    "name": "静岡市",
+    "year": 2023,
+    "spec": "4.1",
+    "files": [
+      {
+        "code": "52383361",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/6e/1b63f3-2c2b-4d3e-9c2b-ff6df591c2e3/22100_shizuoka-shi_city_2023_citygml_3_op/udx/bldg/52383361_bldg_6697_psc_op.gml"
+      },
+      {
+        "code": "52383371",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/6e/1b63f3-2c2b-4d3e-9c2b-ff6df591c2e3/22100_shizuoka-shi_city_2023_citygml_3_op/udx/bldg/52383371_bldg_6697_psc_op.gml"
+      }
+    ]
+  },
+  {
+    "name": "沼津市",
+    "year": 2023,
+    "spec": "4.1",
+    "files": [
+      {
+        "code": "52385648",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c1/c24461-af1d-49a3-a4f4-14e88a731bfb/22203_numazu-shi_city_2023_citygml_3_op/udx/bldg/52385648_bldg_6697_op.gml"
+      },
+      {
+        "code": "52385649",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c1/c24461-af1d-49a3-a4f4-14e88a731bfb/22203_numazu-shi_city_2023_citygml_3_op/udx/bldg/52385649_bldg_6697_op.gml"
+      }
+    ]
+  },
+  {
+    "name": "浜松市",
+    "year": 2023,
+    "spec": "4.1",
+    "files": [
+      {
+        "code": "52370567",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/f0/ed11d3-e112-4d83-bd6f-d5f41ef75c79/22130_hamamatsu-shi_city_2023_citygml_2_op/udx/bldg/52370567_bldg_6697_op.gml"
+      },
+      {
+        "code": "52370568",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/f0/ed11d3-e112-4d83-bd6f-d5f41ef75c79/22130_hamamatsu-shi_city_2023_citygml_2_op/udx/bldg/52370568_bldg_6697_op.gml"
+      }
+    ]
+  },
+  {
+    "name": "福岡市",
+    "year": 2024,
+    "spec": "4.1",
+    "files": [
+      {
+        "code": "50302393",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c5/263250-3d72-486d-8b76-f8c62aaaca03/40130_fukuoka-shi_city_2024_citygml_2_op/udx/bldg/50302393_bldg_6697_op.gml"
+      },
+      {
+        "code": "50302392",
+        "maxLod": 2,
+        "url": "https://assets.cms.plateau.reearth.io/assets/c5/263250-3d72-486d-8b76-f8c62aaaca03/40130_fukuoka-shi_city_2024_citygml_2_op/udx/bldg/50302392_bldg_6697_op.gml"
+      }
+    ]
+  },
+  {
+    "name": "岡山市",
+    "year": 2025,
+    "spec": "5.0",
+    "files": [
+      {
+        "code": "51337783",
+        "maxLod": 2,
+        "url": "https://assets.cms.plateau.reearth.io/assets/0a/984fc5-6af6-4a7c-9188-d825eea4a17f/33100_okayama-shi_city_2025_citygml_1_op/udx/bldg/51337783_bldg_6697_op.gml"
+      },
+      {
+        "code": "51337793",
+        "maxLod": 2,
+        "url": "https://assets.cms.plateau.reearth.io/assets/0a/984fc5-6af6-4a7c-9188-d825eea4a17f/33100_okayama-shi_city_2025_citygml_1_op/udx/bldg/51337793_bldg_6697_op.gml"
+      }
+    ]
+  },
+  {
+    "name": "堺市",
+    "year": 2024,
+    "spec": "4.1",
+    "files": [
+      {
+        "code": "51356389",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/9e/a93aed-31f1-449d-9478-5b4d4c04eb71/27140_sakai-shi_city_2024_citygml_1_op/udx/bldg/51356389_bldg_6697_op.gml"
+      },
+      {
+        "code": "51356399",
+        "maxLod": 1,
+        "url": "https://assets.cms.plateau.reearth.io/assets/9e/a93aed-31f1-449d-9478-5b4d4c04eb71/27140_sakai-shi_city_2024_citygml_1_op/udx/bldg/51356399_bldg_6697_op.gml"
+      }
+    ]
+  }
+]

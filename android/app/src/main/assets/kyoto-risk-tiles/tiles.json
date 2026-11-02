@@ -1,0 +1,1 @@
+{"tilejson": "2.2.0", "tiles": ["asset://kyoto-risk-tiles/{z}/{x}/{y}.pbf"], "minzoom": 8, "maxzoom": 16, "bounds": [135.6529811299958, 34.88252512272187, 135.84025298229068, 35.09395768527534], "attribution": "京都市・国土交通省 PLATEAU / 内閣府 / PlanD独自試算"}

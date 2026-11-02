@@ -1,8 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <queries><package android:name="com.google.android.apps.maps" /></queries>
     <application android:networkSecurityConfig="@xml/lab_network_security">
+        <activity android:name=".diagnostics.DesignFidelityActivity" android:exported="true" android:permission="android.permission.DUMP" />
+        <activity android:name=".enclosure.EnclosureProbeActivity" android:exported="true" android:permission="android.permission.DUMP" />
+        <activity android:name=".diagnostics.BuildingMapBenchmarkActivity" android:exported="true" android:permission="android.permission.DUMP" />
         <receiver android:name=".diagnostics.MotionObservationProbe" android:exported="true" android:permission="android.permission.DUMP" />
         <!-- Explicit shell-only experiment; absent from release builds. -->
         <service android:name=".diagnostics.PowerComparisonService" android:exported="true"

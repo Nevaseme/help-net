@@ -39,6 +39,7 @@ class SyncEngine(
     private val onError: (String) -> Unit = {},
     private val onReceipt: () -> Unit = {},
     private val allowOwnPosition: () -> Boolean = { true },
+    private val relay: io.github.nevaseme.plandmk1.relay.RelayExchange? = null,
 ) {
     private val peers = mutableSetOf<String>()
     private val pending = mutableMapOf<Pair<String, String>, Long>()
@@ -54,6 +55,7 @@ class SyncEngine(
     }
     fun disconnected(peer: String) {
         peers.remove(peer)
+        relay?.disconnected(peer)
         pending.keys.removeAll { it.first == peer }
         pendingCare.removeAll { it.first == peer }
         pendingIncident.removeAll { it.first == peer }
@@ -70,11 +72,22 @@ class SyncEngine(
         catch (_: Exception) { onError("読み取れない通信データを無視しました"); return }
         if (message.groupId != groupId || message.entries.size > 100) return
         trimStoppedPosition()
-        if(message.version==6&&(message.type.startsWith("QUAKE_")||message.type.startsWith("RESPONSE_"))) {guarded {receiveJournal(peer,message)};return}
+        if(message.version==11||message.version==13||message.version==14||message.version==15) {guarded {relay?.receive(peer,bytes)};return}
+        if(message.version==8 && store.rosterRevision(groupId)<=0)return
+        if(message.version==10 && message.type.startsWith("RESPONSE_")){guarded {receiveJournal(peer,message)};return}
+        if(message.version in setOf(6,7,8,9)&&(message.type.startsWith("QUAKE_")||message.type.startsWith("RESPONSE_"))) {
+            if(message.version==6 && message.quake?.action==QuakeAction.EEW)return
+            if(message.version!=9 && message.quake?.action==QuakeAction.TRAINING_START)return
+            guarded {receiveJournal(peer,message)};return
+        }
         if(message.version==5&&(message.type.startsWith("POSITION_")||message.type.startsWith("MEMO_"))) {guarded {receiveLocal(peer,message)};return}
-        if(message.version==4&&message.type.startsWith("PLACE_")) {guarded {receivePlace(peer,message)};return}
-        if (message.version == 3 && message.type.startsWith("INCIDENT_")) {
-            guarded { receiveIncident(peer, message) }; return
+        if(message.version in listOf(4,12,16)&&message.type.startsWith("PLACE_")) {guarded {receivePlace(peer,message)};return}
+        if (message.version in setOf(3,7,8,9) && message.type.startsWith("INCIDENT_")) {
+            guarded {
+                // Do not persist/forward newer incidents until their protocol boundary is durable.
+                if(message.type=="INCIDENT_RECORD" && ((message.version==7&&!hasEew())||(message.version==9&&!hasTrainingStart())))return@guarded
+                receiveIncident(peer,message)
+            }; return
         }
         if (message.version == 2 && message.type.startsWith("CARE_")) {
             guarded { receiveCare(peer, message) }; return
@@ -112,6 +125,7 @@ class SyncEngine(
         }
     }
     private suspend fun summary(peer: String) {
+        guarded {relay?.summary(peer)}
         journalSummary(peer,true)
         journalSummary(peer,false)
         store.positions(groupId).filter {it.originId!=localId||allowOwnPosition()}.map {VersionEntry(it.originId,it.revision)}.chunked(100).forEach {emit(peer,WireMessage(5,groupId,"POSITION_SUMMARY",it))}
@@ -141,22 +155,24 @@ class SyncEngine(
         when(message.type.removePrefix("${prefix}_")) {
             "SUMMARY"->{
                 val missing=message.entries.filter {it.originId !in quakes && it.originId !in responses}
-                if(missing.isNotEmpty())emit(peer,WireMessage(6,groupId,"${prefix}_REQUEST",missing))
+                if(missing.isNotEmpty())emit(peer,WireMessage(message.version,groupId,"${prefix}_REQUEST",missing))
             }
             "REQUEST"->message.entries.forEach {entry->guarded {
                 val q=quakes[entry.originId];val r=responses[entry.originId]
                 if(q!=null||r!=null) {
                     pendingLocal[Triple(peer,prefix,entry.originId)]=1
-                    emit(peer,WireMessage(6,groupId,"${prefix}_RECORD",quake=q,response=r))
+                    emit(peer,WireMessage(message.version,groupId,"${prefix}_RECORD",quake=q,response=r))
                 }
             } }
             "RECORD"->{
+                if(message.version==7 && !(quake&&message.quake?.action==QuakeAction.EEW) && !hasEew())return
+                if(message.version==9 && !(quake&&message.quake?.action==QuakeAction.TRAINING_START) && !hasTrainingStart())return
                 val id:String;val changed:Boolean
                 if(quake){val event=message.quake?:return;if(event.groupId!=groupId)return;id=event.eventId;changed=store.mergeQuake(event)}
                 else {val event=message.response?:return;if(event.groupId!=groupId)return;id=event.eventId;changed=store.mergeResponse(event)}
-                guarded {emit(peer,WireMessage(6,groupId,"${prefix}_ACK",listOf(VersionEntry(id,1))))}
+                guarded {emit(peer,WireMessage(message.version,groupId,"${prefix}_ACK",listOf(VersionEntry(id,1))))}
                 // Receiving reports can create a formation; announce it to the original sender too.
-                if(changed)peers.toList().forEach {other->guarded {journalSummary(other,quake)}}
+                if(changed)peers.toList().forEach {other->guarded {summary(other)}}
             }
             "ACK"->message.entries.forEach {if(pendingLocal.remove(Triple(peer,prefix,it.originId))!=null)onReceipt()}
         }
@@ -192,18 +208,18 @@ class SyncEngine(
         when(message.type) {
             "INCIDENT_SUMMARY" -> {
                 val missing=message.entries.filter { store.getIncident(groupId,it.originId)==null }
-                if(missing.isNotEmpty()) emit(peer,WireMessage(3,groupId,"INCIDENT_REQUEST",missing))
+                if(missing.isNotEmpty()) emit(peer,WireMessage(message.version,groupId,"INCIDENT_REQUEST",missing))
             }
             "INCIDENT_REQUEST" -> message.entries.forEach { entry -> store.getIncident(groupId,entry.originId)?.let {
                 pendingIncident.add(peer to it.eventId)
-                emit(peer,WireMessage(version=3,groupId=groupId,type="INCIDENT_RECORD",incident=it))
+                emit(peer,WireMessage(version=message.version,groupId=groupId,type="INCIDENT_RECORD",incident=it))
             } }
             "INCIDENT_RECORD" -> {
                 val event=message.incident ?: return
                 event.validate(); if(event.groupId!=groupId) return
                 val changed=store.mergeIncident(event); val entries=listOf(VersionEntry(event.eventId,1))
-                guarded { emit(peer,WireMessage(3,groupId,"INCIDENT_ACK",entries)) }
-                if(changed) peers.toList().filter { it!=peer }.forEach { other -> guarded { emit(other,WireMessage(3,groupId,"INCIDENT_SUMMARY",entries)) } }
+                guarded { emit(peer,WireMessage(message.version,groupId,"INCIDENT_ACK",entries)) }
+                if(changed) peers.toList().filter { it!=peer }.forEach { other -> guarded { emit(other,WireMessage(message.version,groupId,"INCIDENT_SUMMARY",entries)) } }
             }
             "INCIDENT_ACK" -> message.entries.forEach { if(pendingIncident.remove(peer to it.originId)) onReceipt() }
         }
@@ -266,9 +282,21 @@ class SyncEngine(
             }
         }
     }
+    private suspend fun hasEew()=store.quakeEvents(groupId).any {it.action==QuakeAction.EEW}
+    private suspend fun hasTrainingStart()=store.quakeEvents(groupId).any {it.action==QuakeAction.TRAINING_START}
     private suspend fun emit(peer: String, message: WireMessage) {
         if(message.position?.originId==localId&&!allowOwnPosition())return
-        val bytes = json.encodeToString(message).encodeToByteArray()
+        // Old peers must not accept a START without its formation and administrator END.
+        val managed=message.type.startsWith("QUAKE_")||message.type.startsWith("RESPONSE_")||message.type.startsWith("INCIDENT_")
+        val minimum=if(!managed)message.version else if(hasTrainingStart())9 else if(store.rosterRevision(groupId)>0)8 else if(hasEew())7 else message.version
+        // Preserve a v9 request while its proof is still missing; never downgrade it to roster-v8.
+        val extended=when(val change=message.response?.change){
+            is ResponseChange.Report->change.cancelled||change.cancelReason.isNotEmpty()||change.regionIds.isNotEmpty()
+            is ResponseChange.Progress->change.status==WorkStatus.PLANNED
+            else->false
+        }
+        val outbound=message.copy(version=maxOf(message.version,minimum,if(extended)10 else 1,if(message.place?.locationReference?.searchReference!=null)16 else if(message.place?.locationReference!=null)12 else 1))
+        val bytes = json.encodeToString(outbound).encodeToByteArray()
         require(bytes.size <= 24_000) { "通信データが大きすぎます" }
         send(peer, bytes)
     }

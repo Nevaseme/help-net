@@ -9,6 +9,7 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -27,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.Lifecycle
@@ -41,31 +43,53 @@ import java.util.Date
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlanApp(model: PlanViewModel) {
+    PlanLocalization { PlanAppContent(model) }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PlanAppContent(model: PlanViewModel) {
     val residents by model.residents.collectAsStateWithLifecycle()
     val careEvents by model.careEvents.collectAsStateWithLifecycle()
     val group by model.group.collectAsStateWithLifecycle()
+    val roster by model.roster.collectAsStateWithLifecycle()
+    val cloudState by model.cloud.state.collectAsStateWithLifecycle()
+    val groupLabel=cloudState.takeIf {it.groupId==group}?.groupName?.takeIf {it.isNotBlank()}?:uiText("group_label")
     val incident by model.incidentUi.collectAsStateWithLifecycle()
     val places by model.places.collectAsStateWithLifecycle()
     val nearby by model.sharing.state.collectAsStateWithLifecycle()
     val message by model.message.collectAsStateWithLifecycle()
     val saving by model.saving.collectAsStateWithLifecycle()
     val own = residents.find { it.originId == model.localId }
-    var tab by rememberSaveable { mutableIntStateOf(1) }
+    val storedOwn by model.storedOwn.collectAsStateWithLifecycle()
+    val activeVenue by model.activeVenue.collectAsStateWithLifecycle()
+    var tab by rememberSaveable { mutableIntStateOf(if(model.hasCloudSession())1 else 4) }
     var lastMain by rememberSaveable { mutableIntStateOf(1) }
     var preview by rememberSaveable { mutableStateOf(false) }
     var showPeople by rememberSaveable { mutableStateOf(false) }
-    val firstAnswer = mainDestination(incident.canEdit, incident.current?.answers?.containsKey(model.localId) == true) == MainDestination.ANSWER
+    var languageSettings by rememberSaveable { mutableStateOf(false) }
+    var responseSummary by rememberSaveable { mutableStateOf(false) }
+    var incidentDetails by rememberSaveable { mutableStateOf(false) }
+    var buildingFromProfile by rememberSaveable { mutableStateOf(false) }
+    var appSettingsChild by rememberSaveable { mutableStateOf(false) }
+    val internet = internetAvailable()
+    var reportPoint by remember { mutableStateOf<MapPoint?>(null) }
+    var reportTarget by remember {mutableStateOf<ResponseTarget?>(null)}
+    // A group switch arrives before its incident flow. Do not navigate using
+    // the previous group's unanswered incident while the new one is loading.
+    val firstAnswer = incident.groupId == group && mainDestination(incident.canEdit, incident.current?.answers?.containsKey(model.localId) == true) == MainDestination.ANSWER
     var awaitingSavedAnswer by rememberSaveable(group, incident.selection) { mutableStateOf(firstAnswer) }
     val saveStates by model.saveStates.collectAsStateWithLifecycle()
     var previousSafetyPhase by remember { mutableStateOf(saveStates["safety"]?.phase) }
+    LaunchedEffect(group,incident.groupId,incident.selection) { if(firstAnswer){tab=0;lastMain=0;awaitingSavedAnswer=true} }
     LaunchedEffect(firstAnswer, saveStates["safety"]?.phase) {
-        if (firstAnswer) awaitingSavedAnswer = true
-        else if (awaitingSavedAnswer) { tab = 1; lastMain = 1; awaitingSavedAnswer = false }
+        if (!firstAnswer && awaitingSavedAnswer) { tab = 1; lastMain = 1; awaitingSavedAnswer = false }
         else if (previousSafetyPhase == SavePhase.SAVING && saveStates["safety"]?.phase == SavePhase.SAVED && tab == 0) { tab = 1; lastMain = 1 }
         previousSafetyPhase = saveStates["safety"]?.phase
     }
     if (preview && BuildConfig.DEBUG) { DesignDemoScreen { preview = false }; return }
-    val drawer = rememberDrawerState(DrawerValue.Closed)
+    var menuOpen by rememberSaveable { mutableStateOf(false) }
+    var communicationDetails by rememberSaveable(group) { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     var picking by rememberSaveable { mutableStateOf(false) }
     var detailId by rememberSaveable(group,incident.selection) { mutableStateOf<String?>(null) }
@@ -76,9 +100,10 @@ fun PlanApp(model: PlanViewModel) {
     val openSafety by model.openSafety.collectAsStateWithLifecycle()
     var notificationsEnabled by remember { mutableStateOf(NotificationManagerCompat.from(context).areNotificationsEnabled()) }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { notificationsEnabled = NotificationManagerCompat.from(context).areNotificationsEnabled() }
-    LaunchedEffect(openSafety) { if (openSafety) { drawer.close(); tab = 0; lastMain = 0; picking = false; detailId = null; buildingId = null; model.openSafety.value = false } }
+    LaunchedEffect(openSafety) { if (openSafety) { menuOpen=false; tab = 0; lastMain = 0; picking = false; detailId = null; buildingId = null; model.openSafety.value = false } }
 
     fun startWithRadios() {
+        if (cloudState.groupId == group && cloudState.nearbyReady) { model.startSharing(); return }
         val ready = try {
             val bluetooth = context.getSystemService(BluetoothManager::class.java)?.adapter?.isEnabled == true
             val wifi = (context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager).isWifiEnabled
@@ -128,67 +153,78 @@ fun PlanApp(model: PlanViewModel) {
         }
         if (required.isEmpty()) requestNotificationAndStart() else permissions.launch(required.toTypedArray())
     }
+    // Start once after membership/credential provisioning, and again on a later app visit.
+    // Permission refusals do not cause a composition/request loop.
+    var autoAttempted by remember(group) { mutableStateOf(false) }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        if (cloudState.groupId==group && cloudState.nearbyReady && !nearby.active &&
+            NearbyTransport.permissions().all { ContextCompat.checkSelfPermission(context,it)==PackageManager.PERMISSION_GRANTED } &&
+            NotificationManagerCompat.from(context).areNotificationsEnabled()) model.startSharing()
+    }
+    LaunchedEffect(group,cloudState.nearbyReady,roster) {
+        if (cloudState.groupId==group && cloudState.nearbyReady && !autoAttempted && roster?.members?.any { model.localId in it.deviceIds }==true) {
+            autoAttempted=true
+            if (!nearby.active) start()
+        }
+    }
     LaunchedEffect(message) {
         message?.let { snackbar.showSnackbar(it); if (model.message.value == it) model.message.value = null }
     }
     fun navigate(destination: Int) {
-        if (tab in listOf(0, 1, 8) && !picking) lastMain = tab
+        incidentDetails=false
+        buildingFromProfile=tab==3&&destination==2
+        if (tab in listOf(0, 1, 8, 10) && !picking) lastMain = tab
         tab = destination; picking = false
-        scope.launch { drawer.close() }
+        scope.launch { menuOpen=false }
     }
-    BackHandler(enabled = picking || tab !in listOf(0, 1, 8)) {
-        if (picking) { picking = false; tab = 3 } else tab = lastMain
+    fun goBack() {
+        if(picking){picking=false;tab=3}
+        else if(tab==2&&buildingFromProfile){tab=3;buildingFromProfile=false}
+        else {tab=lastMain;if(appSettingsChild){appSettingsChild=false;languageSettings=true}}
     }
-    ModalNavigationDrawer(drawerState = drawer, gesturesEnabled = drawer.isOpen, drawerContent = {
-        ModalDrawerSheet(drawerState = drawer) {
-            Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text("メニュー", style = MaterialTheme.typography.headlineSmall)
-                    IconButton(onClick = { scope.launch { drawer.close() } }) { PlanIcon("close", "メニューを閉じる") }
-                }
-                NamedEntity("自分の名前", own?.displayName() ?: "未登録")
-                Text("グループ：$group", style = MaterialTheme.typography.bodySmall)
-                HorizontalDivider(Modifier.padding(vertical = 12.dp))
-                listOf(3 to "自分の情報", 2 to "自分の建物・住戸", 9 to "位置記録", 4 to "共有・接続", 5 to "オフライン地図", 6 to "災害・訓練の管理", 7 to "アプリ情報").forEach { (destination, label) ->
-                    NavigationDrawerItem(label = { Text(label) }, selected = tab == destination, onClick = { navigate(destination) })
-                }
-                if (incident.canEdit && !firstAnswer) NavigationDrawerItem(label = { Text("住民一覧") }, selected = false, onClick = { tab = 8; scope.launch { drawer.close() } })
-                if (BuildConfig.DEBUG) NavigationDrawerItem(label = { Text("画面デモ") }, selected = false, onClick = { scope.launch { drawer.close(); preview = true } })
-            }
-        }
-    }) {
+    BackHandler(enabled = picking || tab !in listOf(0, 1, 8, 10)) {goBack()}
+    Box {
         Scaffold(
-            topBar = { TopAppBar(
-                title = { Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(when { picking -> "住居の位置を選択"; tab in listOf(0, 1, 8) -> if (incident.canEdit) if (incident.current?.start?.training == true) "訓練" else "地震発生" else "PlanD"; else -> when(tab) {2->"自分の建物・住戸";3->"自分の情報";4->"共有・接続";5->"オフライン地図";6->"災害・訓練の管理";9->"位置記録";else->"アプリ情報"}}, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
-                    if (tab in listOf(0, 1, 8) && !picking && incident.canEdit) Text(java.text.SimpleDateFormat("M月d日", java.util.Locale.JAPAN).format(Date(incident.current!!.start.createdAt)), style = MaterialTheme.typography.labelLarge)
-                } },
-                navigationIcon = {
-                    if (picking || tab !in listOf(0, 1, 8)) IconButton(onClick = { if(picking){picking=false;tab=3}else tab=lastMain }) { PlanIcon("back", "戻る") }
-                    else IconButton(onClick = { scope.launch { drawer.open() } }) { PlanIcon("menu", "メニューを開く") }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)) },
-            bottomBar = { if(tab in listOf(0, 1, 8) && !picking && incident.canEdit && !firstAnswer) NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 0.dp) {
-                NavigationBarItem(selected=tab==1,onClick={tab=1;lastMain=1},colors=planNavigationColors(),icon={PlanIcon("map",null)},label={Text("地図")})
-                NavigationBarItem(selected=tab==8,onClick={tab=8;lastMain=8},colors=planNavigationColors(),icon={PlanIcon("list",null)},label={Text("一覧")})
-                NavigationBarItem(selected=tab==0,onClick={tab=0;lastMain=0},colors=planNavigationColors(),icon={PlanIcon("person",null)},label={Text("安否")})
+            topBar = { Column(Modifier.background(MaterialTheme.colorScheme.surface).statusBarsPadding()) {
+                ApprovedHeader(
+                    title=when {picking->"住居の位置を選択";tab in listOf(0,1,8,10)->if(incident.current!=null)uiText(if(incident.current!!.start.training)"training" else "earthquake")else "";else->uiText(when(tab){2->"home_building";3->"my_registration";4->"group_sharing";5->"offline_map";6->"training_incidents";9->"position_history";11->"home";else->"app_information"})},
+                    date=null,
+                    back=picking||tab !in listOf(0,1,8,10),
+                    onNavigate={if(picking||tab !in listOf(0,1,8,10))goBack() else {val opening=!menuOpen;languageSettings=false;incidentDetails=false;responseSummary=false;detailId=null;buildingId=null;menuOpen=opening}},
+                    compact=tab in listOf(0,1,8,10)&&!picking,
+                    noInternet=!internet,
+                    onDetails=if(tab in listOf(0,1,8,10)&&!picking&&incident.current!=null){{incidentDetails=true}}else null)
             } },
+            bottomBar = { if(tab in listOf(0,1,8,10) && !picking) Column(Modifier.background(MaterialTheme.colorScheme.surface).navigationBarsPadding()){ApprovedTabs(tab){tab=it;lastMain=it;languageSettings=false;responseSummary=false;incidentDetails=false;menuOpen=false}} },
             snackbarHost = { SnackbarHost(snackbar) },
         ) { padding ->
-            Column(Modifier.fillMaxSize().padding(padding)) {
-                screenState.SaveableStateProvider(tab) {
+            Box(Modifier.fillMaxSize().padding(padding)) {
+                val mapVisible = tab == 1 && !picking
+                // Retain pan/filter across tabs, but a different group or venue starts its own map.
+                key(group,activeVenue?.sessionId) { RetainedMapContent(mapVisible) {
+                    MapScreen(model, residents, own, false,
+                        onPick={}, onCancelPick={}, onSelect={detailId=it.originId},onBuilding={buildingId=it},
+                        openList=showPeople,onListClosed={showPeople=false},onAddReport={point->reportPoint=point;tab=10;lastMain=10},onReport={id->reportTarget=ResponseTarget(TargetKind.REPORT,id);tab=10;lastMain=10})
+                } }
+                if (!mapVisible) screenState.SaveableStateProvider("$group:$tab") {
                     when {
-                        tab in listOf(0, 1, 8) && !picking && firstAnswer -> SafetyScreen(model, own, saving, onProfile={navigate(3)}, onIncident={navigate(6)})
-                        tab in listOf(0, 1, 8) && !picking && !incident.canEdit -> PeaceHome(model, own != null, onProfile={navigate(3)}, onIncident={navigate(6)}, onPreview={preview=true})
                         else -> when(tab) {
                         0 -> SafetyScreen(model, own, saving, onProfile={navigate(3)}, onIncident={navigate(6)})
                         1, 8 -> MapScreen(model, residents, own, picking,
                             onPick={model.pickedPoint.value=it;picking=false;tab=3},
                             onCancelPick={picking=false;tab=3},onSelect={detailId=it.originId},onBuilding={buildingId=it},openList=showPeople,onListClosed={showPeople=false},listOnly=tab==8)
                         2 -> BuildingsScreen(model, onProfile={navigate(3)}) {buildingId=it}
-                        3 -> SettingsScreen(model, own, group, saving, onBuildings={navigate(2)}, onPick={picking=true;tab=1})
+                        10 -> ResponseScreen(model,responseSummary,{responseSummary=false},reportPoint,{reportPoint=null},reportTarget,{reportTarget=null},onOpenSummary={responseSummary=true})
+                        11 -> PeaceHome(model, own != null, onProfile={navigate(3)}, onIncident={navigate(6)}, onPreview={preview=true})
+                        3 -> SettingsScreen(model, storedOwn, group, saving, onBuildings={navigate(2)}, onPick={picking=true;tab=1})
                         9 -> PositionSettings(model, own != null)
                         4 -> LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
+                        item { CloudSharingPanel(model,own?.name.orEmpty()) }
+                        item { TextButton(onClick={communicationDetails=!communicationDetails}) {
+                            Text(if(communicationDetails) "通信の詳細を閉じる" else "通信の詳細")
+                        } }
+                        if(communicationDetails) {
+                        item { CloudCommunicationDetails(model) }
                         item { SectionTitle("近くの端末と共有") }
                         item { StatusFeedback(when {
                             nearby.starting -> "共有を開始しています…"
@@ -221,16 +257,29 @@ fun PlanApp(model: PlanViewModel) {
                             } }
                         }
                         item { Text("相手が受け取った情報：${nearby.receiptCount}件", style = MaterialTheme.typography.bodySmall) }
-                            if(BuildConfig.DEBUG) item { HorizontalDivider(); LabPanel(model) }
+                        }
                         }
                         5 -> OfflineMapScreen(model,own)
                         6 -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),verticalArrangement=Arrangement.spacedBy(20.dp)) {
-                            IncidentSelector(model)
                             IncidentActions(model,own!=null)
+                            if(roster==null)OutlinedButton(onClick={navigate(4)}){Text(uiText("group_sharing"))}
+                            HorizontalDivider()
+                            IncidentSelector(model)
                             if(own==null) Button(onClick={navigate(3)}){Text("自分の情報を登録")}
                         }
                         else -> AppInformation()
                     }
+                    }
+                }
+                if(menuOpen) ApprovedMenu(groupLabel,{menuOpen=false},::navigate,{menuOpen=false;languageSettings=true})
+                if(languageSettings) LanguageSettings(onClose={languageSettings=false},onNavigate={languageSettings=false;navigate(it);appSettingsChild=true})
+                if(incidentDetails)incident.current?.let {current->
+                    var now by remember(current.start.eventId) {mutableLongStateOf(System.currentTimeMillis())}
+                    LaunchedEffect(current.start.eventId){while(true){now=System.currentTimeMillis();kotlinx.coroutines.delay(60_000)}}
+                    ApprovedSheet(uiText(if(current.start.training)"training_details" else "earthquake_details"),{incidentDetails=false}) {
+                        Text(uiText("incident_started"),color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(DateFormat.getDateTimeInstance(DateFormat.MEDIUM,DateFormat.SHORT,java.util.Locale.forLanguageTag(LocalUiLanguage.current)).format(Date(current.start.createdAt)))
+                        Text(uiText("elapsed",((now-current.start.createdAt)/60_000).coerceAtLeast(0)))
                     }
                 }
             }
@@ -249,8 +298,8 @@ fun PlanApp(model: PlanViewModel) {
     }
     buildingId?.let {id->key(group,incident.selection,id){BuildingDetail(model,id,{buildingId=null;detailId=it.originId},{buildingId=null}, registration = tab == 2)}}
     residents.find { it.originId == detailId }?.let { resident ->
-        val person = residentMapPerson(resident, places, careEvents)
-        ModalBottomSheet(onDismissRequest = { detailId = null }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        val person = projectPersonPrivacy(residentMapPerson(resident, places, careEvents),incident.current?.start?.createdAt,System.currentTimeMillis())
+        PlanModalBottomSheet(onDismissRequest = { detailId = null }) {
             PersonMapDetail(person, System.currentTimeMillis(), false, false, {}, {},
                 onHome = { home -> if (placeBuildings(places).any { it.buildingId == home.id }) { detailId = null; buildingId = home.id } },
                 onClose = { detailId = null }, history = { CareHistoryAndEditor(model, resident, careEvents, own != null && incident.canEdit, saving) })
@@ -260,62 +309,95 @@ fun PlanApp(model: PlanViewModel) {
 
 @Composable
 private fun SettingsScreen(model: PlanViewModel, own: Resident?, group: String, saving: Boolean, onBuildings: () -> Unit, onPick: () -> Unit) {
-    var name by rememberSaveable(own?.originId) { mutableStateOf(own?.displayName().orEmpty()) }
-    var groupInput by rememberSaveable(group) { mutableStateOf(group) }
-    var lat by rememberSaveable(own?.originId) { mutableStateOf(own?.latitude?.toString().orEmpty()) }
-    var lon by rememberSaveable(own?.originId) { mutableStateOf(own?.longitude?.toString().orEmpty()) }
-    var floor by rememberSaveable(own?.originId) { mutableStateOf(own?.floor.orEmpty()) }
-    var room by rememberSaveable(own?.originId) { mutableStateOf(own?.room.orEmpty()) }
+    val demoHome by model.ownDemoHome.collectAsStateWithLifecycle()
+    val homeRows by model.places.collectAsStateWithLifecycle()
+    val storedReference=placeBuildings(homeRows).find{it.buildingId==validHome(homeRows,model.localId)?.buildingId}?.locationReference
+    val effectiveReference=demoHome?.let {BuildingLocationReference(it.address,it.plateauId,if(it.plateauId!=null)"plateau-26100-kyoto-shi-2025" else null,it.searchReference)}?:storedReference
+    var pickedReference by remember(group,demoHome?.buildingId,storedReference) {mutableStateOf(effectiveReference)}
+    var pickingHome by remember {mutableStateOf(false)}
+    var searchHome by remember {mutableStateOf(false)}
+    var query by rememberSaveable(group) {mutableStateOf("")}
+    val keyboard=androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+    val focus=androidx.compose.ui.platform.LocalFocusManager.current
+    val homeLookupContext=LocalContext.current.applicationContext
+    val homeLookup=remember {io.github.nevaseme.plandmk1.buildings.CityAddresses(homeLookupContext)}
+    val homeScope=rememberCoroutineScope()
+    var searchingHome by remember {mutableStateOf(false)}
+    var homeSearchError by remember {mutableStateOf("")}
+    var homeCandidates by remember {mutableStateOf<List<io.github.nevaseme.plandmk1.buildings.AddressCandidate>>(emptyList())}
+    var homeCandidate by remember {mutableStateOf<io.github.nevaseme.plandmk1.buildings.AddressCandidate?>(null)}
+    fun selectHomeCandidate(candidate:io.github.nevaseme.plandmk1.buildings.AddressCandidate){homeCandidate=candidate;homeCandidates=emptyList();searchHome=true;pickingHome=true}
+    fun openHome(search:Boolean){
+        if(searchingHome)return
+        keyboard?.hide();focus.clearFocus();homeSearchError="";homeCandidates=emptyList()
+        if(!search){homeCandidate=null;searchHome=false;pickingHome=true;return}
+        val requested=query.trim()
+        homeScope.launch {searchingHome=true;try {
+            val candidates=homeLookup.candidates(requested,model.cloud.state.value.municipality?.code)
+            when(candidates.size){0->homeSearchError="場所が見つかりません。住所を詳しく入力してください";1->selectHomeCandidate(candidates.single());else->homeCandidates=candidates}
+        }catch(e:kotlinx.coroutines.CancellationException){throw e}catch(_:Exception){homeSearchError="検索できませんでした。もう一度お試しください"}finally{searchingHome=false}}
+    }
+    var address by rememberSaveable(group,own?.originId,demoHome?.buildingId,storedReference?.address) {mutableStateOf(demoHome?.address?:storedReference?.address.orEmpty())}
+    var name by rememberSaveable(group,own?.originId,demoHome?.buildingId,storedReference?.address) { mutableStateOf(own?.displayName().orEmpty()) }
+    var lat by rememberSaveable(group,own?.originId,demoHome?.buildingId,storedReference?.address) { mutableStateOf(own?.latitude?.toString().orEmpty()) }
+    var lon by rememberSaveable(group,own?.originId,demoHome?.buildingId,storedReference?.address) { mutableStateOf(own?.longitude?.toString().orEmpty()) }
+    var floor by rememberSaveable(group,own?.originId,demoHome?.buildingId,storedReference?.address) { mutableStateOf(own?.floor.orEmpty()) }
+    var room by rememberSaveable(group,own?.originId,demoHome?.buildingId,storedReference?.address) { mutableStateOf(own?.room.orEmpty()) }
+    var coordinates by rememberSaveable {mutableStateOf(false)}
     val point by model.pickedPoint.collectAsStateWithLifecycle()
-    LaunchedEffect(point) { point?.let { lat = "%.6f".format(java.util.Locale.US, it.latitude); lon = "%.6f".format(java.util.Locale.US, it.longitude); model.pickedPoint.value = null } }
+    LaunchedEffect(point) { point?.let { lat = "%.6f".format(java.util.Locale.US, it.latitude); lon = "%.6f".format(java.util.Locale.US, it.longitude); model.pickedPoint.value = null; address="";pickedReference=null;floor="";room="" } }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item { SectionTitle("自分の情報") }
-        item { OutlinedTextField(groupInput, { groupInput = it }, label = { Text("実験グループ") }, singleLine = true, enabled = !saving, modifier = Modifier.fillMaxWidth()) }
         item { OutlinedTextField(name, { name = it }, label = { Text("自分の名前") }, singleLine = true, enabled = !saving, modifier = Modifier.fillMaxWidth()) }
-        item { SectionTitle("登録住居") }
-        item { OutlinedButton(enabled = !saving, onClick = onPick, modifier = Modifier.fillMaxWidth()) { Text("地図から位置を選ぶ") } }
-        item { OutlinedTextField(lat, { lat = it }, label = { Text("緯度") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text), singleLine = true, enabled = !saving, modifier = Modifier.fillMaxWidth()) }
-        item { OutlinedTextField(lon, { lon = it }, label = { Text("経度") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text), singleLine = true, enabled = !saving, modifier = Modifier.fillMaxWidth()) }
+        item { SectionTitle("住居・寝室") }
+        item {AddressSearchField(query,{query=it},{if(query.isNotBlank())openHome(true)},Modifier.fillMaxWidth(),enabled=!saving&&!searchingHome)}
+        item {Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){Button(enabled=!saving&&!searchingHome&&query.isNotBlank(),onClick={openHome(true)},modifier=Modifier.weight(1f)){Text(if(searchingHome)"検索中…" else "住所を検索")};OutlinedButton(enabled=!saving&&!searchingHome,onClick={openHome(false)},modifier=Modifier.weight(1f)){Text("地図で選ぶ")}}}
+        if(homeSearchError.isNotBlank())item {Text(homeSearchError)}
+        items(homeCandidates,key={it.id}){candidate->TextButton(onClick={selectHomeCandidate(candidate)}){Text(candidate.address+if(candidate.precision in listOf("town","block","area"))" 付近" else "")}}
+        if(address.isNotBlank())item {Text("選択した住居",style=MaterialTheme.typography.labelLarge);Text(address)}
+        item {TextButton(onClick={keyboard?.hide();focus.clearFocus();onBuildings()}){Text("登録済みの建物・部屋から選ぶ")}}
+        item { TextButton(onClick={coordinates=!coordinates}) {Text(uiText("coordinates"))} }
+        if(coordinates) {
+        item { OutlinedTextField(lat, { lat = it;pickedReference=null;address="";floor="";room="" }, label = { Text("緯度") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text), singleLine = true, enabled = !saving, modifier = Modifier.fillMaxWidth()) }
+        item { OutlinedTextField(lon, { lon = it;pickedReference=null;address="";floor="";room="" }, label = { Text("経度") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text), singleLine = true, enabled = !saving, modifier = Modifier.fillMaxWidth()) }
+        }
         item { OutlinedTextField(floor, { floor = it }, label = { Text("階数（例：2階）") }, singleLine = true, enabled = !saving, modifier = Modifier.fillMaxWidth()) }
         item { OutlinedTextField(room, { room = it }, label = { Text("寝る部屋・場所の説明") }, minLines = 2, enabled = !saving, modifier = Modifier.fillMaxWidth()) }
         item { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             OperationFeedback(model, "profile")
-            Button(onClick = { model.saveProfile(groupInput, name, lat, lon, floor, room) }, enabled = !saving,
+            Button(onClick = { model.saveProfile(group, name, lat, lon, floor, room, address,pickedReference?.copy(address=address.trim().ifBlank{"地図で選択した住居"})) }, enabled = !saving,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) { Text(if (saving) "保存しています…" else "登録情報を保存") }
         } }
-        item { OutlinedButton(onClick=onBuildings,modifier=Modifier.fillMaxWidth()) { Text("建物・住戸を登録する") } }
+
     }
+    if(pickingHome)BuildingLocationPicker(homeCandidate?.let {MapPoint(it.latitude,it.longitude)}?:MapPoint(lat.toDoubleOrNull()?:35.0145,lon.toDoubleOrNull()?:135.7625),{_,_->},{pickingHome=false},initialQuery=if(searchHome)query else "",initialCandidate=homeCandidate,initialReference=pickedReference,onHomeConfirm={point,ref->val moved=kotlin.math.abs((lat.toDoubleOrNull()?:point.latitude)-point.latitude)>1e-6||kotlin.math.abs((lon.toDoubleOrNull()?:point.longitude)-point.longitude)>1e-6;if(moved){floor="";room=""};lat=point.latitude.toString();lon=point.longitude.toString();address=ref.address;pickedReference=ref;pickingHome=false})
+
 }
 
 @Composable
 private fun OfflineMapScreen(model:PlanViewModel,own:Resident?) {
     val offline by model.maps.state.collectAsStateWithLifecycle()
-    var deleteConfirm by remember { mutableStateOf(false) }
-    val center=own?.let{MapPoint(it.latitude,it.longitude)}?:MapPoint(offline.latitude?:35.681236,offline.longitude?:139.767125)
+    val cloud by model.cloud.state.collectAsStateWithLifecycle()
+    val group by model.group.collectAsStateWithLifecycle()
+    val city=cloud.takeIf {it.groupId==group}?.municipality
+    var deleteConfirm by remember {mutableStateOf(false)}
+    LaunchedEffect(city?.code){model.maps.selectCity(city?.code)}
     LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
-        item {
-            OutlinedCard { Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("オフライン地図", style = MaterialTheme.typography.titleMedium)
-                Text(when {
-                    offline.busy -> "保存状態を確認中…"
-                    offline.complete -> "保存済み・圏外で利用可能"
-                    offline.downloading -> "保存中：${offline.resources} / ${offline.expected} 項目"
-                    offline.exists -> "保存は未完了です"
-                    else -> "未保存・地図の表示には通信が必要です"
-                })
-                offline.latitude?.let { Text("保存範囲の中心：%.4f, %.4f".format(it, offline.longitude)) }
-                if (offline.bytes > 0) Text("保存容量：%.1f MB".format(offline.bytes / 1048576.0))
-                offline.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                if (offline.downloading) OutlinedButton(onClick = model.maps::pause) { Text("保存を一時停止") }
-                else if (!offline.busy && !offline.complete) Button(onClick = { if (offline.exists) model.maps.resume() else model.maps.download(center.latitude, center.longitude) }) { Text(if (offline.exists) "保存を再開" else "この中心の周囲2km四方を保存") }
-                if (offline.exists && !offline.busy) TextButton(onClick = { deleteConfirm = true }) { Text("保存地図を削除・地域を変更") }
-            } }
-        }
-
+        item {OutlinedCard {Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+            Text(city?.let {"${it.name}全域の地図"}?:"オフライン地図",style=MaterialTheme.typography.titleLarge)
+            if(city==null)Text("グループの活動地域が未設定です。管理者が「グループ」から市を設定してください。")
+            else {
+                Text(when {offline.busy->"保存状態を確認中…";offline.complete->"保存済み・圏外で利用可能";offline.downloading->"保存中：${offline.resources} / ${offline.expected} 項目";offline.exists->"保存は未完了です";else->"市全域の道路・地名を保存します"})
+                if(!offline.exists)Text(if(city.code=="26100")"背景地図 約39MB・住所と建物データはアプリに収録済み" else "背景地図 約8MB・住所データはアプリに収録済み")
+                if(offline.bytes>0)Text("保存容量：%.1f MB".format(offline.bytes/1048576.0))
+                offline.error?.let {Text(it,color=MaterialTheme.colorScheme.error)}
+                if(offline.downloading)OutlinedButton(onClick=model.maps::pause){Text("一時停止")}
+                else if(!offline.busy&&!offline.complete)Button(onClick={if(offline.exists)model.maps.resume() else model.maps.downloadCity(city.code)}){Text(if(offline.exists)"保存を再開" else "市全域をダウンロード")}
+                if(offline.exists&&!offline.busy)TextButton(onClick={deleteConfirm=true}){Text("保存地図を削除")}
+            }
+        }}}
     }
-    if (deleteConfirm) AlertDialog(onDismissRequest = { deleteConfirm = false }, title = { Text("保存地図を削除しますか？") },
-        confirmButton = { TextButton(onClick = { deleteConfirm = false; model.maps.delete() }) { Text("地図を削除") } },
-        dismissButton = { TextButton(onClick = { deleteConfirm = false }) { Text("キャンセル") } })
+    if(deleteConfirm)AlertDialog(onDismissRequest={deleteConfirm=false},title={Text("保存地図を削除しますか？")},text={Text("登録情報・安否・建物の記録は残ります。")},confirmButton={TextButton(onClick={deleteConfirm=false;model.maps.delete()}){Text("地図を削除")}},dismissButton={TextButton(onClick={deleteConfirm=false}){Text("キャンセル")}})
 }
 
 fun formatTime(time: Long): String = if(time == 0L) "今回未回答" else DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(time))

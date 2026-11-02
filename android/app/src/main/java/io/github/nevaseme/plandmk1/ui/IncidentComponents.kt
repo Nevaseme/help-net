@@ -39,27 +39,43 @@ import io.github.nevaseme.plandmk1.PlanViewModel
     var showEnd by rememberSaveable { mutableStateOf(false) }
     var title by rememberSaveable { mutableStateOf("地震の安否確認") }
     var area by rememberSaveable { mutableStateOf("") }
-    var training by rememberSaveable { mutableStateOf(true) }
+    var training by rememberSaveable { mutableStateOf(false) }
+    var fictional by rememberSaveable { mutableStateOf(false) }
+    val cloudState by model.cloud.state.collectAsStateWithLifecycle()
+    val busy=saving||cloudState.busy
+    val roster by model.roster.collectAsStateWithLifecycle()
+    val canTrain=roster!=null&&model.canStartTraining()
     Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
         val current=state.current
         Text(when { current!=null -> if(current.closed) "安否確認は終了しました" else "安否確認中"
             state.selection=="legacy" -> "過去の情報"
             state.options.count { !it.closed }>1 -> "表示する安否確認を選択"
             else -> "安否確認は未開始" })
-        Button(enabled=registered&&!saving,onClick={showStart=true},modifier=Modifier.fillMaxWidth()) { Text("地震発生") }
+        Text(uiText("training_manage"),style=MaterialTheme.typography.titleLarge)
+        if(canTrain) {
+            if(state.options.any {it.start.training&&!it.closed}) Text(uiText("training_running"))
+            Button(enabled=registered&&!saving&&state.options.none {it.start.training&&!it.closed},onClick={training=true;title="安否確認の訓練";showStart=true},modifier=Modifier.fillMaxWidth().heightIn(min=52.dp)){Text(uiText("training_start"))}
+        } else Text(uiText(if(roster==null)"training_join" else "training_wait"))
+        HorizontalDivider(Modifier.padding(vertical=12.dp))
+        Text(uiText("earthquake_report_section"),style=MaterialTheme.typography.titleMedium)
+        OutlinedButton(enabled=registered&&!saving,onClick={training=false;title="地震の安否確認";showStart=true},modifier=Modifier.fillMaxWidth()) { Text(uiText("report_earthquake")) }
         if(current!=null&&!current.closed) {
             if(model.canEndIncident(current.start.authorId)) OutlinedButton(enabled=!saving,onClick={showEnd=true}){Text("この安否確認を終了")}
         }
         OperationFeedback(model,"incident")
     }
-    if(showStart) AlertDialog(onDismissRequest={if(!saving)showStart=false},title={Text("地震発生・安否確認を開始")},text={
+    if(showStart) AlertDialog(onDismissRequest={if(!saving)showStart=false},title={Text(uiText(if(training)"training_start"else "actual_report_start"))},text={
         Column(Modifier.verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-            OutlinedTextField(title,{title=it.take(80)},label={Text("地震・訓練の名前")},enabled=!saving)
-            OutlinedTextField(area,{area=it.take(120)},label={Text("対象地域")},enabled=!saving)
-            Row { Checkbox(training,{training=it},enabled=!saving);Text("訓練として記録する") }
+            OutlinedTextField(title,{title=it.take(80)},label={Text(uiText("incident_name"))},enabled=!saving)
+            OutlinedTextField(area,{area=it.take(120)},label={Text(uiText("target_area"))},enabled=!saving)
+            if(training){
+                Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically){Checkbox(fictional,{fictional=it;if(it&&area.isBlank())area="御所南〜烏丸御池"},enabled=!busy);Text("京都に架空の位置を割り当てる",Modifier.weight(1f))}
+                if(fictional)Text("管理者を含む参加者を分散表示します。住居や現在地は変更しません。",style=MaterialTheme.typography.bodySmall)
+                cloudState.error?.let {Text(it,color=MaterialTheme.colorScheme.error)}
+            }
             OperationFeedback(model,"incident")
         }
-    },confirmButton={TextButton(enabled=!saving&&title.isNotBlank()&&area.isNotBlank(),onClick={model.startIncident(title,area,training)}) { Text(if(saving) "保存しています…" else "地震発生を記録して開始") }},dismissButton={TextButton(enabled=!saving,onClick={showStart=false}){Text("閉じる")}})
+    },confirmButton={TextButton(enabled=!busy&&title.isNotBlank()&&area.isNotBlank()&&(!training||canTrain),onClick={if(training&&fictional)model.cloud.startVenue("",true,title,area){showStart=false}else model.startIncident(title,area,training)}) { Text(uiText(if(saving)"saving"else if(training)"training_start"else "actual_report_start")) }},dismissButton={TextButton(enabled=!saving,onClick={showStart=false}){Text(uiText("close"))}})
     val saveStates by model.saveStates.collectAsStateWithLifecycle()
     val initialSelection=remember(showStart){state.selection}
     LaunchedEffect(state.selection,showStart,saving) { if(showStart&&!saving&&state.selection!=initialSelection&&saveStates["incident"]?.phase==io.github.nevaseme.plandmk1.core.SavePhase.SAVED)showStart=false }

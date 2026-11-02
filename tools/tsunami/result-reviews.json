@@ -1,0 +1,21 @@
+{
+  "schema": "pland-tsunami-result-reviews-1",
+  "reviews": [
+    {
+      "manifest_sha256": "f89af938b0a0b8a860b5e296d2617540f8a133d5e2daab678223b8eb13299f82",
+      "scenario_id": "atami-coastal-3m-10m-open-experiment",
+      "status": "rejected_boundary_screen",
+      "reviewed_on": "2026-10-30",
+      "reason": "The 3m coastal-height calculation reaches 60m of the northern reflective land cut; adjacent maximum depth is 3.439196m. The finite domain cannot be adopted as a complete inundation extent.",
+      "evidence": ".implementation/tsunami-atami/review-coastal-3m-10m-open.json"
+    },
+    {
+      "manifest_sha256": "5b30c080c4448da9e0eb42420db0f7412d2bdb8320c28c915f7dd296ec983862",
+      "scenario_id": "atami-coastal-3m-20m-open-experiment",
+      "status": "rejected_boundary_screen",
+      "reviewed_on": "2026-10-30",
+      "reason": "The 3m coastal-height calculation reaches 20m of the southern reflective land cut (maximum depth 3.067018m) and40m of the northern cut (2.334892m). The finite domain cannot be adopted as a complete inundation extent.",
+      "evidence": ".implementation/tsunami-atami/review-coastal-3m-20m-open.json"
+    }
+  ]
+}

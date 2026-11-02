@@ -16,16 +16,27 @@ data class ResponseRow(val groupId:String,val eventId:String,val payload:String)
 }
 class ResponseStore(private val db:PlanDatabase) {
     private val quakes=QuakeStore(db)
-    suspend fun reportRegionSummary(group:String,incidentId:String,catalog:RegionCatalog,assignments:Map<String,List<String>>):RegionalSummary=db.withTransaction {
+    suspend fun reportRegionSummary(group:String,incidentId:String,catalog:RegionCatalog,assignments:Map<String,List<String>> = emptyMap()):RegionalSummary=db.withTransaction {
         val roster=requireNotNull(quakes.roster(group));val quakeHistory=quakes.events(group)
         val selected=canonicalIncidentId(roster,quakeHistory,incidentId)
         require(quakeStates(roster,quakeHistory).any {it.formation.incidentId==selected}) {"集計する災害を選んでください"}
-        val reports=heads(group).filter {it.incidentId==selected}.mapNotNull {(it.change as? ResponseChange.Report)?.reportId}.distinct()
-        regionalSummary(catalog,reports.map {RegionCase(ResponseTarget(TargetKind.REPORT,it),assignments[it].orEmpty())})
+        val reports=heads(group).filter {it.incidentId==selected}.mapNotNull {(it.change as? ResponseChange.Report)?.takeUnless {report->report.cancelled}}.groupBy {it.reportId}
+        regionalSummary(catalog,reports.map {(id,values)->RegionCase(ResponseTarget(TargetKind.REPORT,id),assignments[id]?:values.flatMap {it.regionIds}.distinct())})
     }
-    suspend fun exportCsv(group:String,incidentId:String,regions:Map<ResponseTarget,List<String>> = emptyMap()):String=db.withTransaction {
+    suspend fun exportCsv(group:String,incidentId:String,regions:Map<ResponseTarget,List<String>> = emptyMap(),language:String="ja"):String=db.withTransaction {
         val roster=requireNotNull(quakes.roster(group)) {"参加者設定を読み込んでください"};val records=RoomRecordStore(db)
-        operationCsv(operationRows(roster,incidentId,records.all(group),records.incidents(group),quakes.events(group),events(group),regions))
+        operationCsv(operationRows(roster,incidentId,records.all(group),records.incidents(group),quakes.events(group),events(group),regions,language),language=language)
+    }
+    suspend fun startWork(group:String,incidentId:String,actorDeviceId:String,target:ResponseTarget,at:Long):List<ResponseEvent> = db.withTransaction {
+        val roster=requireNotNull(quakes.roster(group)) {"参加者設定を読み込んでください"}
+        val quakeHistory=quakes.events(group);val selected=canonicalIncidentId(roster,quakeHistory,incidentId)
+        require(quakeStates(roster,quakeHistory).any {incidentId in it.incidentIds&&!it.closed}) {"成立済みで開始中の災害を指定してください"}
+        val current=heads(group).filter {it.incidentId==selected}
+        if(target.kind==TargetKind.PERSON)require(db.residents().get(group,target.id)!=null) {"対象住民が見つかりません"}
+        else require(current.any {(it.change as? ResponseChange.Report)?.let {r->r.reportId==target.id&&!r.cancelled}==true}) {"対象の通報が見つかりません"}
+        startWorkChanges(roster,current,actorDeviceId,target).map {plan->
+            append(ResponseEvent(group,java.util.UUID.randomUUID().toString(),actorDeviceId,1,at,incidentId,plan.change,plan.replaces))
+        }
     }
     suspend fun events(group:String)=db.responses().all(group).map {Json.decodeFromString<ResponseEvent>(it.payload)}
     fun observe(group:String)=db.responses().observe(group).map {rows->rows.map {Json.decodeFromString<ResponseEvent>(it.payload)}}

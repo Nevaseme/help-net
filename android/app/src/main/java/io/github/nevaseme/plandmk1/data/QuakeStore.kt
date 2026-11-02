@@ -16,13 +16,39 @@ data class QuakeRow(val groupId:String,val eventId:String,val payload:String)
     @Query("SELECT * FROM member_rosters WHERE groupId=:group") suspend fun roster(group:String):RosterRow?
     @Query("SELECT * FROM member_rosters WHERE groupId=:group") fun observeRoster(group:String):Flow<RosterRow?>
     @Insert(onConflict=OnConflictStrategy.ABORT) suspend fun putRoster(row:RosterRow)
+    @Update suspend fun updateRoster(row:RosterRow):Int
     @Query("SELECT * FROM quake_events WHERE groupId=:group ORDER BY eventId") suspend fun events(group:String):List<QuakeRow>
     @Query("SELECT * FROM quake_events WHERE groupId=:group ORDER BY eventId") fun observe(group:String):Flow<List<QuakeRow>>
     @Insert(onConflict=OnConflictStrategy.ABORT) suspend fun put(row:QuakeRow)
 }
 
 class QuakeStore(private val db:PlanDatabase) {
+    /** Idempotent durable receive; a missing roster never creates an administrator or a deferred group join. */
+    suspend fun receiveEew(receipt:io.github.nevaseme.plandmk1.eew.EewReceipt):String?=db.withTransaction {
+        val target=receipt.target?:return@withTransaction null
+        val warning=receipt.warning
+        if(!receipt.actionable || warning.test || warning.warningFor("京都府南部")==null || receipt.receivedAt-warning.issuedAt>180_000)return@withTransaction null
+        val roster=roster(target.groupId)?:return@withTransaction null
+        if(roster.members.none {target.deviceId in it.deviceIds})return@withTransaction null
+        val previous=events(target.groupId)
+        val id=UUID.nameUUIDFromBytes("eew:${warning.source}:${warning.messageId}:${target.deviceId}".toByteArray(Charsets.UTF_8)).toString()
+        val old=previous.find {it.eventId==id}
+        val proof=old?:run {
+            val evidence=EewEvidence(warning.source,warning.eventId,warning.issuedAt,receipt.receivedAt,
+                startsNewPeriod=quakeStates(roster,previous).none {!it.closed&&!it.formation.training})
+            QuakeEvent(target.groupId,id,target.deviceId,receipt.receivedAt,QuakeAction.EEW,false,targetId=evidence.incidentId(),eew=evidence).also {merge(it)}
+        }
+        // This decision commits with the proof. A crash after DB commit can repair selection, while
+        // completed receipts and later serials never overwrite a user's deliberate history selection.
+        val state=quakeStates(roster,events(target.groupId)).find {proof.targetId in it.incidentIds}
+        if(proof.eew?.startsNewPeriod==true && state?.closed==false)state.formation.incidentId else null
+    }
     suspend fun roster(group:String)=db.quakes().roster(group)?.let {MemberRoster.decode(it.payload)}
+    suspend fun updateRoster(candidate:MemberRoster,ownDeviceId:String)=db.withTransaction {
+        val previous=roster(candidate.groupId);validateRosterUpdate(previous,candidate,ownDeviceId)
+        val row=RosterRow(candidate.groupId,candidate.encode())
+        if(previous==null)db.quakes().putRoster(row) else if(previous!=candidate)check(db.quakes().updateRoster(row)==1)
+    }
     fun observeRoster(group:String)=db.quakes().observeRoster(group).map {it?.let {MemberRoster.decode(it.payload)}}
     suspend fun importRoster(text:String,ownDeviceId:String):MemberRoster=db.withTransaction {
         val candidate=MemberRoster.decode(text);candidate.memberForDevice(ownDeviceId)
@@ -42,9 +68,14 @@ class QuakeStore(private val db:PlanDatabase) {
     private suspend fun materialize(group:String) {
         val roster=requireNotNull(roster(group));val rows=events(group)
         quakeStates(roster,rows).forEach {state->
-            val report=rows.first {it.eventId==state.formation.incidentId}
-            val start=IncidentEvent(group,report.eventId,report.eventId,report.actorDeviceId,roster.memberForDevice(report.actorDeviceId).activityName,1,report.operatedAt,IncidentKind.START,report.title,report.area,report.training)
+          state.incidentIds.forEach {incidentId->
+            val evidence=rows.firstOrNull {it.action==QuakeAction.EEW && it.targetId==incidentId}?.eew
+            val start=if(evidence!=null)eewIncidentStart(group,evidence) else {
+                val report=rows.first {it.eventId==incidentId}
+                IncidentEvent(group,report.eventId,report.eventId,report.actorDeviceId,roster.memberForDevice(report.actorDeviceId).activityName,1,report.operatedAt,IncidentKind.START,report.title,report.area,report.training)
+            }
             if(db.incidents().get(group,start.eventId)==null)db.incidents().put(IncidentRow(group,start.eventId,Json.encodeToString(start)))
+          }
         }
     }
 

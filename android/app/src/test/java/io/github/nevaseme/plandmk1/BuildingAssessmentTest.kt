@@ -28,6 +28,8 @@ class BuildingAssessmentTest {
         assertEquals(2,found.size)
         assertEquals(.1,found.first().rates!!.full,1e-8)
         assertEquals(.2,found.first().rates!!.halfOnly,1e-8)
+        assertEquals(BuildingRiskLevel.MEDIUM, found.first().riskLevel)
+        assertEquals(BuildingRiskLevel.UNKNOWN, found.last().riskLevel)
         assertNull(found.last().rates)
         assertEquals(listOf("unknown-year"),found.last().building.reasons)
         assertTrue(repo.atPoint(35.005,135.005,6.0).isEmpty()) // courtyard hole
@@ -56,4 +58,25 @@ class BuildingAssessmentTest {
         assertTrue(buildings.any{it.status=="estimated"})
         assertTrue(buildings.any{it.status=="unknown" && it.profile==null})
     }
+    @Test fun fullDamageClassificationBoundaries() {
+        for ((rate, expected) in listOf(
+            0.0 to BuildingRiskLevel.LOW,
+            Math.nextDown(0.1) to BuildingRiskLevel.LOW,
+            0.1 to BuildingRiskLevel.MEDIUM,
+            Math.nextDown(0.4) to BuildingRiskLevel.MEDIUM,
+            0.4 to BuildingRiskLevel.HIGH,
+            1.0 to BuildingRiskLevel.HIGH,
+        )) assertEquals(expected, BuildingRiskLevel.fromFullDamageRate(rate))
+        assertEquals(BuildingRiskLevel.UNKNOWN, BuildingRiskLevel.fromFullDamageRate(null))
+        for (invalid in listOf(-0.1, 1.1, Double.NaN, Double.POSITIVE_INFINITY)) {
+            try { BuildingRiskLevel.fromFullDamageRate(invalid); fail("invalid rate accepted") }
+            catch (_: IllegalArgumentException) {}
+        }
+    }
+
+    @Test fun digitizedGridValuesRemainExactAtClassificationBoundary() = runTest {
+        // A table entry at 6.3 must not interpolate just below its exact value.
+        assertEquals(0.13, repository().atPoint(35.001,135.001,6.3).first().rates!!.full, 0.0)
+    }
+
 }

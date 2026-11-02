@@ -6,6 +6,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -14,28 +15,22 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nevaseme.plandmk1.*
+import io.github.nevaseme.plandmk1.R
 import io.github.nevaseme.plandmk1.core.*
 
-@Composable fun PlanIcon(kind: String, description: String?) {
-    val ink = if (kind == "menu" || kind == "back") MaterialTheme.colorScheme.primary else LocalContentColor.current
-    Canvas(Modifier.size(24.dp).semantics { description?.let { contentDescription = it } }) {
-        val s = size.width / 24f; val stroke = 2f * s
-        fun line(x: Float, y: Float, u: Float, v: Float) = drawLine(ink, Offset(x*s,y*s), Offset(u*s,v*s), stroke)
-        when (kind) {
-            "menu" -> { line(3f,6f,21f,6f); line(3f,12f,21f,12f); line(3f,18f,21f,18f) }
-            "back" -> { line(20f,12f,4f,12f); line(4f,12f,11f,5f); line(4f,12f,11f,19f) }
-            "close" -> { line(5f,5f,19f,19f); line(5f,19f,19f,5f) }
-            "map" -> {
-                drawPath(Path().apply { moveTo(3*s,5*s);lineTo(9*s,3*s);lineTo(15*s,6*s);lineTo(21*s,4*s);lineTo(21*s,19*s);lineTo(15*s,21*s);lineTo(9*s,18*s);lineTo(3*s,20*s);close() },ink,style=Stroke(stroke))
-                line(9f,3f,9f,18f);line(15f,6f,15f,21f)
-            }
-            "target" -> { drawCircle(ink,7*s,Offset(12*s,12*s),style=Stroke(stroke));line(12f,1f,12f,6f);line(12f,18f,12f,23f);line(1f,12f,6f,12f);line(18f,12f,23f,12f) }
-            "list" -> { listOf(5f, 12f, 19f).forEach { y -> drawCircle(ink, 1.5f*s, Offset(3*s, y*s)); line(8f,y,22f,y) } }
-            else -> { drawCircle(ink,4*s,Offset(12*s,7*s));drawPath(Path().apply {moveTo(3*s,23*s);cubicTo(3*s,10*s,21*s,10*s,21*s,23*s);close()},ink) }
-        }
+@Composable fun PlanIcon(kind: String, description: String?, modifier: Modifier = Modifier.size(24.dp)) {
+    val resource=when(kind){
+        "map"->R.drawable.approved_map;"list"->R.drawable.approved_list;"response"->R.drawable.approved_response
+        "menu"->R.drawable.approved_menu;"close"->R.drawable.approved_close;"target"->R.drawable.approved_target
+        "chevron","back"->R.drawable.approved_chevron;"home"->R.drawable.approved_home
+        "settings"->R.drawable.approved_settings;"building"->R.drawable.approved_building;else->R.drawable.approved_person
     }
+    Icon(androidx.compose.ui.res.painterResource(resource),description,
+        modifier.then(if(kind=="back")Modifier.rotate(180f)else Modifier),
+        tint=if(kind in listOf("menu","back"))MaterialTheme.colorScheme.primary else LocalContentColor.current)
 }
 
 @Composable fun planNavigationColors() = NavigationBarItemDefaults.colors(
@@ -47,9 +42,9 @@ import io.github.nevaseme.plandmk1.core.*
     val incident by model.incidentUi.collectAsStateWithLifecycle()
     if (own == null || !incident.canEdit) {
         Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
-            Text("自分の安否", style = MaterialTheme.typography.headlineSmall)
-            Text(if (own == null) "名前と住居を登録してください" else "安否確認の開始を待っています")
-            Button(onClick = if (own == null) onProfile else onIncident) { Text(if (own == null) "自分の情報を登録" else "災害・訓練の管理") }
+            Text(uiText("my_safety"), style = MaterialTheme.typography.headlineSmall)
+            Text(uiText(if (own == null) "register_name_home" else "waiting_start"))
+            Button(onClick = if (own == null) onProfile else onIncident) { Text(uiText(if (own == null) "register_profile" else "incident_management")) }
         }
     } else {
         val first = incident.current?.answers?.containsKey(model.localId) != true
@@ -78,39 +73,58 @@ import io.github.nevaseme.plandmk1.core.*
     }
 }
 
-@Composable fun MapScreen(model: PlanViewModel, residents: List<Resident>, own: Resident?, picking: Boolean, onPick: (MapPoint) -> Unit, onCancelPick: () -> Unit, onSelect: (Resident) -> Unit, onBuilding: (String) -> Unit, openList: Boolean = false, onListClosed: () -> Unit = {}, listOnly: Boolean = false) {
+@Composable fun MapScreen(model: PlanViewModel, residents: List<Resident>, own: Resident?, picking: Boolean, onPick: (MapPoint) -> Unit, onCancelPick: () -> Unit, onSelect: (Resident) -> Unit, onBuilding: (String) -> Unit, openList: Boolean = false, onListClosed: () -> Unit = {}, listOnly: Boolean = false, onAddReport:((MapPoint)->Unit)?=null,onReport:(String)->Unit={}) {
     val care by model.careEvents.collectAsStateWithLifecycle()
     val places by model.places.collectAsStateWithLifecycle()
     val incident by model.incidentUi.collectAsStateWithLifecycle()
     val saving by model.saving.collectAsStateWithLifecycle()
+    val deviceRecords by model.deviceRecords.collectAsStateWithLifecycle()
     val positions by model.positions.collectAsStateWithLifecycle()
     val memos by model.memos.collectAsStateWithLifecycle()
+    val responses by model.responseEvents.collectAsStateWithLifecycle()
+    val cloud by model.cloud.state.collectAsStateWithLifecycle()
+    val group by model.group.collectAsStateWithLifecycle()
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(Unit) { while (true) { kotlinx.coroutines.delay(60_000); now = System.currentTimeMillis() } }
-    val people = remember(residents, places, care, positions, memos, incident) {
-        val locations = positions.associateBy { it.originId }
+    val mapVisible = LocalMapVisible.current
+    LaunchedEffect(mapVisible,incident.current?.start?.createdAt) {
+        if (mapVisible) {
+            now = System.currentTimeMillis()
+            while (true) {
+                val disclosure=incident.current?.start?.createdAt?.plus(180_000)
+                val until=disclosure?.minus(now)?.takeIf {it>0}?:60_000
+                kotlinx.coroutines.delay(minOf(60_000L,until)); now = System.currentTimeMillis()
+            }
+        }
+    }
+    val venue by model.activeVenue.collectAsStateWithLifecycle()
+    val people = remember(residents, places, care, positions, memos, incident, now,venue,deviceRecords) {
+        val locations = positions.filter {venue?.positionMode!="ACTUAL"||it.acquiredAt>=venue!!.startedAt}.associateBy { it.originId }
         val notes = memos.associateBy { it.answerId }
         residents.map { person ->
             val answer = incident.current?.answers?.get(person.originId)
-            residentMapPerson(person, places, care, locations[person.originId],
-                if (answer?.safety == Safety.SOS) notes[answer.eventId]?.takeIf {it.authorId==person.originId&&it.incidentId==answer.incidentId}?.text.orEmpty() else "")
+            val base=residentMapPerson(person, places, care, locations[person.originId],
+                if (answer?.safety == Safety.SOS) notes[answer.eventId]?.takeIf {it.authorId==person.originId&&it.incidentId==answer.incidentId}?.text.orEmpty() else "").copy(impactAt=latestImpact(deviceRecords,group,person.originId,now))
+            val placement=venue?.placements?.find {it.deviceId==person.originId}
+            projectPersonPrivacy(if(placement==null)base else if(venue?.positionMode=="ACTUAL")base.copy(name=placement.name,home=null,demo=true) else base.copy(name=placement.name,point=MapPoint(checkNotNull(placement.latitude),checkNotNull(placement.longitude)),acquiredAt=incident.current?.start?.createdAt,accuracy=null,demo=true),incident.current?.start?.createdAt,now)
         }
     }
     val homes = placeBuildings(places).map { MapHome(it.buildingId!!, it.displayLabel(), MapPoint(it.latitude!!, it.longitude!!)) }
-    val center = if (picking) own?.let { MapPoint(it.latitude, it.longitude) } ?: MapPoint(32.7904, 130.819)
-        else positions.find { it.originId == model.localId }?.let { MapPoint(it.latitude, it.longitude) }
-            ?: own?.let { MapPoint(it.latitude, it.longitude) } ?: MapPoint(32.7904, 130.819)
-    if (picking) Box(Modifier.fillMaxSize()) {
-        ResidentMap(emptyList(), center, true, onPick, onSelect, {}, Modifier.fillMaxSize())
-        Surface(Modifier.align(Alignment.TopCenter).padding(12.dp), shape = MaterialTheme.shapes.medium) { Text("住居の位置をタップ", Modifier.padding(12.dp)) }
-        Button(onClick = onCancelPick, modifier = Modifier.align(Alignment.BottomCenter).padding(24.dp)) { Text("位置選択をやめる") }
-    } else SituationScreen(people, homes, center, now, canRescue = own != null && incident.canEdit && !saving,
+    val incidentResponses=responses.filter {it.incidentId==incident.current?.start?.eventId}
+    val reports=incidentResponses.mapNotNull {it.change as? ResponseChange.Report}.filterNot {it.cancelled}.distinctBy {it.reportId}.map {report->MapReport(report.reportId,MapPoint(report.latitude,report.longitude),responseUrgency(incidentResponses,ResponseTarget(TargetKind.REPORT,report.reportId)))}
+    val center = if(!picking&&venue?.positionMode=="KYOTO") MapPoint(35.0145,135.7625)
+        else positions.find { it.originId == model.localId&&(venue?.positionMode!="ACTUAL"||it.acquiredAt>=venue!!.startedAt) }?.let { MapPoint(it.latitude, it.longitude) }
+            ?: if(venue?.positionMode=="ACTUAL")MapPoint(35.66,139.73) else own?.takeIf {it.latitude.isFinite()&&it.longitude.isFinite()}?.let { MapPoint(it.latitude, it.longitude) } ?: MapPoint(35.003, 135.759)
+    if (picking) {
+        val app=LocalContext.current.applicationContext as PlanDApplication
+        val source=remember(app){app.positionSourceFactory()}
+        HomeLocationPicker(center,onPick,onCancelPick) {source().let {MapPoint(it.latitude,it.longitude)}}
+    } else SituationScreen(people, homes, center, now, initialZoom=if(venue!=null)14.5 else 16.8, canRescue = own != null && incident.canEdit && !saving,
         canUndo = { p -> currentCareEvents(care.filter { it.subjectId == p.id }).any { it.action == CareAction.RESCUED && it.authorId == model.localId } },
         onRescue = { model.saveCare(it.id, CareAction.RESCUED, "本人の救助完了を確認") },
         onUndo = { p -> currentCareEvents(care.filter { it.subjectId == p.id }).find { it.action == CareAction.RESCUED && it.authorId == model.localId }?.let { model.saveCare(p.id, CareAction.REVOKED, "救助完了の記録を訂正", it.eventId) } },
         history = { p -> residents.find { it.originId == p.id }?.let { CareHistoryAndEditor(model, it, care, own != null && incident.canEdit, saving) } },
         feedback = { p -> OperationFeedback(model, model.careSaveKey(p.id)) },
-        openList = openList, onListClosed = onListClosed, listOnly = listOnly)
+        openList = openList, onListClosed = onListClosed, listOnly = listOnly,onAddReport=onAddReport.takeIf {incident.canEdit},reports=reports,onReport=onReport,statisticsLabel=cloud.takeIf {it.groupId==group}?.groupName?.takeIf {it.isNotBlank()}?:uiText("group_label"))
 }
 
 @Composable fun AppInformation() {

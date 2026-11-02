@@ -11,6 +11,28 @@ import org.junit.Test
 import java.util.UUID
 
 class ResponseStorageTest {
+    @Test fun startWorkRollsBackBothWritesAndPreservesCompletedProgress()=runBlocking {
+        fun id()=UUID.randomUUID().toString()
+        val context=ApplicationProvider.getApplicationContext<Context>();val name="start-work-${id()}.db"
+        val db=Room.databaseBuilder(context,PlanDatabase::class.java,name).build();val actor=id();val incident=id();val reportId=id()
+        val roster=MemberRoster(groupId="trial",members=listOf(GroupMember(actor,"管理者",MemberRole.ADMIN,listOf(actor))))
+        try {
+            QuakeStore(db).importRoster(roster.encode(),actor)
+            QuakeStore(db).command(QuakeEvent("trial",incident,actor,0,QuakeAction.TRAINING_START,true,title="訓練",area="地域"))
+            val store=ResponseStore(db);val target=ResponseTarget(TargetKind.REPORT,reportId)
+            store.append(ResponseEvent("trial",reportId,actor,1,1,incident,ResponseChange.Report(reportId,"道路",35.0,139.0,"倒木")))
+            db.openHelper.writableDatabase.execSQL("CREATE TRIGGER reject_start_progress BEFORE INSERT ON response_events WHEN NEW.payload LIKE '%\"type\":\"PROGRESS\"%' BEGIN SELECT RAISE(ABORT, 'test second write'); END")
+            try {store.startWork("trial",incident,actor,target,2);fail("write must abort")}catch(_:Exception){}
+            assertEquals(1,store.events("trial").size)
+            db.openHelper.writableDatabase.execSQL("DROP TRIGGER reject_start_progress")
+            val started=store.startWork("trial",incident,actor,target,3);assertEquals(2,started.size)
+            assertEquals(2,started.map {it.sequence}.distinct().size)
+            assertTrue(store.startWork("trial",incident,actor,target,4).isEmpty())
+            val progress=started.single {it.change is ResponseChange.Progress}
+            val done=store.append(ResponseEvent("trial",id(),actor,1,5,incident,ResponseChange.Progress(target,WorkStatus.DONE,"完了"),listOf(progress.eventId)))
+            assertTrue(store.startWork("trial",incident,actor,target,6).isEmpty());assertTrue(store.heads("trial").contains(done))
+        }finally {db.close();context.deleteDatabase(name)}
+    }
     @Test fun realStorageKeepsAssignmentsCorrectionsMaterialsAndAvailability()=runBlocking {
         fun id()=UUID.randomUUID().toString()
         val context=ApplicationProvider.getApplicationContext<Context>();val name="responses-${id()}.db"

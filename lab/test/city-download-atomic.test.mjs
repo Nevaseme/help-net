@@ -1,0 +1,23 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {loadCityPackage} from '../web/city-addresses.mjs';
+import {gzipSync} from 'node:zlib';
+import {CityDownload} from '../web/city-offline.mjs';
+test('failed city update leaves the previous complete package usable',async t=>{
+ const buckets=new Map();const original=globalThis.caches,fetcher=globalThis.fetch;
+ globalThis.caches={keys:async()=>[...buckets.keys()],delete:async k=>buckets.delete(k),open:async k=>{if(!buckets.has(k))buckets.set(k,new Map());const b=buckets.get(k);return {match:async u=>b.get(String(u))?.clone(),put:async(u,r)=>{b.set(String(u),r.clone());},delete:async u=>b.delete(String(u))};}};
+ t.after(()=>{globalThis.caches=original;globalThis.fetch=fetcher;});
+ const plan={code:'13103',name:'港区',bytes:3,files:[{url:'https://test.invalid/a'},{url:'https://test.invalid/b'}]};
+ globalThis.fetch=async()=>new Response('old');const d=new CityDownload();await d.download(plan);assert.ok(await d.status(plan.code));
+ let calls=0;globalThis.fetch=async()=>{if(++calls===2)throw Error('network failed');return new Response('new');};
+ await assert.rejects(()=>d.download(plan));assert.ok(await d.status(plan.code),'old complete version must remain');
+});
+
+test('completed city download refreshes the search package already in memory',async t=>{
+ const buckets=new Map(),original=globalThis.caches,fetcher=globalThis.fetch;
+ globalThis.caches={keys:async()=>[...buckets.keys()],delete:async k=>buckets.delete(k),open:async k=>{if(!buckets.has(k))buckets.set(k,new Map());const b=buckets.get(k);return {match:async u=>b.get(String(u))?.clone(),put:async(u,r)=>{b.set(String(u),r.clone());},delete:async u=>b.delete(String(u))};}};
+ t.after(()=>{globalThis.caches=original;globalThis.fetch=fetcher;});
+ let version=1;globalThis.fetch=async url=>url.endsWith('city.json')?Response.json({addresses:{path:'13103/addresses.json.gz'}}):new Response(gzipSync(JSON.stringify({rows:[['test','施設'+version,139,35,'poi']]})));
+ assert.equal((await loadCityPackage('13103',true)).addresses.rows[0][1],'施設1');version=2;
+ await new CityDownload().download({code:'13103',name:'港区',bytes:1,files:[{url:'https://nevaseme.github.io/safety_confirm/data/cities/13103/city.json'},{url:'https://nevaseme.github.io/safety_confirm/data/cities/13103/addresses.json.gz'}]});
+ assert.equal((await loadCityPackage('13103')).addresses.rows[0][1],'施設2');
+});

@@ -1,0 +1,10 @@
+{
+  "expectedGeometryBuildings": 513815,
+  "renderableUniqueBuildings": 513815,
+  "missingCount": 0,
+  "missingIds": [],
+  "overviewProfileFeatures": 16055,
+  "overviewSourceLayer": "footprints",
+  "bytes": 164567482,
+  "tiles": 2329
+}

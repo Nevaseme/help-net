@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "files": [
+    {
+      "file": "26100-addresses.prepared.gzip",
+      "rows": 259772,
+      "sourceSha256": "5ac2108d5dada49301a26efddf83e0cd277580fa95ddf5f5c182d4697741ea9e",
+      "sha256": "f1b94b481e734a7230333314050d6199f6812ef05b7b80a2a872b72d228b0bd1"
+    },
+    {
+      "file": "26100-places.prepared.gzip",
+      "rows": 25364,
+      "sourceSha256": "a8adbc8999ff6ef6afb22a49f6b49c66897ffcd3abbbfa4751779c88faf02e0c",
+      "sha256": "58d75284ef7ee010ff09779d910d7cee78527644500467129190eabee7a52881"
+    },
+    {
+      "file": "22205-addresses.prepared.gzip",
+      "rows": 31164,
+      "sourceSha256": "f18e88d468a8676318de024ffa638b0a7d830bf09f68ed0569f311eaf30d3fca",
+      "sha256": "53753a10494878dceb5875eb54a5ade7ec0fce6c6c85ee9f7c8b1d109e182d1b"
+    },
+    {
+      "file": "22205-places.prepared.gzip",
+      "rows": 697,
+      "sourceSha256": "f772de1d762f5cd476354b6a79376aee4b2cb8ecefdbbfb1937f346d4fff44f5",
+      "sha256": "d5ebfdf1cbf71c309ff6dde39d5173a256d538cc43be749e7ae1070b59b31dd2"
+    },
+    {
+      "file": "13103-addresses.prepared.gzip",
+      "rows": 4257,
+      "sourceSha256": "85e8387aeb8475ec542092e634b0f1f5ec3a2bea96d411f282113b94646695bb",
+      "sha256": "fc8f97684b19ec3ef7ea9cd2ca38e9d7cfed71347259184c9a63932e83e01764"
+    },
+    {
+      "file": "13103-places.prepared.gzip",
+      "rows": 7902,
+      "sourceSha256": "25de62fec74816fe2a29245ec2f9b8f4831a138a6fd69417a89d0af76bb235ac",
+      "sha256": "9e7a7116656627253daa8f871962b2eebcd87188119f6df125516f53ca8761fa"
+    }
+  ]
+}

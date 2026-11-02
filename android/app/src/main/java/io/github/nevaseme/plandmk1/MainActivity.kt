@@ -15,6 +15,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import org.maplibre.android.MapLibre
 
 class MainActivity : ComponentActivity() {
@@ -23,13 +24,19 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         MapLibre.getInstance(this)
+        // The map provider allows at most four concurrent requests for offline downloads.
+        org.maplibre.android.module.http.HttpRequestUtil.setOkHttpClient(okhttp3.OkHttpClient.Builder()
+            .dispatcher(okhttp3.Dispatcher().apply {maxRequests=4;maxRequestsPerHost=4})
+            .addInterceptor { chain->chain.proceed(chain.request().newBuilder().header("User-Agent","Tasukeai-Android/${BuildConfig.VERSION_NAME} (io.github.nevaseme.plandmk1)").build()) }.build())
         val app = application as PlanDApplication
         positionAccess = PositionAccess(this, app)
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.RESUMED) {
                 app.installation.group.collectLatest { group ->
-                    app.store.observe(group).collect { residents ->
-                        positionAccess.registered(group, residents.any { it.originId == app.installation.localId })
+                    combine(app.store.observe(group),app.cloud.state) { residents,cloud->
+                        residents.any {it.originId==app.installation.localId}||cloud.groupId==group&&cloud.venue?.let {it.positionMode=="ACTUAL"&&!it.closed&&it.placements.any {p->p.deviceId==app.installation.localId}}==true
+                    }.collect { registered ->
+                        positionAccess.registered(group, registered)
                     }
                 }
             }

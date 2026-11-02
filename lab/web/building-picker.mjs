@@ -1,0 +1,38 @@
+import {clearableSearch,dismissKeyboard} from './search-controls.mjs';
+import {selectAddressCandidate,candidateLabel} from './address-selection.mjs';
+import {searchReference} from './home-registration.mjs';
+import {CITY_DATA,verifiedBytes,gunzipJson} from './city-addresses.mjs';
+import {addVectorBasemap} from './vector-basemap.mjs';
+export function inRing(ring,x,y){let inside=false;for(let i=0;i<ring.length-1;i++){const [a,b]=ring[i],[c,d]=ring[i+1];if(Math.abs((x-a)*(d-b)-(y-b)*(c-a))<=1e-14&&x>=Math.min(a,c)&&x<=Math.max(a,c)&&y>=Math.min(b,d)&&y<=Math.max(b,d))return true;if((b>y)!==(d>y)&&x<(c-a)*(y-b)/(d-b)+a)inside=!inside;}return inside;}
+const contains=(b,x,y)=>b&&x>=b[0]&&x<=b[2]&&y>=b[1]&&y<=b[3];
+export const containsBuilding=(b,x,y)=>contains(b.bbox,x,y)&&b.geometry?.coordinates.some(p=>p.length&&inRing(p[0],x,y)&&!p.slice(1).some(r=>inRing(r,x,y)));
+let index;const chunks=new Map();
+export async function buildingsAt(latitude,longitude,code){
+ if(code!=='26100')return [];
+ if(!index){const r=await fetch(CITY_DATA+'26100/buildings/index.json');if(!r.ok)throw Error('建物データを取得できません。市全域の地図を保存すると圏外でも使えます。');index=await r.json();}
+ const result=[];
+ for(const chunk of index.chunks.filter(c=>contains(c.bbox,longitude,latitude))){
+  let rows=chunks.get(chunk.mesh);if(!rows){const body=await gunzipJson(await verifiedBytes(await fetch(CITY_DATA+'26100/buildings/'+chunk.file),chunk.sha256));rows=body.buildings;if(chunks.size>=2)chunks.delete(chunks.keys().next().value);chunks.set(chunk.mesh,rows);}
+  result.push(...rows.filter(b=>containsBuilding(b,longitude,latitude)));
+ }
+ return result;
+}
+export function pickBuilding({latitude,longitude,code,query='',initialCandidate=null,initialAddress=''}){
+ return new Promise(resolve=>{
+  const dialog=document.createElement('dialog');dialog.className='building-picker';dialog.innerHTML='<header><h2>住居の位置を選ぶ</h2><button type="button" class="text-button" data-back>戻る</button></header><form class="pin-search"><input aria-label="住所・建物名を検索" placeholder="住所・建物名を検索" type="search"><button data-search>検索</button></form><div class="pin-map-wrap"><div class="building-picker-map"></div><button type="button" class="pin-locate secondary" data-locate><img src="/crosshair.svg" alt="">現在地</button><span class="home-pin" aria-label="住居のピン"></span></div><div class="building-picker-confirm"><p role="status"></p><div data-candidates></div><div class="pin-address-summary"><span data-address-label></span><button type="button" class="text-button" data-edit-address>編集</button></div><label data-address-editor hidden>登録する住所・建物名<input data-address maxlength="240" enterkeyhint="done"></label><button type="button" data-confirm disabled>この位置にする</button></div>';
+  document.body.append(dialog);dialog.showModal();const canvas=dialog.querySelector('.building-picker-map'),state=dialog.querySelector('[role=status]'),confirm=dialog.querySelector('[data-confirm]'),candidates=dialog.querySelector('[data-candidates]'),search=dialog.querySelector('.pin-search');search.querySelector('input').value=query;clearableSearch(search.querySelector('input'));
+  const map=L.map(canvas,{zoomAnimation:false,fadeAnimation:false,markerZoomAnimation:false}).setView([latitude,longitude],18);let point={latitude,longitude},selected=null,outline=null,generation=0,lastCandidate=initialCandidate,closed=false;
+  const address=dialog.querySelector('[data-address]');address.value=initialAddress||(initialCandidate?candidateLabel(initialCandidate):'');let addressPoint={latitude,longitude};address.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();dismissKeyboard();renderAddress(false);}});canvas.addEventListener('pointerdown',dismissKeyboard,{capture:true});
+  function renderAddress(edit=false){dialog.querySelector('[data-address-label]').textContent=address.value||'住所・建物名を入力（任意）';dialog.querySelector('[data-address-editor]').hidden=!edit;dialog.querySelector('.pin-address-summary').hidden=edit;}
+  dialog.querySelector('[data-edit-address]').onclick=()=>{renderAddress(true);address.focus();};renderAddress();
+  const viewport=globalThis.visualViewport;const resize=()=>{dialog.style.height=`${viewport?.height||innerHeight}px`;map.invalidateSize({pan:false});};viewport?.addEventListener('resize',resize);resize();
+  addVectorBasemap(map).catch(()=>{if(!closed)state.textContent='背景地図を読み込めません。通信があるときに地図を保存してください。';});
+  function choose(building){selected=building;if(outline)map.removeLayer(outline);outline=building?L.geoJSON(building.geometry,{interactive:false,style:{color:'#1756a9',weight:2,fillColor:'#3478d4',fillOpacity:.35}}).addTo(map):null;confirm.disabled=false;state.textContent='';}
+  async function moved(){const n=++generation,c=map.getCenter();point={latitude:c.lat,longitude:c.lng};if(Math.hypot((point.latitude-addressPoint.latitude)*111000,(point.longitude-addressPoint.longitude)*91000)>2){address.value='';addressPoint=point;renderAddress();}dialog.dataset.latitude=String(c.lat);dialog.dataset.longitude=String(c.lng);selected=null;confirm.disabled=true;candidates.replaceChildren();if(outline){map.removeLayer(outline);outline=null;}try{const rows=await buildingsAt(c.lat,c.lng,code);if(n!==generation||closed)return;if(rows.length<=1)choose(rows[0]||null);else{state.textContent='建物の輪郭を選んでください';for(const [i,b] of rows.entries()){const button=document.createElement('button');button.type='button';button.className='secondary';button.textContent=`建物候補 ${i+1}`;button.onclick=()=>choose(b);candidates.append(button);}}}catch(e){if(n===generation&&!closed){choose(null);state.textContent='建物の輪郭を読み込めません。ピンの位置で登録できます。';}}}
+  map.on('movestart',()=>{generation++;confirm.disabled=true;});map.on('moveend',moved);map.on('click',e=>map.panTo(e.latlng,{animate:false}));moved();
+  search.onsubmit=async e=>{e.preventDefault();dismissKeyboard();const n=++generation;search.querySelector('[data-search]').disabled=true;state.textContent='検索中…';try{const found=await selectAddressCandidate(search.querySelector('input').value,code);if(closed||n!==generation)return;if(!found){state.textContent='場所が見つかりません。住所を詳しく入力してください';return;}lastCandidate=found;code=found.municipalityCode;addressPoint={latitude:found.latitude,longitude:found.longitude};address.value=candidateLabel(found);renderAddress();map.setView([found.latitude,found.longitude],found.precision==='area'?12:18,{animate:false});await moved();if(['area','town','block'].includes(found.precision))state.textContent='住所付近を表示しています。ピンを住居に合わせてください';}catch(error){if(!closed)state.textContent=error.message;}finally{if(!closed)search.querySelector('[data-search]').disabled=false;}};
+  const locate=dialog.querySelector('[data-locate]');locate.onclick=()=>{dismissKeyboard();if(!navigator.geolocation){state.textContent='この端末では現在地を取得できません。住所検索か地図で選んでください';return;}locate.disabled=true;state.textContent='現在地を確認しています…';navigator.geolocation.getCurrentPosition(p=>{if(closed)return;locate.disabled=false;map.setView([p.coords.latitude,p.coords.longitude],18,{animate:false});moved();},()=>{if(closed)return;locate.disabled=false;state.textContent='現在地を取得できません。位置情報の許可を確認するか、住所検索で選んでください';},{timeout:15000,maximumAge:60000});};
+  const close=value=>{dismissKeyboard();closed=true;generation++;viewport?.removeEventListener('resize',resize);map.remove();dialog.close();dialog.remove();resolve(value);};
+  confirm.onclick=()=>close({...point,plateauId:selected?.id??null,candidate:lastCandidate,address:address.value.trim()||'地図で選択した住居',searchReference:searchReference(lastCandidate,search.querySelector('input').value)});dialog.querySelector('[data-back]').onclick=()=>close(null);dialog.oncancel=e=>{e.preventDefault();close(null);};
+ });
+}

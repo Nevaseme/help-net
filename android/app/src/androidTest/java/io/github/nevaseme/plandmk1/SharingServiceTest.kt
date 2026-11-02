@@ -152,6 +152,22 @@ class SharingServiceTest {
         main { p.leave("C") }; waitFor("Last peer stopped") { !app.sharing.state.value.active }
         foreground(); assertEquals(2, ports.size)
     }
+    @Test fun automaticServiceWaitsForBluetoothAndResumesWhileActivityIsClosed() {
+        io.github.nevaseme.plandmk1.cloud.CloudSettings(app).saveNearbyKey(group,"ab".repeat(32))
+        val p=start();background()
+        assertTrue(app.sharing.state.value.active)
+        shell("svc wifi disable");SystemClock.sleep(500)
+        assertEquals(0,p.stops)
+        shell("svc bluetooth disable")
+        waitFor("Radio paused without destroying service") {p.stops==1 && app.sharing.state.value.active}
+        assertTrue(notifications().any {it.id==SharingService.NOTIFICATION_ID})
+        shell("svc bluetooth enable")
+        waitFor("Radio resumed without opening Activity") {p.starts==2 && app.sharing.state.value.active}
+        connect(p,"A")
+        val r=record();main {p.onBytes("A",bytes(r))}
+        waitFor("Record received after automatic restart") {p.packets.any {it.second.type=="ACK"}}
+        assertEquals(r,runBlocking {app.store.get(group,r.originId)})
+    }
 
     @Test fun immediateStopAndGroupChangeRejectLateEvents() {
         main { app.sharing.start(group, "模擬住民"); app.sharing.stop() }

@@ -30,6 +30,7 @@ data class Resident(
 }
 
 interface RecordStore {
+    suspend fun rosterRevision(groupId:String):Long=0
     suspend fun quakeEvents(groupId:String):List<QuakeEvent> = emptyList()
     suspend fun responseEvents(groupId:String):List<ResponseEvent> = emptyList()
     suspend fun mergeQuake(event:QuakeEvent):Boolean = error("災害報告を保存できません")

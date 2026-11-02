@@ -10,14 +10,16 @@ const val CLUSTER_WIDTH = 82
 fun clusterHeight(cluster: MapCluster) = cluster.counts.size * 30 + 14
 
 enum class MapSafety(val label: String, val argb: Int) {
-    SOS("SOS", 0xFFE51C46.toInt()), UNANSWERED("応答なし", 0xFFE4A319.toInt()),
-    SAFE("無事", 0xFF008C7D.toInt()), RESCUED("救助済み", 0xFF008C7D.toInt())
+    SOS("SOS", 0xFFE01F2C.toInt()), UNANSWERED("応答なし", 0xFFEE9C08.toInt()),
+    SAFE("無事", 0xFF00836C.toInt()), RESCUED("救助済み", 0xFF00836C.toInt())
 }
 
 data class MapHome(
     val id: String, val address: String, val point: MapPoint,
     val built: Int? = null, val material: String = "不明", val floors: Int? = null,
     val rating: Int? = null,
+    val fullDamagePercent: Double? = null, val assessmentIntensity: Double? = null,
+    val assessmentAssumed: Boolean = false,
 )
 
 data class MapPerson(
@@ -25,13 +27,28 @@ data class MapPerson(
     val point: MapPoint? = null, val acquiredAt: Long? = null, val accuracy: Int? = null,
     val home: MapHome? = null, val bedroom: String = "未登録", val memo: String = "",
     val impactAt: Long? = null, val enclosedAt: Long? = null,
+    val identityVisible: Boolean = true, val registeredPlaceVisible: Boolean = true, val demo:Boolean=false,
 ) {
-    val publicName get() = when (state) {
+    val publicName get() = if(demo)name else when (state) {
         MapSafety.SAFE -> "無事の人"
         MapSafety.RESCUED -> "救助済みの人"
-        else -> name.ifBlank { "登録住民" }
+        else -> if(!identityVisible) "応答なし" else name.ifBlank { "登録住民" }
     }
     fun hasPosition(@Suppress("UNUSED_PARAMETER") now: Long) = point != null && acquiredAt != null
+}
+
+/** Display projection only; the stored profile and incident's earliest formation time are retained. */
+fun projectPersonPrivacy(person:MapPerson,incidentStartedAt:Long?,now:Long):MapPerson {
+    if(person.demo)return person.copy(identityVisible=true,registeredPlaceVisible=person.home!=null,impactAt=person.impactAt,enclosedAt=null)
+    val anonymous=person.state==MapSafety.UNANSWERED && (incidentStartedAt==null || now-incidentStartedAt<180_000)
+    val homeVisible=when(person.state) {
+        MapSafety.UNANSWERED -> !anonymous
+        MapSafety.SOS,MapSafety.SAFE,MapSafety.RESCUED -> !person.hasPosition(now)
+    }
+    val observations=person.state==MapSafety.SOS||person.state==MapSafety.UNANSWERED
+    return person.copy(name=if(anonymous)""else person.name,identityVisible=!anonymous,registeredPlaceVisible=homeVisible,
+        home=person.home.takeIf {homeVisible},bedroom=if(homeVisible)person.bedroom else "",memo=if(anonymous)""else person.memo,
+        impactAt=person.impactAt.takeIf {observations},enclosedAt=person.enclosedAt.takeIf {observations})
 }
 
 fun situationList(people: List<MapPerson>, state: MapSafety?, unknownOnly: Boolean, areaIds: Set<String>?, now: Long) =
@@ -51,6 +68,7 @@ data class MapCluster(val people: List<MapPerson>) {
 }
 
 fun markerAgeLabel(person: MapPerson, now: Long): String {
+    if(person.demo)return ""
     val minutes = person.acquiredAt?.let { ((now - it) / 60_000).coerceAtLeast(0) } ?: return ""
     return when { minutes <= 5 -> ""; minutes < 60 -> "${minutes}分前"; else -> "${minutes / 60}時間前" }
 }

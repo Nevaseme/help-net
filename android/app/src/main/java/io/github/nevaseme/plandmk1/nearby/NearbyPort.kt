@@ -8,6 +8,7 @@ interface NearbyPort {
     var onDisconnected: (String) -> Unit
     var onBytes: (String, ByteArray) -> Unit
     fun start(name: String)
+    fun configureAutomatic(link: GroupLink) { }
     fun setVisible(visible: Boolean)
     fun stop()
     fun connect(peer: Peer)

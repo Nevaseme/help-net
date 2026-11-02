@@ -11,6 +11,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
 import kotlin.math.abs
 import kotlin.math.floor
+import kotlin.math.round
 
 @Serializable
 data class BuildingGeometry(val type: String, val coordinates: List<List<List<List<Double>>>>)
@@ -35,7 +36,11 @@ data class BuildingAssessment(
     val rates: BuildingDamageRates?,
     val modelId: String,
     val limitations: List<String>,
-)
+) {
+    // Keep building.status/reasons: a high-rise assumed zero is not a measured result.
+    val riskLevel: BuildingRiskLevel
+        get() = BuildingRiskLevel.fromFullDamageRate(rates?.full)
+}
 
 /** Read-only public reference data. Never writes or joins residents' records by inferred IDs.
  * All file work runs on IO; at most two meshes are cached. No network is used.
@@ -107,7 +112,10 @@ class BuildingAssessmentRepository(private val openAsset: (String) -> InputStrea
                 }.map { building ->
                     val rates=building.profile?.let { profile ->
                         val curve=curves.getValue(profile).jsonObject
-                        val position=(instrumentalIntensity-5)*10
+                        val rawPosition=(instrumentalIntensity-5)*10
+                        // Decimal grid points (e.g. 6.3) must use the exact table value.
+                        val nearest=round(rawPosition)
+                        val position=if(abs(rawPosition-nearest)<1e-10) nearest else rawPosition
                         val lo=floor(position).toInt().coerceAtMost(19)
                         val fraction=position-lo
                         fun interpolate(key: String): Double {

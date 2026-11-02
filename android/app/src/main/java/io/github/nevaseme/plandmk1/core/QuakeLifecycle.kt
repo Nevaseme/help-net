@@ -2,12 +2,18 @@ package io.github.nevaseme.plandmk1.core
 
 import kotlinx.serialization.Serializable
 
-@Serializable enum class QuakeAction { REPORT, CANCEL, FORM, END }
+@Serializable enum class QuakeAction { REPORT, CANCEL, FORM, END, EEW, TRAINING_START }
 @Serializable data class QuakeEvent(
     val groupId:String, val eventId:String, val actorDeviceId:String, val operatedAt:Long,
     val action:QuakeAction, val training:Boolean, val targetId:String?=null,
     val reportIds:List<String> = emptyList(), val title:String="", val area:String="",
     val endedIncidentIds:List<String> = emptyList(),
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val eew:EewEvidence?=null,
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val rosterRevision:Long=0,
 ) {
     fun validate(roster:MemberRoster) {
         require(groupId==roster.groupId && recordIdPattern.matches(eventId) && operatedAt in 0..MAX_SEQUENCE)
@@ -16,34 +22,46 @@ import kotlinx.serialization.Serializable
         require(reportIds.distinct().size==reportIds.size && reportIds.all(recordIdPattern::matches))
         require(endedIncidentIds.distinct().size==endedIncidentIds.size && endedIncidentIds.all(recordIdPattern::matches))
         require(if(action==QuakeAction.END)endedIncidentIds.isEmpty()||targetId in endedIncidentIds else endedIncidentIds.isEmpty())
+        require((action==QuakeAction.EEW)==(eew!=null))
+        require(rosterRevision in 0..MAX_SEQUENCE && (action==QuakeAction.FORM||rosterRevision==0L))
         when(action) {
+            QuakeAction.EEW -> {requireNotNull(eew).validate();require(!training && targetId==eew.incidentId() && operatedAt==eew.receivedAt && reportIds.isEmpty() && title.isEmpty() && area.isEmpty())}
+            QuakeAction.TRAINING_START -> require(training && roster.memberForDevice(actorDeviceId).role==MemberRole.ADMIN && targetId==null && reportIds.isEmpty() && title.isNotBlank() && title.length<=80 && area.isNotBlank() && area.length<=120)
             QuakeAction.REPORT -> require(targetId==null && reportIds.isEmpty() && title.isNotBlank() && title.length<=80 && area.isNotBlank() && area.length<=120)
             QuakeAction.CANCEL,QuakeAction.END -> require(targetId!=null && targetId!=eventId && reportIds.isEmpty() && title.isEmpty() && area.isEmpty())
             QuakeAction.FORM -> require(targetId!=null && targetId!=eventId && reportIds.isNotEmpty() && title.isEmpty() && area.isEmpty())
         }
     }
 }
-data class QuakeFormation(val groupId:String,val incidentId:String,val firstReportedAt:Long,val training:Boolean,val reportIds:List<String>) {
-    fun event(id:String,device:String,at:Long)=QuakeEvent(groupId,id,device,at,QuakeAction.FORM,training,incidentId,reportIds)
+data class QuakeFormation(val groupId:String,val incidentId:String,val firstReportedAt:Long,val training:Boolean,val reportIds:List<String>,val rosterRevision:Long=0) {
+    fun event(id:String,device:String,at:Long)=QuakeEvent(groupId,id,device,at,QuakeAction.FORM,training,incidentId,reportIds,rosterRevision=rosterRevision)
 }
 data class QuakeState(val formation:QuakeFormation,val closed:Boolean,val incidentIds:Set<String> = setOf(formation.incidentId))
 
 private fun reportsFor(roster:MemberRoster,events:List<QuakeEvent>)=events.filter {it.action==QuakeAction.REPORT && it.groupId==roster.groupId}
 private fun proof(roster:MemberRoster,events:List<QuakeEvent>,formed:QuakeEvent):QuakeFormation? {
     if(formed.action!=QuakeAction.FORM)return null
+    val membership=roster.membersAt(formed.rosterRevision)?:return null
     val byId=reportsFor(roster,events).associateBy {it.eventId}
     val reports=formed.reportIds.map {byId[it]?:return null}.sortedWith(compareBy<QuakeEvent> {it.operatedAt}.thenBy {it.eventId})
     if(reports.isEmpty() || reports.any {it.training!=formed.training} || reports.first().eventId!=formed.targetId)return null
-    if(reports.map {roster.memberForDevice(it.actorDeviceId).memberId}.distinct().size<requiredEarthquakeReporters(roster.members.size))return null
-    return QuakeFormation(roster.groupId,reports.first().eventId,reports.first().operatedAt,formed.training,reports.map {it.eventId})
+    if(reports.any {report->membership.none {report.actorDeviceId in it.deviceIds}})return null
+    if(reports.map {roster.memberForDevice(it.actorDeviceId).memberId}.distinct().size<requiredEarthquakeReporters(membership.size))return null
+    return QuakeFormation(roster.groupId,reports.first().eventId,reports.first().operatedAt,formed.training,reports.map {it.eventId},formed.rosterRevision)
 }
 private data class QuakePeriod(val training:Boolean,val reports:List<QuakeEvent>,val forms:List<QuakeFormation>,val closed:Boolean)
 /** Only a verified administrator END separates reporting rounds. Reports themselves never expire. */
 private fun quakePeriods(roster:MemberRoster,events:List<QuakeEvent>):List<QuakePeriod> {
     val relevant=events.filter {it.groupId==roster.groupId};relevant.forEach {it.validate(roster)}
-    val reports=reportsFor(roster,relevant).sortedWith(compareBy<QuakeEvent> {it.operatedAt}.thenBy {it.eventId})
+    val receipts=relevant.filter {it.action==QuakeAction.EEW}.groupBy {it.targetId}.values.map {copies->
+        val first=copies.minWith(compareBy<QuakeEvent> {it.operatedAt}.thenBy {it.eventId})
+        val end=relevant.filter {it.action==QuakeAction.END && !it.training && roster.memberForDevice(it.actorDeviceId).role==MemberRole.ADMIN && (it.targetId==first.targetId || first.targetId in it.endedIncidentIds)}.minOfOrNull {it.operatedAt}
+        first.copy(operatedAt=minOf(first.operatedAt,end?:Long.MAX_VALUE))
+    }
+    val trainingStarts=relevant.filter {it.action==QuakeAction.TRAINING_START}
+    val reports=(reportsFor(roster,relevant)+receipts+trainingStarts).sortedWith(compareBy<QuakeEvent> {it.operatedAt}.thenBy {it.eventId})
     val byId=reports.associateBy {it.eventId}
-    val forms=relevant.mapNotNull {proof(roster,relevant,it)}.sortedWith(compareBy<QuakeFormation> {it.firstReportedAt}.thenBy {it.incidentId}.thenBy {it.reportIds.joinToString()})
+    val forms=(relevant.mapNotNull {proof(roster,relevant,it)}+receipts.map {QuakeFormation(roster.groupId,requireNotNull(it.targetId),it.operatedAt,false,listOf(it.eventId))}+trainingStarts.map {QuakeFormation(roster.groupId,it.eventId,it.operatedAt,true,listOf(it.eventId))}).sortedWith(compareBy<QuakeFormation> {it.firstReportedAt}.thenBy {it.incidentId}.thenBy {it.reportIds.joinToString()})
     return listOf(false,true).flatMap {training->
         val periods=mutableListOf<QuakePeriod>();var after=-1L
         while(true) {
@@ -71,18 +89,19 @@ fun formationCandidates(roster:MemberRoster,events:List<QuakeEvent>):List<QuakeF
         }==true
     }.mapNotNull {it.targetId}.toSet()
     return quakePeriods(roster,events).filter {!it.closed&&it.forms.isEmpty()}.flatMap {period->
-        val available=period.reports.filter {it.eventId !in cancelled}
+        val available=period.reports.filter {it.action==QuakeAction.REPORT && it.eventId !in cancelled}
         pendingEarthquakeGroups(available.map {EarthquakeReport(it.eventId,it.groupId,roster.memberForDevice(it.actorDeviceId).memberId,it.operatedAt,it.training)},roster.groupId,roster.members.map {it.memberId}.toSet(),period.training)
             .filter {it.hasEnoughReports}.map {group->
                 val evidence=group.reportIds.map {byId.getValue(it)}.distinctBy {roster.memberForDevice(it.actorDeviceId).memberId}.take(group.requiredReporters)
-                QuakeFormation(roster.groupId,evidence.first().eventId,group.firstReportedAt,period.training,evidence.map {it.eventId})
+                QuakeFormation(roster.groupId,evidence.first().eventId,group.firstReportedAt,period.training,evidence.map {it.eventId},roster.revision)
             }
     }
 }
 fun validateQuakeCommand(roster:MemberRoster,events:List<QuakeEvent>,event:QuakeEvent) {
     event.validate(roster)
     when(event.action) {
-        QuakeAction.REPORT -> Unit
+        QuakeAction.REPORT,QuakeAction.EEW -> Unit
+        QuakeAction.TRAINING_START -> require(quakeStates(roster,events).none {!it.closed&&it.formation.training}) {"開始中の訓練を終了してから新しい訓練を開始してください"}
         QuakeAction.CANCEL -> {
             val report=requireNotNull(events.find {it.eventId==event.targetId && it.groupId==event.groupId && it.action==QuakeAction.REPORT}) {"取り消す報告がありません"}
             require(report.training==event.training && roster.memberForDevice(report.actorDeviceId).memberId==roster.memberForDevice(event.actorDeviceId).memberId) {"自分の報告だけ取り消せます"}

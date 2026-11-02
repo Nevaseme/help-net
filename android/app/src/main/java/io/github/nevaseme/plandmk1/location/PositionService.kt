@@ -40,7 +40,7 @@ class PositionService : Service() {
         val session = PositionRecording(scope, source, { fix ->
             check(app.position.current(requested) && app.installation.group.value == group)
             app.store.recordOwnPosition(group, app.installation.localId, fix).also {saved->
-                if(saved) {app.sharing.changed();app.lab.changed()}
+                if(saved) {app.recordsChanged()}
             }
         })
         recording = session

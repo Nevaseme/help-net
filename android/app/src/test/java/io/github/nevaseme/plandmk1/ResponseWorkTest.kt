@@ -4,8 +4,41 @@ import io.github.nevaseme.plandmk1.core.*
 import org.junit.Assert.*
 import org.junit.Test
 import java.util.UUID
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 class ResponseWorkTest {
+    @Test fun reportCancellationAndRestoreKeepIdentityAuthorizationAndHistory() {
+        val reportId=id();val root=event(b,ResponseChange.Report(reportId,"道路",35.0,139.0,"倒木",regionIds=listOf("north")),eventId=reportId)
+        val cancel=event(b,(root.change as ResponseChange.Report).copy(cancelled=true,cancelReason="重複を確認"),listOf(reportId))
+        validateResponseCommand(roster,listOf(root),cancel)
+        try {validateResponseCommand(roster,listOf(root),cancel.copy(actorDeviceId=c));fail("unauthorized cancellation")}catch(_:IllegalArgumentException){}
+        try {validateResponseShape(roster,cancel.copy(change=(cancel.change as ResponseChange.Report).copy(cancelReason=" ")));fail("reason required")}catch(_:IllegalArgumentException){}
+        try {validateResponseCommand(roster,listOf(root),cancel.copy(change=(cancel.change as ResponseChange.Report).copy(reportId=id())));fail("stable ID")}catch(_:IllegalArgumentException){}
+        val restore=event(a,(cancel.change as ResponseChange.Report).copy(cancelled=false,cancelReason=""),listOf(cancel.eventId))
+        validateResponseCommand(roster,listOf(root,cancel),restore)
+        assertEquals(listOf(restore),responseHeads(roster,listOf(restore,cancel,root)))
+        assertEquals(reportId,(restore.change as ResponseChange.Report).reportId)
+    }
+    @Test fun newOptionalReportDefaultsStayAbsentEvenWithEncodeDefaultsEnabled() {
+        val report=event(b,ResponseChange.Report(id(),"道路",35.0,139.0,"倒木"))
+        val json=Json {encodeDefaults=true}.encodeToString(report)
+        assertFalse(json.contains("regionIds"));assertFalse(json.contains("cancelled"));assertFalse(json.contains("cancelReason"))
+        val changed=report.copy(change=(report.change as ResponseChange.Report).copy(regionIds=listOf("north"),cancelled=true,cancelReason="誤報"))
+        val encoded=Json.encodeToString(changed)
+        assertTrue(encoded.contains("regionIds"));assertTrue(encoded.contains("cancelled"));assertEquals(changed,Json.decodeFromString<ResponseEvent>(encoded))
+        try {validateResponseShape(roster,changed.copy(change=(changed.change as ResponseChange.Report).copy(regionIds=listOf("north","north"))));fail("duplicate region")}catch(_:IllegalArgumentException){}
+    }
+    @Test fun startWorkPlansSelfAssignmentAndOnlyUnambiguousUnstartedProgress() {
+        val planned=event(b,ResponseChange.Progress(person,WorkStatus.PLANNED,"翌朝確認"))
+        val changes=startWorkChanges(roster,listOf(planned),b,person)
+        assertEquals(2,changes.size);assertEquals(ResponseChange.Assignment(person,b,true),changes[0].change)
+        assertEquals(ResponseChange.Progress(person,WorkStatus.IN_PROGRESS,""),changes[1].change);assertEquals(listOf(planned.eventId),changes[1].replaces)
+        val assigned=event(b,ResponseChange.Assignment(person,b,true));val done=event(c,ResponseChange.Progress(person,WorkStatus.DONE,"完了"))
+        assertTrue(startWorkChanges(roster,listOf(assigned,done),b,person).isEmpty())
+        val conflict=startWorkChanges(roster,listOf(planned,done),b,person)
+        assertEquals(1,conflict.size);assertTrue(conflict.single().change is ResponseChange.Assignment)
+    }
     @Test fun recordMustFitExistingTransportBeforeItIsSaved() {
         val tooLarge=event(a,ResponseChange.Report(id(),"道路",35.0,139.0,"あ".repeat(9000)))
         try {validateResponseShape(roster,tooLarge);fail("oversized")}catch(_:IllegalArgumentException){}

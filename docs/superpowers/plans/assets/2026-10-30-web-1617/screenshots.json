@@ -1,0 +1,225 @@
+{
+  "version": "1.6.17",
+  "date": "2026-10-30",
+  "url": "https://nevaseme.github.io/safety_confirm/?demo=language&v=38#response-language-demo",
+  "sourceCommit": "aee4413cc8bf5a551b99e7a6a2586c79bea94b6f",
+  "note": "公開デモを実操作した画面。全て架空データ。経過時計は進行する。",
+  "screenshots": [
+    {
+      "file": "01-map-ja.jpg",
+      "state": "一般住民・東町内会・3分経過後",
+      "viewport": {
+        "width": 440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "02-menu-ja.jpg",
+      "state": "メニュー",
+      "viewport": {
+        "width": 440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "03-settings-ja.jpg",
+      "state": "日本語の言語設定",
+      "viewport": {
+        "width": 440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "04-settings-en.jpg",
+      "state": "英語の言語設定",
+      "viewport": {
+        "width": 440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "05-people-ja.jpg",
+      "state": "人物一覧・省略なし",
+      "viewport": {
+        "width": 440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "06-sos-known-ja.jpg",
+      "state": "SOS・位置あり・住所非表示",
+      "viewport": {
+        "width": 440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "07-no-response-known-ja.jpg",
+      "state": "応答なし・位置あり・3分後",
+      "viewport": {
+        "width": 440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "08-building-ja.jpg",
+      "state": "建物詳細・建築年",
+      "viewport": {
+        "width": 440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "09-no-response-unknown-ja.jpg",
+      "state": "応答なし・位置不明・3分後",
+      "viewport": {
+        "width": 440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "10-response-ja.jpg",
+      "state": "対応一覧・すべて",
+      "viewport": {
+        "width": 440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "11-report-detail-ja.jpg",
+      "state": "他の担当者がいる通報・注意と資材不足",
+      "viewport": {
+        "width": 440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "12-progress-ja.jpg",
+      "state": "対応状況フォーム",
+      "viewport": {
+        "width": 440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "13-material-ja.jpg",
+      "state": "資材要請フォーム",
+      "viewport": {
+        "width": 440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "14-report-new-ja.jpg",
+      "state": "通報を追加",
+      "viewport": {
+        "width": 440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "15-area-summary-ja.jpg",
+      "state": "地域別通報件数と種類",
+      "viewport": {
+        "width": 440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "16-town-summary-ja.jpg",
+      "state": "中央町内会・要約・不足の有無",
+      "viewport": {
+        "width": 440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "17-town-details-ja.jpg",
+      "state": "中央町内会・資材品目と不足数",
+      "viewport": {
+        "width": 440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "18-my-status-ja.jpg",
+      "state": "自分の安否",
+      "viewport": {
+        "width": 440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "19-response-en.jpg",
+      "state": "英語・対応一覧",
+      "viewport": {
+        "width": 440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "20-progress-en.jpg",
+      "state": "英語・4段階の対応状況",
+      "viewport": {
+        "width": 440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "21-no-response-en.jpg",
+      "state": "英語・応答なし・住所と昼間の場所",
+      "viewport": {
+        "width": 440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "22-municipal-map-en.jpg",
+      "state": "自治体職員・市全域・英語",
+      "viewport": {
+        "width": 440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "23-municipal-statistics-en.jpg",
+      "state": "自治体職員・統計のみ・英語",
+      "viewport": {
+        "width": 440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "24-waiting-map-ja.jpg",
+      "state": "開始3分未満・一般住民・東町内会・応答なし匿名",
+      "viewport": {
+        "width": 440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "25-waiting-notice-ja.jpg",
+      "state": "3分未満・個人情報の制限案内",
+      "viewport": {
+        "width": 440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "26-preview-settings-ja.jpg",
+      "state": "デモ専用・役割／町内会／時計設定",
+      "viewport": {
+        "width": 440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "27-map-legend-ja.jpg",
+      "state": "凡例・マーカーと観測アイコン",
+      "viewport": {
+        "width": 440,
+        "height": 1000
+      }
+    }
+  ]
+}

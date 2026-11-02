@@ -76,8 +76,10 @@ data class PlaceRow(val groupId: String,val eventId: String,val payload: String)
     @Insert(onConflict=OnConflictStrategy.ABORT) suspend fun put(row: PlaceRow)
 }
 
-@Database(entities = [ResidentRow::class, CareEventRow::class, IncidentRow::class, PlaceRow::class, PhonePositionRow::class, SosMemoRow::class, RosterRow::class, QuakeRow::class, ResponseRow::class], version = 7, exportSchema = true)
+@Database(entities = [ResidentRow::class, CareEventRow::class, IncidentRow::class, PlaceRow::class, PhonePositionRow::class, SosMemoRow::class, RosterRow::class, QuakeRow::class, ResponseRow::class, RelayProofRow::class, DeviceRecordRow::class], version = 9, exportSchema = true)
 abstract class PlanDatabase : RoomDatabase() {
+    abstract fun deviceRecords(): DeviceRecordDao
+    abstract fun relayProofs(): RelayProofDao
     abstract fun responses(): ResponseDao
     abstract fun quakes(): QuakeDao
     abstract fun localSituation(): LocalSituationDao
@@ -86,6 +88,12 @@ abstract class PlanDatabase : RoomDatabase() {
     abstract fun residents(): ResidentDao
     abstract fun careEvents(): CareEventDao
     companion object {
+        val MIGRATION_8_9 = object : Migration(8,9) {override fun migrate(db:SupportSQLiteDatabase) {db.execSQL("CREATE TABLE IF NOT EXISTS `device_records` (`groupId` TEXT NOT NULL, `eventId` TEXT NOT NULL, `payload` TEXT NOT NULL, PRIMARY KEY(`groupId`, `eventId`))")}}
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS `relay_proofs` (`groupId` TEXT NOT NULL, `identity` TEXT NOT NULL, `revision` INTEGER NOT NULL, `bodyHash` TEXT NOT NULL, `payload` TEXT NOT NULL, PRIMARY KEY(`groupId`, `identity`))")
+            }
+        }
         val MIGRATION_6_7 = object : Migration(6, 7) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("CREATE TABLE IF NOT EXISTS `response_events` (`groupId` TEXT NOT NULL, `eventId` TEXT NOT NULL, `payload` TEXT NOT NULL, PRIMARY KEY(`groupId`, `eventId`))")
@@ -120,6 +128,7 @@ abstract class PlanDatabase : RoomDatabase() {
 }
 
 class RoomRecordStore(private val db: PlanDatabase,private val localDeviceId:String?=null) : RecordStore {
+    override suspend fun rosterRevision(groupId:String)=QuakeStore(db).roster(groupId)?.revision?:0
     override suspend fun quakeEvents(groupId:String)=QuakeStore(db).events(groupId)
     override suspend fun responseEvents(groupId:String)=ResponseStore(db).events(groupId)
     override suspend fun mergeQuake(event:QuakeEvent):Boolean=db.withTransaction {
@@ -169,11 +178,15 @@ class RoomRecordStore(private val db: PlanDatabase,private val localDeviceId:Str
         }
     }
 
-    suspend fun answerWithMemo(event: IncidentEvent, memo: String): IncidentEvent = db.withTransaction {
+    suspend fun answerWithMemo(event: IncidentEvent, memo: String, venue: io.github.nevaseme.plandmk1.demo.VenueSession? = null): IncidentEvent = db.withTransaction {
         require(event.kind == IncidentKind.ANSWER)
         require(memo.length <= SOS_MEMO_LIMIT) { "SOSメモは${SOS_MEMO_LIMIT}文字以内で入力してください" }
         require(event.safety == Safety.SOS || memo.isEmpty())
-        require(get(event.groupId, event.authorId) != null) { "先に自分の情報を登録してください" }
+        val venueMember=venue?.takeIf {it.active(event.groupId,event.incidentId)}?.let {session->
+            session.validate(checkNotNull(QuakeStore(db).roster(event.groupId)))
+            session.placements.any {it.deviceId==event.authorId&&it.name==event.authorName}
+        }==true
+        require(get(event.groupId, event.authorId) != null || venueMember) { "先に自分の情報を登録してください" }
         appendIncident(event).also { answer ->
             if (answer.safety == Safety.SOS) saveSosMemo(answer.groupId, answer.incidentId, answer.authorId, answer.eventId, memo, answer.createdAt)
         }
@@ -191,7 +204,7 @@ class RoomRecordStore(private val db: PlanDatabase,private val localDeviceId:Str
         }
     }
     suspend fun appendPlace(event: PlaceEvent): PlaceEvent=db.withTransaction {
-        require(get(event.groupId,event.authorId)!=null) {"先に自分の情報を登録してください"}
+        require(get(event.groupId,event.authorId)!=null||QuakeStore(db).roster(event.groupId)?.members?.any {event.authorId in it.deviceIds}==true) {"先にグループへ参加してください"}
         if(event.kind==PlaceKind.CARE)requireActiveManagedIncident(event.groupId,checkNotNull(event.incidentId))
         val quakes=QuakeStore(db);val roster=quakes.roster(event.groupId);val history=quakes.events(event.groupId)
         fun canonical(id:String?)=canonicalIncidentId(roster,history,id)
@@ -243,6 +256,18 @@ class RoomRecordStore(private val db: PlanDatabase,private val localDeviceId:Str
         val previous = db.residents().get(record.groupId, record.originId)
         if (previous != null && previous.revision >= record.revision) false
         else { db.residents().put(ResidentRow.from(record)); true }
+    }
+    suspend fun assignOwnHome(event:PlaceEvent):PlaceEvent=db.withTransaction {
+        if(event.buildingId!=null){val b=placeBuildings(places(event.groupId)).find{it.buildingId==event.buildingId}?:error("建物が未受信です")
+            val room=placeUnits(places(event.groupId),b.buildingId!!).find{it.unitId==event.unitId}?.label.orEmpty()
+            updateOwn(event.groupId,event.authorId){old->checkNotNull(old).copy(latitude=b.latitude!!,longitude=b.longitude!!,floor="",room=room)}
+        };appendPlace(event)
+    }
+    suspend fun updateOwnWithHome(candidate:Resident,reference:BuildingLocationReference):Resident=db.withTransaction {
+        candidate.validate();reference.validate()
+        val profile=updateOwn(candidate.groupId,candidate.originId){old->candidate.copy(safety=old?.safety?:Safety.UNREPORTED)}
+        homeRegistrationEvents(profile,reference,places(profile.groupId),System.currentTimeMillis()).forEach {mergePlace(it)}
+        profile
     }
     suspend fun updateOwn(group: String, id: String, transform: (Resident?) -> Resident): Resident = db.withTransaction {
         val previous = get(group, id)

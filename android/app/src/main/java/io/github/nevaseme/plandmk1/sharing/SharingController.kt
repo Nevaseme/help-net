@@ -15,6 +15,8 @@ class SharingController(private val context: Context) {
     val state = mutable.asStateFlow()
     private var generation = 0L
     private var session: SharingSession? = null
+    private var automatic = false
+    private val prefs = context.getSharedPreferences("nearby-auto", Context.MODE_PRIVATE)
     var foreground = false
         private set
 
@@ -22,6 +24,8 @@ class SharingController(private val context: Context) {
         if (mutable.value.active) return
         if (!foreground) { error("アプリを開いてから共有を開始してください"); return }
         val token = ++generation
+        automatic = io.github.nevaseme.plandmk1.cloud.CloudSettings(context).nearbyKey(groupId) != null
+        if (automatic) prefs.edit().putString("group",groupId).apply()
         mutable.value = NearbyState(active = true, starting = true)
         try {
             ContextCompat.startForegroundService(context, Intent(context, SharingService::class.java)
@@ -29,6 +33,7 @@ class SharingController(private val context: Context) {
         } catch (e: Exception) { stop("共有を開始できません。権限や無線設定を確認してください：${e.localizedMessage.orEmpty()}") }
     }
     fun stop(reason: String? = null) {
+        prefs.edit().remove("group").apply()
         generation++
         val previous = session; session = null
         previous?.stop()
@@ -40,15 +45,21 @@ class SharingController(private val context: Context) {
     fun setForeground(visible: Boolean) {
         foreground = visible
         session?.setForeground(visible)
-        if (!visible && session == null && mutable.value.active) stop(SharingSession.NO_PEERS)
+        if (!automatic && !visible && session == null && mutable.value.active) stop(SharingSession.NO_PEERS)
     }
     fun connect(peer: Peer) { if (foreground) session?.connect(peer) }
     fun verify(id: String, accept: Boolean) { if (foreground) session?.verify(id, accept) }
     fun changed() { session?.changed() }
     fun error(message: String) { mutable.update { it.copy(error = message) } }
     internal fun isCurrent(token: Long) = generation == token && mutable.value.active
+    internal fun restoreAutomatic(group: String): Long? {
+        if (prefs.getString("group",null)!=group || io.github.nevaseme.plandmk1.cloud.CloudSettings(context).nearbyKey(group)==null) return null
+        automatic=true
+        mutable.value=NearbyState(active=true,starting=true)
+        return ++generation
+    }
     internal fun attach(token: Long, value: SharingSession): Boolean {
-        if (!isCurrent(token) || !foreground) return false
+        if (!isCurrent(token) || (!automatic && !foreground)) return false
         session = value; return true
     }
     internal fun publish(token: Long, value: NearbyState) { if (generation == token) mutable.value = value }

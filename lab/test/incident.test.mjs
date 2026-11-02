@@ -20,7 +20,7 @@ test('pending answer keeps clicked incident even when selection changes during p
  const {appendScopedIncident}=await import('../web/incidents.mjs');
  assert.equal(typeof appendScopedIncident,'function');
  let release,saved;const scope={groupId:'incident-test',incidentId:'clicked-A',authorId:A};
- const db={get:()=>new Promise(resolve=>{release=resolve;}),appendIncident:e=>{saved=e;return e;}};
+ const db={read:async()=>undefined,get:()=>new Promise(resolve=>{release=resolve;}),appendIncident:e=>{saved=e;return e;}};
  const pending=appendScopedIncident(db,scope,'ANSWER',{safety:'SOS'});
  scope.incidentId='received-B';scope.groupId='other';release({name:'訓練者'});await pending;
  assert.equal(saved.incidentId,'clicked-A');assert.equal(saved.groupId,'incident-test');assert.equal(saved.safety,'SOS');

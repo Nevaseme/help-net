@@ -18,11 +18,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-data class Peer(val id: String, val name: String)
+data class Peer(val id: String, val name: String, val deviceId: String? = null)
 data class Verification(val id: String, val name: String, val code: String)
 data class NearbyState(
     val active: Boolean = false,
@@ -53,6 +55,14 @@ class NearbyTransport(
     private val connectionOwners = mutableMapOf<String, Long>()
     private var nextListener = 0L
     private var nativeOwner = 0L
+    private var automatic: GroupLink? = null
+    private var topology: BoundedNearbyTopology? = null
+    private var retryJob: Job? = null
+    private val devices = mutableMapOf<String, String>()
+    private val challenges = mutableMapOf<String, ByteArray>()
+    private fun now() = android.os.SystemClock.elapsedRealtime()
+    private val canSearch get() = visible || automatic != null
+    override fun configureAutomatic(link: GroupLink) { check(!mutable.value.active); automatic = link }
     override var onConnected: suspend (String) -> Unit = {}
     override var onDisconnected: (String) -> Unit = {}
     override var onBytes: (String, ByteArray) -> Unit = { _, _ -> }
@@ -66,17 +76,25 @@ class NearbyTransport(
         if (!available()) {
             error("Google Play開発者サービスを更新・有効化してください"); return
         }
-        endpointName = name.take(60)
+        endpointName = automatic?.endpoint(name) ?: name.take(60)
+        topology = automatic?.let { BoundedNearbyTopology(it.device) }
         nativeOwner = ++latestOwner
         ++generation
         mutable.value = NearbyState(active = true)
         resumeSearch()
+        retryJob?.cancel()
+        if (automatic != null) retryJob = scope.launch {
+            while (isActive && mutable.value.active) {
+                delay(BoundedNearbyTopology.POLL_INTERVAL_MS)
+                reconcileAutomatic()
+            }
+        }
     }
 
-    private fun validSearch(token: Int, epoch: Int) = token == generation && epoch == searchEpoch && visible && mutable.value.active
+    private fun validSearch(token: Int, epoch: Int) = token == generation && epoch == searchEpoch && canSearch && mutable.value.active
 
     private fun resumeSearch() {
-        if (!mutable.value.active || !visible || mutable.value.discovering) return
+        if (!mutable.value.active || !canSearch || mutable.value.discovering) return
         val token = generation
         val epoch = ++searchEpoch
         val owner = nativeOwner
@@ -86,10 +104,10 @@ class NearbyTransport(
             previous?.join()
             if (!validSearch(token, epoch)) return@launch
             try {
-                client.startAdvertising(endpointName, SERVICE_ID, lifecycle(token), AdvertisingOptions.Builder().setStrategy(Strategy.P2P_CLUSTER).build())
+                client.startAdvertising(endpointName, automatic?.serviceId ?: SERVICE_ID, lifecycle(token), AdvertisingOptions.Builder().setStrategy(Strategy.P2P_CLUSTER).build())
                     .addOnSuccessListener { if (owner == latestOwner && !validSearch(token, epoch)) client.stopAdvertising() }.awaitResult()
                 if (!validSearch(token, epoch)) return@launch
-                client.startDiscovery(SERVICE_ID, discovery(token, epoch), DiscoveryOptions.Builder().setStrategy(Strategy.P2P_CLUSTER).build())
+                client.startDiscovery(automatic?.serviceId ?: SERVICE_ID, discovery(token, epoch), DiscoveryOptions.Builder().setStrategy(Strategy.P2P_CLUSTER).build())
                     .addOnSuccessListener { if (owner == latestOwner && !validSearch(token, epoch)) client.stopDiscovery() }.awaitResult()
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
@@ -110,6 +128,7 @@ class NearbyTransport(
     override fun setVisible(visible: Boolean) {
         if (this.visible == visible) return
         this.visible = visible
+        if (automatic != null) return
         if (visible) { resumeSearch(); return }
         searchEpoch++
         client.stopAdvertising(); client.stopDiscovery()
@@ -123,6 +142,8 @@ class NearbyTransport(
     override fun stop() = stopWithReason(null)
     private fun stopWithReason(reason: String?, showPlayServicesSettings: Boolean = false) {
         generation++
+        retryJob?.cancel(); retryJob = null
+        devices.clear(); challenges.clear(); topology = null
         searchEpoch++; accepted.clear(); connectionOwners.clear()
         runCatching { client.stopAdvertising() }; runCatching { client.stopDiscovery() }; runCatching { client.stopAllEndpoints() }
         mutable.value.connected.forEach(onDisconnected)
@@ -130,13 +151,19 @@ class NearbyTransport(
     }
 
     override fun connect(peer: Peer) {
-        if (!visible || !mutable.value.active || peer.id in mutable.value.connecting || peer.id in mutable.value.connected) return
+        if (automatic != null) { reconcileAutomatic(); return }
+        requestConnection(peer)
+    }
+
+    private fun requestConnection(peer: Peer) {
+        if (!canSearch || !mutable.value.active || peer.id in mutable.value.connecting || peer.id in mutable.value.connected) return
         val token = generation
         mutable.update { it.copy(connecting = it.connecting + peer.id) }
         val callback = lifecycle(token, peer.id)
         val owner = connectionOwners[peer.id]
         client.requestConnection(endpointName, peer.id, callback).addOnFailureListener {
             if (generation == token && connectionOwners[peer.id] == owner) {
+                if (automatic != null) { failAutomatic(peer.id); return@addOnFailureListener }
                 connectionOwners.remove(peer.id)
                 mutable.update { s -> s.copy(connecting = s.connecting - peer.id) }
                 error("接続できませんでした。相手の共有状態を確認して再試行してください")
@@ -177,10 +204,18 @@ class NearbyTransport(
     private fun discovery(token: Int, epoch: Int) = object : EndpointDiscoveryCallback() {
         override fun onEndpointFound(id: String, info: DiscoveredEndpointInfo) {
             if (!validSearch(token, epoch)) return
-            mutable.update { it.copy(peers = it.peers.filterNot { p -> p.id == id } + Peer(id, info.endpointName.take(60))) }
+            val identity = automatic?.peer(info.endpointName)
+            if (automatic != null && identity == null) return
+            identity?.let { devices[id] = it.first; topology?.found(id, it.first, now()) }
+            val peer = Peer(id, identity?.second ?: info.endpointName.take(60), identity?.first)
+            mutable.update { it.copy(peers = it.peers.filterNot { p -> p.id == id } + peer) }
+            reconcileAutomatic()
         }
         override fun onEndpointLost(id: String) {
-            if (validSearch(token, epoch)) mutable.update { it.copy(peers = it.peers.filterNot { p -> p.id == id && id !in it.connected }) }
+            if (!validSearch(token, epoch)) return
+            topology?.lost(id, now())
+            mutable.update { it.copy(peers = it.peers.filterNot { p -> p.id == id && id !in it.connected && id !in it.connecting }) }
+            if (id !in mutable.value.connected && id !in mutable.value.connecting) devices.remove(id)
         }
     }
 
@@ -191,11 +226,32 @@ class NearbyTransport(
       return object : ConnectionLifecycleCallback() {
         override fun onConnectionInitiated(id: String, info: ConnectionInfo) {
             if (token != generation) return
+            if (requestedId != null && connectionOwners[id] != owner) return
             if (!validSearch(token, epoch)) {
                 if (connectionOwners[id] == null) client.rejectConnection(id)
                 return
             }
             if (id in mutable.value.connected || (connectionOwners[id] != null && connectionOwners[id] != owner)) return
+            val link = automatic
+            if (link != null) {
+                val identity = link.peer(info.endpointName)
+                val raw = info.rawAuthenticationToken
+                if (identity == null || raw == null || raw.isEmpty()) { client.rejectConnection(id); return }
+                devices[id] = identity.first
+                mutable.update { it.copy(peers = it.peers.filterNot { p -> p.id == id } + Peer(id, identity.second, identity.first)) }
+                if (topology?.accept(id, identity.first, now()) != true) {
+                    client.rejectConnection(id)
+                    if (id in mutable.value.connecting) failAutomatic(id)
+                    return
+                }
+                devices[id] = identity.first; challenges[id] = raw
+                connectionOwners[id] = owner; accepted.add(id)
+                mutable.update { it.copy(peers=it.peers.filterNot { p->p.id==id }+Peer(id,identity.second,identity.first),connecting=it.connecting+id) }
+                client.acceptConnection(id,payload(token,owner)).addOnFailureListener {
+                    if (generation==token && connectionOwners[id]==owner) failAutomatic(id)
+                }
+                return
+            }
             connectionOwners[id] = owner
             mutable.update { s -> s.copy(
                 peers = s.peers.filterNot { it.id == id } + Peer(id, info.endpointName.take(60)),
@@ -205,10 +261,20 @@ class NearbyTransport(
         }
         override fun onConnectionResult(id: String, result: ConnectionResolution) {
             if (token != generation || connectionOwners[id] != owner) return
-            if (result.status.isSuccess && (!visible || id !in accepted)) {
+            if (result.status.isSuccess && (!canSearch || id !in accepted)) {
                 client.disconnectFromEndpoint(id)
                 connectionOwners.remove(id); accepted.remove(id)
                 mutable.update { it.copy(connecting = it.connecting - id, verifications = it.verifications.filterNot { v -> v.id == id }) }
+                return
+            }
+            if (automatic != null) {
+                if (!result.status.isSuccess) { failAutomatic(id); return }
+                val raw=challenges[id] ?: return failAutomatic(id)
+                val remote=devices[id] ?: return failAutomatic(id)
+                val proof=automatic!!.proof(raw,automatic!!.device,remote)
+                client.sendPayload(id,Payload.fromBytes(proof)).addOnFailureListener {
+                    if (generation==token && connectionOwners[id]==owner) failAutomatic(id)
+                }
                 return
             }
             mutable.update { it.copy(connecting = it.connecting - id, verifications = it.verifications.filterNot { v -> v.id == id }) }
@@ -222,6 +288,7 @@ class NearbyTransport(
         }
         override fun onDisconnected(id: String) {
             if (token != generation || connectionOwners[id] != owner) return
+            if (automatic != null) { failAutomatic(id); return }
             connectionOwners.remove(id)
             accepted.remove(id)
             mutable.update { it.copy(connected = it.connected - id, connecting = it.connecting - id, verifications = it.verifications.filterNot { v -> v.id == id }) }
@@ -232,6 +299,16 @@ class NearbyTransport(
 
     private fun payload(token: Int, owner: Long) = object : PayloadCallback() {
         override fun onPayloadReceived(id: String, payload: Payload) {
+            if (generation == token && connectionOwners[id] == owner && automatic != null && id !in mutable.value.connected) {
+                val bytes=payload.asBytes()
+                val raw=challenges[id];val remote=devices[id]
+                if (bytes==null || raw==null || remote==null || !automatic!!.verifies(raw,remote,bytes)) { failAutomatic(id); return }
+                if (topology?.established(id) != true) { failAutomatic(id); return }
+                challenges.remove(id)
+                mutable.update { it.copy(connected=it.connected+id,connecting=it.connecting-id,error=null) }
+                scope.launch { if (generation==token && connectionOwners[id]==owner) onConnected(id) }
+                return
+            }
             if (generation == token && connectionOwners[id] == owner && id in mutable.value.connected && payload.type == Payload.Type.BYTES) {
                 payload.asBytes()?.let { if (it.size <= 24_000) onBytes(id, it) }
             }
@@ -239,6 +316,30 @@ class NearbyTransport(
         override fun onPayloadTransferUpdate(id: String, update: PayloadTransferUpdate) {
             if (generation == token && connectionOwners[id] == owner && update.status == PayloadTransferUpdate.Status.FAILURE) error("転送が中断しました。共有を再接続すると再送されます")
         }
+    }
+
+    private fun reconcileAutomatic() {
+        if (!mutable.value.active) return
+        val plan = topology?.poll(now()) ?: return
+        plan.disconnect.forEach { dropAutomatic(it) }
+        plan.connect?.let { id ->
+            val peer = mutable.value.peers.firstOrNull { it.id == id }
+            if (peer != null) requestConnection(peer) else topology?.failed(id, now())
+        }
+    }
+    private fun failAutomatic(id: String) {
+        topology?.failed(id, now())
+        dropAutomatic(id)
+    }
+    private fun dropAutomatic(id: String) {
+        val wasConnected=id in mutable.value.connected
+        connectionOwners.remove(id);accepted.remove(id);challenges.remove(id)
+        client.disconnectFromEndpoint(id)
+        mutable.update { it.copy(connected=it.connected-id,connecting=it.connecting-id,
+            peers=if (topology?.isVisible(id) == true) it.peers else it.peers.filterNot { p -> p.id == id },
+            verifications=it.verifications.filterNot { v->v.id==id }) }
+        if (topology?.isVisible(id) != true) devices.remove(id)
+        if (wasConnected) onDisconnected(id)
     }
 
     companion object {

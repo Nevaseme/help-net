@@ -7,12 +7,17 @@ import kotlinx.serialization.json.Json
 
 @Serializable enum class TargetKind { PERSON, REPORT }
 @Serializable data class ResponseTarget(val kind:TargetKind,val id:String)
-@Serializable enum class WorkStatus { UNASSIGNED, IN_PROGRESS, DONE }
+@Serializable enum class WorkStatus { UNASSIGNED, PLANNED, IN_PROGRESS, DONE }
 @Serializable enum class Urgency { UNSET, LOW, MEDIUM, HIGH }
 @Serializable enum class ActivityState { UNSET, AVAILABLE, WORKING, UNAVAILABLE }
 
 @Serializable sealed class ResponseChange {
-    @Serializable @SerialName("REPORT") data class Report(val reportId:String,val category:String,val latitude:Double,val longitude:Double,val description:String):ResponseChange()
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @Serializable @SerialName("REPORT") data class Report(val reportId:String,val category:String,val latitude:Double,val longitude:Double,val description:String,
+        @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) val regionIds:List<String> = emptyList(),
+        @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) val cancelled:Boolean = false,
+        @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) val cancelReason:String = "",
+    ):ResponseChange()
     @Serializable @SerialName("ASSIGNMENT") data class Assignment(val target:ResponseTarget,val memberId:String,val active:Boolean):ResponseChange()
     @Serializable @SerialName("PROGRESS") data class Progress(val target:ResponseTarget,val status:WorkStatus,val result:String):ResponseChange()
     @Serializable @SerialName("PRIORITY") data class Priority(val target:ResponseTarget,val urgency:Urgency,val reason:String):ResponseChange()
@@ -55,7 +60,11 @@ fun validateResponseShape(roster:MemberRoster,event:ResponseEvent) {
     else require(event.incidentId?.let(recordIdPattern::matches)==true)
     event.change.target()?.let {require(recordIdPattern.matches(it.id))}
     when(val c=event.change) {
-        is ResponseChange.Report->require(c.category.isNotBlank()&&c.description.isNotBlank()&&c.latitude.isFinite()&&c.latitude in -85.0..85.0&&c.longitude.isFinite()&&c.longitude in -180.0..180.0)
+        is ResponseChange.Report->{
+            require(c.category.isNotBlank()&&c.description.isNotBlank()&&c.latitude.isFinite()&&c.latitude in -85.0..85.0&&c.longitude.isFinite()&&c.longitude in -180.0..180.0)
+            require(c.regionIds.distinct().size==c.regionIds.size&&c.regionIds.all {it.matches(Regex("[A-Za-z0-9_-]{1,80}"))}) {"地域IDを確認してください"}
+            require(!c.cancelled||c.cancelReason.isNotBlank()) {"取消理由を入力してください"}
+        }
         is ResponseChange.Assignment->require(roster.members.any {it.memberId==c.memberId}&&(c.memberId==roster.memberForDevice(event.actorDeviceId).memberId||roster.canCoordinate(event.actorDeviceId)))
         is ResponseChange.Progress->require(c.status!=WorkStatus.DONE || c.result.isNotBlank()) {"対応結果を入力してください"}
         is ResponseChange.Priority->{
@@ -65,6 +74,22 @@ fun validateResponseShape(roster:MemberRoster,event:ResponseEvent) {
         is ResponseChange.Material->require(recordIdPattern.matches(c.requestId)&&c.name.isNotBlank()&&c.unit.isNotBlank()&&c.needed.isFinite()&&c.arranged.isFinite()&&c.needed>=0&&c.arranged>=0)
         is ResponseChange.Availability->Unit
     }
+}
+
+data class StartWorkChange(val change:ResponseChange,val replaces:List<String>)
+/** One local command does not resolve concurrent progress or reopen completed work. */
+fun startWorkChanges(roster:MemberRoster,heads:List<ResponseEvent>,actorDeviceId:String,target:ResponseTarget):List<StartWorkChange> {
+    val member=roster.memberForDevice(actorDeviceId)
+    require(recordIdPattern.matches(target.id))
+    val relevant=heads.filter {it.change.target()==target}
+    val assignments=relevant.filter {(it.change as? ResponseChange.Assignment)?.memberId==member.memberId}
+    val progress=relevant.filter {it.change is ResponseChange.Progress}
+    val changes=mutableListOf<StartWorkChange>()
+    if(assignments.size!=1||(assignments.single().change as ResponseChange.Assignment).active.not())
+        changes+=StartWorkChange(ResponseChange.Assignment(target,member.memberId,true),assignments.map {it.eventId})
+    if(progress.isEmpty()||(progress.size==1&&(progress.single().change as ResponseChange.Progress).status in listOf(WorkStatus.UNASSIGNED,WorkStatus.PLANNED)))
+        changes+=StartWorkChange(ResponseChange.Progress(target,WorkStatus.IN_PROGRESS,""),progress.map {it.eventId})
+    return changes
 }
 
 private fun authorizeResponse(roster:MemberRoster,history:List<ResponseEvent>,event:ResponseEvent) {

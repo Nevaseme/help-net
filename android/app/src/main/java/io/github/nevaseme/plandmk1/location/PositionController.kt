@@ -55,7 +55,7 @@ class PositionController(private val context: Context) {
         recording?.stop(); recording = null
         mutable.value = PositionState()
         end?.invoke()
-        (context.applicationContext as? io.github.nevaseme.plandmk1.PlanDApplication)?.let {app->app.sharing.changed();app.lab.changed()}
+        (context.applicationContext as? io.github.nevaseme.plandmk1.PlanDApplication)?.let {app->app.recordsChanged()}
     }
     fun refresh() { recording?.refresh() }
     fun error(text: String) { mutable.value = mutable.value.copy(message = text) }

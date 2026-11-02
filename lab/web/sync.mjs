@@ -1,7 +1,9 @@
+import {homeEvents} from './home-registration.mjs';
 import {validateIncident,normalizeIncident,sameIncident,incidentView,incidentOptions} from './incidents.mjs';
 import {validatePlace,samePlace,preparePlace} from './places.mjs';
 import {validateLocal,newerLocal} from './local-situation.mjs';
 import {ManagedStore} from './managed-store.mjs';
+import {validateDeviceRecord} from './device-records.mjs';
 import {managedIncidentOptions,canonicalIncidentId} from './managed-records.mjs';
 export {incidentView,incidentOptions} from './incidents.mjs';
 const uuid = /^[0-9a-fA-F-]{36}$/;
@@ -32,10 +34,13 @@ export function currentEvents(events) {
 export class Store extends ManagedStore {
  constructor(db){super(db);this.name=db.name;}
  static open(name='pland-lab',factory=globalThis.indexedDB){return new Promise((resolve,reject)=>{
-  const request=factory.open(name,5);
-  request.onupgradeneeded=()=>{const db=request.result;for(const name of ["rosters","quakes","responses"])if(!db.objectStoreNames.contains(name))db.createObjectStore(name,{keyPath:name==="rosters"?"groupId":["groupId","eventId"]});if(!db.objectStoreNames.contains('positions'))db.createObjectStore('positions',{keyPath:['groupId','originId']});if(!db.objectStoreNames.contains('memos'))db.createObjectStore('memos',{keyPath:['groupId','answerId']});if(!db.objectStoreNames.contains('residents')){db.createObjectStore('residents',{keyPath:['groupId','originId']});db.createObjectStore('events',{keyPath:['groupId','eventId']});db.createObjectStore('meta');}if(!db.objectStoreNames.contains('incidents'))db.createObjectStore('incidents',{keyPath:['groupId','eventId']});if(!db.objectStoreNames.contains('places'))db.createObjectStore('places',{keyPath:['groupId','eventId']});};
+  const request=factory.open(name,6);
+  request.onupgradeneeded=()=>{const db=request.result;if(!db.objectStoreNames.contains("deviceRecords"))db.createObjectStore("deviceRecords",{keyPath:["groupId","eventId"]});for(const name of ["rosters","quakes","responses"])if(!db.objectStoreNames.contains(name))db.createObjectStore(name,{keyPath:name==="rosters"?"groupId":["groupId","eventId"]});if(!db.objectStoreNames.contains('positions'))db.createObjectStore('positions',{keyPath:['groupId','originId']});if(!db.objectStoreNames.contains('memos'))db.createObjectStore('memos',{keyPath:['groupId','answerId']});if(!db.objectStoreNames.contains('residents')){db.createObjectStore('residents',{keyPath:['groupId','originId']});db.createObjectStore('events',{keyPath:['groupId','eventId']});db.createObjectStore('meta');}if(!db.objectStoreNames.contains('incidents'))db.createObjectStore('incidents',{keyPath:['groupId','eventId']});if(!db.objectStoreNames.contains('places'))db.createObjectStore('places',{keyPath:['groupId','eventId']});};
   request.onsuccess=()=>{request.result.onversionchange=()=>request.result.close();resolve(new Store(request.result));};request.onerror=()=>reject(request.error);
  });}
+ async deviceRecords(group){return (await this.read('deviceRecords')).filter(r=>r.groupId===group);}
+ mergeDeviceRecord(input){const r=validateDeviceRecord(input);return this.update('deviceRecords',[r.groupId,r.eventId],old=>{if(old){if(JSON.stringify(stableDevice(old))!==JSON.stringify(stableDevice(r)))throw Error('同じ記録IDの内容が一致しません');return undefined;}return r;});}
+ async appendDeviceRecord(input){const known=(await this.deviceRecords(input.groupId)).filter(r=>r.authorId===input.authorId).reduce((n,r)=>Math.max(n,r.sequence),0);let sequence;await this.update('meta','device-sequence:'+input.groupId+':'+input.authorId,old=>sequence=Math.max(old||0,input.sequence||0,known)+1);const r={...input,eventId:crypto.randomUUID(),sequence,createdAt:Date.now()};await this.mergeDeviceRecord(r);return r;}
  async positions(group){return (await this.read('positions')).filter(r=>r.groupId===group);}
  async memos(group){return (await this.read('memos')).filter(r=>r.groupId===group);}
  savePosition(input){const r=validateLocal(input,true);return this.update('positions',[r.groupId,r.originId],old=>newerLocal(old,r,true));}
@@ -96,6 +101,12 @@ export class Store extends ManagedStore {
  });}
  merge(r){validateResident(r);return this.update('residents',[r.groupId,r.originId],old=>old&&old.revision>=r.revision?undefined:r);}
  async saveOwn(r){return this.update('residents',[r.groupId,r.originId],old=>validateResident({...r,revision:(old?.revision||0)+1,updatedAt:Date.now()}));}
+ saveProfileWithHome(r,home){return new Promise((resolve,reject)=>{
+  const tx=this.db.transaction(['residents','places','meta'],'readwrite'),residents=tx.objectStore('residents'),places=tx.objectStore('places');let problem,old,rows,ready=0;
+  const save=()=>{if(++ready!==2)return;try{const profile=validateResident({...r,safety:old?.safety||r.safety,revision:(old?.revision||0)+1,updatedAt:Date.now()});const events=homeEvents(profile,home,rows.filter(x=>x.groupId===r.groupId));residents.put(profile);for(const event of events)places.put(event);tx.objectStore('meta').put(r.groupId,'group');}catch(e){problem=e;tx.abort();}};
+  const a=residents.get([r.groupId,r.originId]);a.onsuccess=()=>{old=a.result;save();};const b=places.getAll();b.onsuccess=()=>{rows=b.result;save();};
+  tx.oncomplete=()=>resolve();tx.onabort=()=>reject(problem||tx.error||Error('保存が中断されました'));tx.onerror=()=>{};
+ });}
  saveProfile(r){return new Promise((resolve,reject)=>{
   const tx=this.db.transaction(['residents','meta'],'readwrite'),s=tx.objectStore('residents'),q=s.get([r.groupId,r.originId]);let problem;
   q.onsuccess=()=>{try{s.put(validateResident({...r,safety:q.result?.safety||r.safety,revision:(q.result?.revision||0)+1,updatedAt:Date.now()}));tx.objectStore('meta').put(r.groupId,'group');}catch(e){problem=e;tx.abort();}};
@@ -109,7 +120,9 @@ export class SyncEngine {
  disconnected(peer){this.peers.delete(peer);for(const key of this.pending.keys())if(key.startsWith(peer+'|'))this.pending.delete(key);}
  async changed(){this.trimStoppedPosition();for(const peer of this.peers)await this.guard(()=>this.summary(peer));}
  async guard(fn){try{await fn();}catch(e){this.onError(e.message||'同期に失敗しました');}}
- async emit(peer,m){const msg={version:1,groupId:this.group,entries:[],...m};require(new TextEncoder().encode(JSON.stringify(msg)).length<=24000,'通信データが大きすぎます');if(this.peers.has(peer))await this.send(peer,msg);}
+ async hasEew(){return (await this.store.quakeEvents?.(this.group)||[]).some(e=>e.action==='EEW');}
+ async hasTrainingStart(){return (await this.store.quakeEvents?.(this.group)||[]).some(e=>e.action==='TRAINING_START');}
+ async emit(peer,m){const msg={version:1,groupId:this.group,entries:[],...m};if(/^(QUAKE|RESPONSE|INCIDENT)_/.test(msg.type)){if(await this.hasTrainingStart())msg.version=Math.max(msg.version,9);else if((await this.store.roster?.(this.group))?.revision>0)msg.version=Math.max(msg.version,8);else if(await this.hasEew())msg.version=Math.max(msg.version,7);}const c=msg.response?.change;if(c?.status==='PLANNED'||['regionIds','cancelled','cancelReason'].some(key=>Object.hasOwn(c??{},key)))msg.version=10;if(msg.place?.locationReference)msg.version=msg.place.locationReference.searchReference?16:12;require(new TextEncoder().encode(JSON.stringify(msg)).length<=24000,'通信データが大きすぎます');if(this.peers.has(peer))await this.send(peer,msg);}
  trimStoppedPosition(){if(!this.allowOwnPosition())for(const key of this.pending.keys())if(key.endsWith('|POSITION|'+this.id))this.pending.delete(key);}
  async summary(peer){
   await this.journalSummary(peer,true);await this.journalSummary(peer,false);
@@ -130,10 +143,12 @@ export class SyncEngine {
    const raw=typeof message==='string'?message:JSON.stringify(message);if(new TextEncoder().encode(raw).length>24000)return;
    const m=JSON.parse(raw);if(!m||m.groupId!==this.group||!Array.isArray(m.entries??[])||(m.entries??[]).length>100)return;
    this.trimStoppedPosition();
-   if(m.version===6&&typeof m.type==='string'&&(m.type.startsWith('QUAKE_')||m.type.startsWith('RESPONSE_'))){await this.receiveJournal(peer,m);return;}
+   if(m.version===8&&!((await this.store.roster?.(this.group))?.revision>0))return;
+   if(m.version===10&&typeof m.type==='string'&&m.type.startsWith('RESPONSE_')){await this.receiveJournal(peer,m);return;}
+   if([6,7,8,9].includes(m.version)&&typeof m.type==='string'&&(m.type.startsWith('QUAKE_')||m.type.startsWith('RESPONSE_'))){if(m.version===6&&m.quake?.action==='EEW'||m.version<9&&m.quake?.action==='TRAINING_START')return;await this.receiveJournal(peer,m);return;}
    if(m.version===5&&typeof m.type==='string'&&(m.type.startsWith('POSITION_')||m.type.startsWith('MEMO_'))){await this.receiveLocal(peer,m);return;}
-   if(m.version===4&&typeof m.type==='string'&&m.type.startsWith('PLACE_')){await this.receivePlace(peer,m);return;}
-   if(m.version===3&&typeof m.type==='string'&&m.type.startsWith('INCIDENT_')){await this.receiveIncident(peer,m);return;}
+   if([4,12,16].includes(m.version)&&typeof m.type==='string'&&m.type.startsWith('PLACE_')){await this.receivePlace(peer,m);return;}
+   if([3,7,8,9].includes(m.version)&&typeof m.type==='string'&&m.type.startsWith('INCIDENT_')){if(m.type==='INCIDENT_RECORD'&&(m.version===7&&!await this.hasEew()||m.version===9&&!await this.hasTrainingStart()))return;await this.receiveIncident(peer,m);return;}
    const care=m.version===2&&typeof m.type==='string'&&m.type.startsWith('CARE_');if(!care&&m.version!==1)return;
    const type=care?m.type.slice(5):m.type, entries=m.entries??[];
    if(entries.some(e=>!e||!uuid.test(e.originId)||!Number.isSafeInteger(e.revision)||e.revision<1||(care&&e.revision!==1)))return;
@@ -163,16 +178,18 @@ export class SyncEngine {
   const quake=m.type.startsWith('QUAKE_'),prefix=quake?'QUAKE':'RESPONSE',entries=m.entries??[];
   if(entries.some(e=>!e||!uuid.test(e.originId)||e.revision!==1))return;
   const rows=quake?await this.store.quakeEvents(this.group):await this.store.responseEvents(this.group),byId=new Map(rows.map(e=>[e.eventId,e]));
-  const emit=(peer,action,props)=>this.emit(peer,{version:6,type:prefix+'_'+action,...props}),action=m.type.slice(prefix.length+1);
+  const emit=(peer,action,props)=>this.emit(peer,{version:m.version,type:prefix+'_'+action,...props}),action=m.type.slice(prefix.length+1);
   if(action==='SUMMARY'){
    const missing=entries.filter(e=>!byId.has(e.originId));if(missing.length)await emit(peer,'REQUEST',{entries:missing});
   }else if(action==='REQUEST'){
    for(const e of entries)await this.guard(async()=>{const record=byId.get(e.originId);if(record){this.pending.set(`${peer}|${prefix}|${e.originId}`,1);await emit(peer,'RECORD',{[quake?'quake':'response']:record});}});
   }else if(action==='RECORD'){
    const e=quake?m.quake:m.response;if(!e||e.groupId!==this.group)return;
+   if(m.version===7&&!(quake&&e.action==='EEW')&&!await this.hasEew())return;
+   if(m.version===9&&!(quake&&e.action==='TRAINING_START')&&!await this.hasTrainingStart())return;
    const changed=await(quake?this.store.mergeQuake(e,this.id):this.store.mergeResponse(e));
    await this.guard(()=>emit(peer,'ACK',{entries:[{originId:e.eventId,revision:1}]}));
-   if(changed)for(const other of this.peers)await this.guard(()=>this.journalSummary(other,quake));
+   if(changed)for(const other of this.peers)await this.guard(()=>this.summary(other));
   }else if(action==='ACK')for(const e of entries)if(this.pending.delete(`${peer}|${prefix}|${e.originId}`))this.onReceipt({peer,...e});
  }
  async receiveLocal(peer,m){
@@ -196,7 +213,7 @@ export class SyncEngine {
  }
  async receiveIncident(peer,m){
   const entries=m.entries??[];if(entries.some(e=>!e||!uuid.test(e.originId)||e.revision!==1))return;
-  const emit=(to,type,data)=>this.emit(to,{version:3,type:'INCIDENT_'+type,...data});
+  const emit=(to,type,data)=>this.emit(to,{version:m.version,type:'INCIDENT_'+type,...data});
   if(m.type==='INCIDENT_SUMMARY'){const missing=[];for(const e of entries)if(!await this.store.getIncident(this.group,e.originId))missing.push(e);if(missing.length)await emit(peer,'REQUEST',{entries:missing});}
   else if(m.type==='INCIDENT_REQUEST'){for(const e of entries){const incident=await this.store.getIncident(this.group,e.originId);if(incident){this.pending.set(`${peer}|incident|${e.originId}`,1);await emit(peer,'RECORD',{incident});}}}
   else if(m.type==='INCIDENT_RECORD'){const e=validateIncident(m.incident);if(e.groupId!==this.group)return;const changed=await this.store.mergeIncident(e),entries=[{originId:e.eventId,revision:1}];await this.guard(()=>emit(peer,'ACK',{entries}));if(changed)for(const other of this.peers)if(other!==peer)await this.guard(()=>emit(other,'SUMMARY',{entries}));}
@@ -211,3 +228,5 @@ export class SyncEngine {
   else if(m.type==='PLACE_ACK')for(const e of entries)if(this.pending.delete(`${peer}|place|${e.originId}`))this.onReceipt({peer,place:true,...e});
  }
 }
+
+function stableDevice(v){return Array.isArray(v)?v.map(stableDevice):v&&typeof v==="object"?Object.fromEntries(Object.keys(v).sort().map(k=>[k,stableDevice(v[k])])):v;}

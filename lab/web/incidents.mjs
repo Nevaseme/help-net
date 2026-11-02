@@ -1,3 +1,4 @@
+import {venueAuthor} from './venue-demo.mjs';
 const uuid=/^[0-9a-fA-F-]{36}$/;
 const ensure=(ok,msg)=>{if(!ok)throw Error(msg);};
 const fields=['groupId','eventId','incidentId','authorId','authorName','sequence','createdAt','kind','title','area','training','safety','subjectId','action','note','supersedes'];
@@ -25,6 +26,7 @@ export function incidentView(rows,incidentId){
 export function incidentOptions(rows){return rows.filter(e=>e.kind==='START').map(e=>incidentView(rows,e.eventId)).sort((a,b)=>b.start.createdAt-a.start.createdAt||a.start.eventId.localeCompare(b.start.eventId));}
 export async function appendScopedIncident(store,scope,kind,extra={}){
  const {groupId,incidentId,authorId}=scope;
- const own=await store.get(groupId,authorId);if(!own)throw Error('先に登録してください');
- return store.appendIncident({groupId,eventId:crypto.randomUUID(),incidentId,authorId,authorName:own.name,createdAt:Date.now(),kind,...extra});
+ const own=await store.get(groupId,authorId),demo=await venueAuthor(store,groupId,incidentId,authorId);
+ const name=demo||own?.name;if(!name)throw Error('先に登録してください');
+ return store.appendIncident({groupId,eventId:crypto.randomUUID(),incidentId,authorId,authorName:name,createdAt:Date.now(),kind,...extra});
 }

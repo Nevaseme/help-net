@@ -11,8 +11,10 @@ class EewMessagingService : FirebaseMessagingService() {
     override fun onMessageReceived(message: RemoteMessage) {
         val app = application as PlanDApplication
         try {
+            // receive waits for receipt + Room transaction + persisted selection on this FCM worker.
             val notice = app.eewReceiver.receive(message.data, System.currentTimeMillis(), allowDiagnostics = BuildConfig.DEBUG)
             if (notice != null) EewNotifications(this).show(notice)
+            android.os.Handler(android.os.Looper.getMainLooper()).post {app.recordsChanged()}
         } catch (e: Exception) {
             // Do not log a device token, the payload, or user data.
             android.util.Log.e("PlanD-EEW", "速報の保存または通知に失敗しました", e)

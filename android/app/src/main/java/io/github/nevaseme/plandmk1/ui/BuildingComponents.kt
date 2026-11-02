@@ -9,6 +9,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import io.github.nevaseme.plandmk1.MapPoint
+import io.github.nevaseme.plandmk1.buildings.*
+import kotlinx.coroutines.launch
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nevaseme.plandmk1.PlanViewModel
@@ -27,6 +31,7 @@ fun homeLabel(rows: List<PlaceEvent>,person: String): String {
     val members=residents.filter {validHome(rows,it.originId)?.buildingId==building.buildingId}
     OutlinedCard(onClick=onClick,modifier=Modifier.fillMaxWidth()) {Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
         NamedEntity("建物名", building.displayLabel())
+        building.locationReference?.let {Text(it.address,style=MaterialTheme.typography.bodyMedium)}
         BuildingResponse(rows,building.buildingId!!,incident)
         Text("住民の安否：SOS ${members.count {it.safety==Safety.SOS}}人 / 無事 ${members.count {it.safety==Safety.SAFE}}人 / 未回答 ${members.count {it.safety==Safety.UNREPORTED}}人")
         Text("詳細・対応履歴を見る",style=MaterialTheme.typography.labelLarge,color=MaterialTheme.colorScheme.primary)
@@ -37,30 +42,57 @@ fun homeLabel(rows: List<PlaceEvent>,person: String): String {
     val incident by model.incidentUi.collectAsStateWithLifecycle();val saving by model.saving.collectAsStateWithLifecycle()
     val group by model.group.collectAsStateWithLifecycle();val own=residents.find {it.originId==model.localId}
     var create by rememberSaveable(group){mutableStateOf(false)}
+    var search by rememberSaveable(group){mutableStateOf("")}
+    val cloud by model.cloud.state.collectAsStateWithLifecycle()
+    val context=LocalContext.current;val lookup=remember {CityAddresses(context.applicationContext)};val searchScope=rememberCoroutineScope()
+    var suggestions by remember(group){mutableStateOf<List<AddressCandidate>>(emptyList())}
+    var searchStatus by remember(group){mutableStateOf("")}
+    var initialCandidate by remember(group){mutableStateOf<AddressCandidate?>(null)}
     LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-        item {Text("自分の住居を選ぶ",style=MaterialTheme.typography.headlineSmall)}
+        item {Text("登録済みの建物・部屋",style=MaterialTheme.typography.headlineSmall)}
         if(own==null)item {Button(onClick=onProfile){Text("先に自分の情報を登録")}}
         item {Text("自分の住まい\n${homeLabel(rows,model.localId)}")}
-        item {Button(enabled=own!=null&&!saving,onClick={create=true}){Text("建物を登録")}}
+        item {Button(enabled=own!=null&&!saving,onClick={initialCandidate=null;create=true}){Text("住所・地図から建物を追加")}}
         item {OperationFeedback(model,model.placeSaveKey(PlaceKind.BUILDING))}
         if(homeFor(rows,model.localId)?.buildingId!=null)item {TextButton(enabled=!saving,onClick={model.assignHome(null)}){Text("自分の建物の関連付けを解除")}}
         item {OperationFeedback(model,model.placeSaveKey(PlaceKind.HOME))}
-        if(placeBuildings(rows).isEmpty())item {Text("建物はまだ登録されていません")}
-        items(placeBuildings(rows),key={it.buildingId!!}) {b->BuildingCard(b,rows,incident.selection,residents){onSelect(b.buildingId!!)}}
+        item {AddressSearchField(search,{search=it},{},Modifier.fillMaxWidth(),label="登録済みの建物を絞り込む")}
+        if(placeBuildings(rows).isNotEmpty())item {Text("登録済みの建物",style=MaterialTheme.typography.titleSmall)}
+        if(placeBuildings(rows).isEmpty()&&search.isBlank())item {Text("登録済みの建物はありません。住所・地図から追加できます。")}
+        if(search.isNotBlank()&&placeBuildings(rows).isNotEmpty()&&placeBuildings(rows).none{normalizeAddress(it.label+it.locationReference?.address.orEmpty()).contains(normalizeAddress(search))})item {Text("一致する登録済みの建物はありません")}
+
+        items(placeBuildings(rows).filter {normalizeAddress(it.label+it.locationReference?.address.orEmpty()).contains(normalizeAddress(search))},key={it.buildingId!!}) {b->BuildingCard(b,rows,incident.selection,residents){onSelect(b.buildingId!!)}}
     }
-    if(create)BuildingForm(model,null,own){create=false}
+    if(create)BuildingForm(model,null,own,initialCandidate){create=false}
 }
-@Composable private fun BuildingForm(model: PlanViewModel,building: PlaceEvent?,own: Resident?,close: ()->Unit) {
+@Composable private fun BuildingForm(model: PlanViewModel,building: PlaceEvent?,own: Resident?,initialCandidate:AddressCandidate?=null,close: ()->Unit) {
     val saving by model.saving.collectAsStateWithLifecycle()
-    var label by rememberSaveable {mutableStateOf(building?.displayLabel().orEmpty())}
-    var lat by rememberSaveable {mutableStateOf((building?.latitude?:own?.latitude)?.toString().orEmpty())}
-    var lon by rememberSaveable {mutableStateOf((building?.longitude?:own?.longitude)?.toString().orEmpty())}
+    val cloud by model.cloud.state.collectAsStateWithLifecycle()
+    val group by model.group.collectAsStateWithLifecycle()
+    val context=LocalContext.current;val repo=remember {CityAddresses(context.applicationContext)};val scope=rememberCoroutineScope()
+    var label by rememberSaveable {mutableStateOf(building?.displayLabel()?:initialCandidate?.let {if(it.precision=="poi")it.address else "自宅"}.orEmpty())}
+    var address by rememberSaveable {mutableStateOf(building?.locationReference?.address?:initialCandidate?.takeUnless {it.precision=="poi"}?.address.orEmpty())}
+    var lat by rememberSaveable {mutableStateOf(building?.latitude?:initialCandidate?.latitude?:own?.latitude?:35.0145)}
+    var lon by rememberSaveable {mutableStateOf(building?.longitude?:initialCandidate?.longitude?:own?.longitude?:135.7625)}
+    var plateauId by rememberSaveable {mutableStateOf(building?.locationReference?.plateauId)}
+    var confirmed by rememberSaveable {mutableStateOf(building!=null)}
+    var picking by rememberSaveable {mutableStateOf(building==null)}
+    var searching by remember {mutableStateOf(false)};var message by remember {mutableStateOf("")}
+    var searchRef by remember {mutableStateOf(building?.locationReference?.searchReference?:initialCandidate?.reference(initialCandidate.address))}
+    var candidates by remember {mutableStateOf<List<AddressCandidate>>(emptyList())}
+    var selectedCandidate by remember {mutableStateOf(initialCandidate)}
     AlertDialog(onDismissRequest={if(!saving)close()},title={Text(if(building==null)"建物を登録" else "建物情報を訂正")},text={Column(Modifier.verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-        OutlinedTextField(label,{label=it.take(80)},label={Text("建物名")},enabled=!saving)
-        OutlinedTextField(lat,{lat=it},label={Text("建物の緯度")},enabled=!saving)
-        OutlinedTextField(lon,{lon=it},label={Text("建物の経度")},enabled=!saving)
+        OutlinedTextField(label,{label=it.take(80)},label={Text("建物名")},enabled=!saving,singleLine=true)
+        AddressSearchField(address,{address=it.take(240);candidates=emptyList();message=""},{picking=true},label="登録する住所・建物名",enabled=!saving)
+        TextButton(enabled=!saving&&!searching&&address.isNotBlank(),onClick={scope.launch {searching=true;message="";try {val found=repo.candidates(address,cloud.municipality?.code);if(found.isEmpty())message="場所が見つかりません。住所を詳しく入力してください" else if(found.size==1){val c=found.single();lat=c.latitude;lon=c.longitude;confirmed=false;plateauId=null;searchRef=c.reference(address);selectedCandidate=c;picking=true}else candidates=found}catch(e:Exception){message=e.message.orEmpty()}finally{searching=false}}}){Text(if(searching)"検索中…" else "住所を検索")}
+
+        candidates.forEach {c->TextButton(onClick={searchRef=c.reference(address);selectedCandidate=c;address=c.address;lat=c.latitude;lon=c.longitude;confirmed=false;plateauId=null;candidates=emptyList();picking=true}){Text(c.address+if(c.precision=="town")" 付近" else "")}}
+        if(message.isNotEmpty())Text(message)
+        OutlinedButton(enabled=!saving,onClick={picking=true}){Text(if(confirmed)"建物の位置を選び直す" else "地図で建物を選ぶ")}
+        if(confirmed)Text("建物の位置を選択済み",style=MaterialTheme.typography.bodyMedium)
         OperationFeedback(model,model.placeSaveKey(PlaceKind.BUILDING,building?.buildingId.orEmpty()))
-    }},confirmButton={TextButton(enabled=!saving,onClick={model.registerBuilding(building?.buildingId,label,lat,lon){close()}}){Text("建物情報を保存")}},dismissButton={TextButton(enabled=!saving,onClick=close){Text("閉じる")}})
+    }},confirmButton={TextButton(enabled=!saving&&confirmed&&label.isNotBlank()&&address.isNotBlank(),onClick={model.registerBuilding(building?.buildingId,label,lat.toString(),lon.toString(),BuildingLocationReference(address.trim(),plateauId,if(plateauId!=null)"plateau-26100-kyoto-shi-2025" else null,searchRef)){close()}}){Text("建物情報を保存")}},dismissButton={TextButton(enabled=!saving,onClick=close){Text("閉じる")}})
+    if(picking)BuildingLocationPicker(MapPoint(lat,lon),{point,id->lat=point.latitude;lon=point.longitude;plateauId=id;confirmed=true;picking=false},{picking=false},initialQuery=address.ifBlank{label},initialCandidate=selectedCandidate,onHomeConfirm={point,ref->lat=point.latitude;lon=point.longitude;plateauId=ref.plateauId;address=ref.address;searchRef=ref.searchReference;confirmed=true;picking=false})
 }
 @Composable fun BuildingDetail(model: PlanViewModel,buildingId: String,onResident: (Resident)->Unit,onClose: ()->Unit,registration: Boolean = false) {
     val care by model.careEvents.collectAsStateWithLifecycle()
@@ -72,6 +104,7 @@ fun homeLabel(rows: List<PlaceEvent>,person: String): String {
     var editingUnit by rememberSaveable {mutableStateOf<String?>(null)}
     AlertDialog(onDismissRequest={if(!saving)onClose()},title={NamedEntity("建物名", building.displayLabel())},text={Column(Modifier.verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(10.dp)) {
         BuildingResponse(rows,buildingId,incident.selection)
+        building.locationReference?.let {Text(it.address)}
         if(registration) {
         if(building.authorId==model.localId)TextButton(enabled=!saving,onClick={editing=true}){Text("建物情報を訂正")}
         OperationFeedback(model,model.placeSaveKey(PlaceKind.BUILDING,buildingId))

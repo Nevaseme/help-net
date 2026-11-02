@@ -1,0 +1,401 @@
+{
+  "domain_id": "atami-pair-3c5ac077d073c3da7873de92",
+  "solver": {
+    "name": "PlanD Cartesian shallow-water",
+    "version": "pland-cartesian-swe-2.2",
+    "implementation_sha256": "6d4d60c7df1e924ec786e7f9036e65bac870777ff8b3ea3a4c65b6f74e2a9a20"
+  },
+  "reporting_bounds_m": [
+    52000.5,
+    -100499.5,
+    52780.5,
+    -99919.5
+  ],
+  "primary_origin_m": [
+    51600.5,
+    -101239.5
+  ],
+  "primary_cells": [
+    76,
+    85
+  ],
+  "secondary_origin_m": [
+    51600.5,
+    -101079.5
+  ],
+  "secondary_cells": [
+    76,
+    69
+  ],
+  "criteria": {
+    "mean_wet_depth_difference_m": 0.1,
+    "maximum_land_depth_difference_m": 0.5,
+    "land_footprint_iou_minimum": 0.9,
+    "wet_depth_threshold_m": 0.1
+  },
+  "cases": [
+    {
+      "schema": "pland-paired-domain-evidence-1",
+      "target_height_m": 3,
+      "roi_epsg6676": [
+        52000.5,
+        -100499.5,
+        52780.5,
+        -99919.5
+      ],
+      "large_domain_id": "atami-149069edba9acf54034aa0ff",
+      "small_domain_id": "atami-d4fee66d3b7d6394fe7c73c4",
+      "solver": {
+        "name": "PlanD Cartesian shallow-water",
+        "version": "pland-cartesian-swe-2.2",
+        "implementation_sha256": "6d4d60c7df1e924ec786e7f9036e65bac870777ff8b3ea3a4c65b6f74e2a9a20"
+      },
+      "grid_alignment_verified": true,
+      "identical_core_bed_verified": true,
+      "core_cells": 1131,
+      "core_land_cells": 753,
+      "large_achieved_height_m": 3.037640512930224,
+      "small_achieved_height_m": 3.0000269480976076,
+      "large_forcing_m": 3,
+      "small_forcing_m": 2.7497131101019514,
+      "wet_threshold_m": 0.1,
+      "land_wet_union_cells": 39,
+      "mean_peak_depth_difference_land_wet_union_m": 0.050077661850529843,
+      "maximum_peak_depth_difference_land_m": 0.0820292317408021,
+      "maximum_peak_depth_difference_all_core_cells_m": 0.0820292317408021,
+      "land_footprint_iou": 0.9743589743589743,
+      "large_land_wet_area_m2": 15600,
+      "small_land_wet_area_m2": 15200,
+      "checks": {
+        "mean_land_wet_union_within_0_1m": true,
+        "maximum_land_within_0_5m": true,
+        "land_footprint_iou_at_least_0_9": true,
+        "both_numerical_cases_accepted": true
+      },
+      "screen_passed": true,
+      "real_world_validated": false,
+      "scope": "Predeclared numerical domain-size sensitivity screen on the same central initially-dry land cells; not observed-tsunami accuracy or global inundation extent.",
+      "evidence_sha256": "01077db9087d72a33a06d02be2fb42cbc84677ca96dd65100e87b3c4aa372b39"
+    },
+    {
+      "schema": "pland-paired-domain-evidence-1",
+      "target_height_m": 10,
+      "roi_epsg6676": [
+        52000.5,
+        -100499.5,
+        52780.5,
+        -99919.5
+      ],
+      "large_domain_id": "atami-149069edba9acf54034aa0ff",
+      "small_domain_id": "atami-d4fee66d3b7d6394fe7c73c4",
+      "solver": {
+        "name": "PlanD Cartesian shallow-water",
+        "version": "pland-cartesian-swe-2.2",
+        "implementation_sha256": "6d4d60c7df1e924ec786e7f9036e65bac870777ff8b3ea3a4c65b6f74e2a9a20"
+      },
+      "grid_alignment_verified": true,
+      "identical_core_bed_verified": true,
+      "core_cells": 1131,
+      "core_land_cells": 753,
+      "large_achieved_height_m": 10.008753081638945,
+      "small_achieved_height_m": 10.000453901177735,
+      "large_forcing_m": 10.535467775245388,
+      "small_forcing_m": 9.9,
+      "wet_threshold_m": 0.1,
+      "land_wet_union_cells": 571,
+      "mean_peak_depth_difference_land_wet_union_m": 0.07344302274151872,
+      "maximum_peak_depth_difference_land_m": 0.31839460420718435,
+      "maximum_peak_depth_difference_all_core_cells_m": 0.31839460420718435,
+      "land_footprint_iou": 1.0,
+      "large_land_wet_area_m2": 228400,
+      "small_land_wet_area_m2": 228400,
+      "checks": {
+        "mean_land_wet_union_within_0_1m": true,
+        "maximum_land_within_0_5m": true,
+        "land_footprint_iou_at_least_0_9": true,
+        "both_numerical_cases_accepted": true
+      },
+      "screen_passed": true,
+      "real_world_validated": false,
+      "scope": "Predeclared numerical domain-size sensitivity screen on the same central initially-dry land cells; not observed-tsunami accuracy or global inundation extent.",
+      "evidence_sha256": "b2f09e29777aee00168ba83e800337acfd5bb53e5c4f0ef63e1d73a533a656df"
+    },
+    {
+      "schema": "pland-paired-domain-evidence-1",
+      "target_height_m": 20,
+      "roi_epsg6676": [
+        52000.5,
+        -100499.5,
+        52780.5,
+        -99919.5
+      ],
+      "large_domain_id": "atami-149069edba9acf54034aa0ff",
+      "small_domain_id": "atami-d4fee66d3b7d6394fe7c73c4",
+      "solver": {
+        "name": "PlanD Cartesian shallow-water",
+        "version": "pland-cartesian-swe-2.2",
+        "implementation_sha256": "6d4d60c7df1e924ec786e7f9036e65bac870777ff8b3ea3a4c65b6f74e2a9a20"
+      },
+      "grid_alignment_verified": true,
+      "identical_core_bed_verified": true,
+      "core_cells": 1131,
+      "core_land_cells": 753,
+      "large_achieved_height_m": 20.000062308545893,
+      "small_achieved_height_m": 20.02709005491952,
+      "large_forcing_m": 19.851858796122567,
+      "small_forcing_m": 18.8953622795225,
+      "wet_threshold_m": 0.1,
+      "land_wet_union_cells": 721,
+      "mean_peak_depth_difference_land_wet_union_m": 0.08099969923107733,
+      "maximum_peak_depth_difference_land_m": 0.38139409459671647,
+      "maximum_peak_depth_difference_all_core_cells_m": 0.38139409459671647,
+      "land_footprint_iou": 0.9986130374479889,
+      "large_land_wet_area_m2": 288000,
+      "small_land_wet_area_m2": 288400,
+      "checks": {
+        "mean_land_wet_union_within_0_1m": true,
+        "maximum_land_within_0_5m": true,
+        "land_footprint_iou_at_least_0_9": true,
+        "both_numerical_cases_accepted": true
+      },
+      "screen_passed": true,
+      "real_world_validated": false,
+      "scope": "Predeclared numerical domain-size sensitivity screen on the same central initially-dry land cells; not observed-tsunami accuracy or global inundation extent.",
+      "evidence_sha256": "8bccac9cf1fe6b50593b731465d1eb01eabea575e7a3a8a63dec893e05fe1334"
+    }
+  ],
+  "review": {
+    "status": "experimental-checked",
+    "real_world_validated": false,
+    "checked_on": "2026-10-30",
+    "solver_sha256": "6d4d60c7df1e924ec786e7f9036e65bac870777ff8b3ea3a4c65b6f74e2a9a20",
+    "domain_sensitivity_cases": [
+      {
+        "schema": "pland-paired-domain-evidence-1",
+        "target_height_m": 3,
+        "roi_epsg6676": [
+          52000.5,
+          -100499.5,
+          52780.5,
+          -99919.5
+        ],
+        "large_domain_id": "atami-149069edba9acf54034aa0ff",
+        "small_domain_id": "atami-d4fee66d3b7d6394fe7c73c4",
+        "solver": {
+          "name": "PlanD Cartesian shallow-water",
+          "version": "pland-cartesian-swe-2.2",
+          "implementation_sha256": "6d4d60c7df1e924ec786e7f9036e65bac870777ff8b3ea3a4c65b6f74e2a9a20"
+        },
+        "grid_alignment_verified": true,
+        "identical_core_bed_verified": true,
+        "core_cells": 1131,
+        "core_land_cells": 753,
+        "large_achieved_height_m": 3.037640512930224,
+        "small_achieved_height_m": 3.0000269480976076,
+        "large_forcing_m": 3,
+        "small_forcing_m": 2.7497131101019514,
+        "wet_threshold_m": 0.1,
+        "land_wet_union_cells": 39,
+        "mean_peak_depth_difference_land_wet_union_m": 0.050077661850529843,
+        "maximum_peak_depth_difference_land_m": 0.0820292317408021,
+        "maximum_peak_depth_difference_all_core_cells_m": 0.0820292317408021,
+        "land_footprint_iou": 0.9743589743589743,
+        "large_land_wet_area_m2": 15600,
+        "small_land_wet_area_m2": 15200,
+        "checks": {
+          "mean_land_wet_union_within_0_1m": true,
+          "maximum_land_within_0_5m": true,
+          "land_footprint_iou_at_least_0_9": true,
+          "both_numerical_cases_accepted": true
+        },
+        "screen_passed": true,
+        "real_world_validated": false,
+        "scope": "Predeclared numerical domain-size sensitivity screen on the same central initially-dry land cells; not observed-tsunami accuracy or global inundation extent.",
+        "evidence_sha256": "01077db9087d72a33a06d02be2fb42cbc84677ca96dd65100e87b3c4aa372b39"
+      },
+      {
+        "schema": "pland-paired-domain-evidence-1",
+        "target_height_m": 10,
+        "roi_epsg6676": [
+          52000.5,
+          -100499.5,
+          52780.5,
+          -99919.5
+        ],
+        "large_domain_id": "atami-149069edba9acf54034aa0ff",
+        "small_domain_id": "atami-d4fee66d3b7d6394fe7c73c4",
+        "solver": {
+          "name": "PlanD Cartesian shallow-water",
+          "version": "pland-cartesian-swe-2.2",
+          "implementation_sha256": "6d4d60c7df1e924ec786e7f9036e65bac870777ff8b3ea3a4c65b6f74e2a9a20"
+        },
+        "grid_alignment_verified": true,
+        "identical_core_bed_verified": true,
+        "core_cells": 1131,
+        "core_land_cells": 753,
+        "large_achieved_height_m": 10.008753081638945,
+        "small_achieved_height_m": 10.000453901177735,
+        "large_forcing_m": 10.535467775245388,
+        "small_forcing_m": 9.9,
+        "wet_threshold_m": 0.1,
+        "land_wet_union_cells": 571,
+        "mean_peak_depth_difference_land_wet_union_m": 0.07344302274151872,
+        "maximum_peak_depth_difference_land_m": 0.31839460420718435,
+        "maximum_peak_depth_difference_all_core_cells_m": 0.31839460420718435,
+        "land_footprint_iou": 1.0,
+        "large_land_wet_area_m2": 228400,
+        "small_land_wet_area_m2": 228400,
+        "checks": {
+          "mean_land_wet_union_within_0_1m": true,
+          "maximum_land_within_0_5m": true,
+          "land_footprint_iou_at_least_0_9": true,
+          "both_numerical_cases_accepted": true
+        },
+        "screen_passed": true,
+        "real_world_validated": false,
+        "scope": "Predeclared numerical domain-size sensitivity screen on the same central initially-dry land cells; not observed-tsunami accuracy or global inundation extent.",
+        "evidence_sha256": "b2f09e29777aee00168ba83e800337acfd5bb53e5c4f0ef63e1d73a533a656df"
+      },
+      {
+        "schema": "pland-paired-domain-evidence-1",
+        "target_height_m": 20,
+        "roi_epsg6676": [
+          52000.5,
+          -100499.5,
+          52780.5,
+          -99919.5
+        ],
+        "large_domain_id": "atami-149069edba9acf54034aa0ff",
+        "small_domain_id": "atami-d4fee66d3b7d6394fe7c73c4",
+        "solver": {
+          "name": "PlanD Cartesian shallow-water",
+          "version": "pland-cartesian-swe-2.2",
+          "implementation_sha256": "6d4d60c7df1e924ec786e7f9036e65bac870777ff8b3ea3a4c65b6f74e2a9a20"
+        },
+        "grid_alignment_verified": true,
+        "identical_core_bed_verified": true,
+        "core_cells": 1131,
+        "core_land_cells": 753,
+        "large_achieved_height_m": 20.000062308545893,
+        "small_achieved_height_m": 20.02709005491952,
+        "large_forcing_m": 19.851858796122567,
+        "small_forcing_m": 18.8953622795225,
+        "wet_threshold_m": 0.1,
+        "land_wet_union_cells": 721,
+        "mean_peak_depth_difference_land_wet_union_m": 0.08099969923107733,
+        "maximum_peak_depth_difference_land_m": 0.38139409459671647,
+        "maximum_peak_depth_difference_all_core_cells_m": 0.38139409459671647,
+        "land_footprint_iou": 0.9986130374479889,
+        "large_land_wet_area_m2": 288000,
+        "small_land_wet_area_m2": 288400,
+        "checks": {
+          "mean_land_wet_union_within_0_1m": true,
+          "maximum_land_within_0_5m": true,
+          "land_footprint_iou_at_least_0_9": true,
+          "both_numerical_cases_accepted": true
+        },
+        "screen_passed": true,
+        "real_world_validated": false,
+        "scope": "Predeclared numerical domain-size sensitivity screen on the same central initially-dry land cells; not observed-tsunami accuracy or global inundation extent.",
+        "evidence_sha256": "8bccac9cf1fe6b50593b731465d1eb01eabea575e7a3a8a63dec893e05fe1334"
+      }
+    ],
+    "method": "Every requested height is independently calibrated and solved in both domains. Only the declared central reporting window is displayed after the fixed sensitivity screen passes. Case checks at 3/10/20 m are not a substitute for the per-request comparison.",
+    "independent_checks": "ANUGA 3.3.10 scalar Flather, stationary measured terrain, native target heights 3/10/20 m; analytic dam break, lake at rest, mass balance and grid refinement on synthetic cases.",
+    "limitations": [
+      "No validation against an observed tsunami",
+      "20 m terrain discretization not a site grid-convergence study",
+      "Fixed ten-minute wave from east, baseline 0 m, fixed roughness; height alone does not determine a real tsunami",
+      "Outside reporting window not assessed; inland inundation may continue beyond north/south outlets",
+      "At 20 m target, independent ANUGA comparison differs by up to 0.91 m in peak depth within the reporting area; domain-size agreement is not a depth-accuracy bound."
+    ],
+    "independent_solver_comparison": [
+      {
+        "target_height_m": 10,
+        "central_roi_land": {
+          "cell_count": 753,
+          "mean_absolute_peak_depth_difference_m": 0.07438846500624327,
+          "maximum_absolute_peak_depth_difference_m": 0.4435950153907509,
+          "threshold_metrics": [
+            {
+              "depth_threshold_m": 0.1,
+              "js_inundated_m2": 228400.0,
+              "anuga_inundated_m2": 229600.0,
+              "area_weighted_intersection_over_union": 0.9887103777681285,
+              "union_wet_mean_absolute_peak_depth_difference_m": 0.0958533900496936,
+              "union_wet_maximum_peak_depth_difference_m": 0.4435950153907509
+            },
+            {
+              "depth_threshold_m": 0.5,
+              "js_inundated_m2": 228000.0,
+              "anuga_inundated_m2": 227300.0,
+              "area_weighted_intersection_over_union": 0.9908176650634019,
+              "union_wet_mean_absolute_peak_depth_difference_m": 0.09599981560113068,
+              "union_wet_maximum_peak_depth_difference_m": 0.4435950153907509
+            },
+            {
+              "depth_threshold_m": 1.0,
+              "js_inundated_m2": 224400.0,
+              "anuga_inundated_m2": 224600.0,
+              "area_weighted_intersection_over_union": 0.9832155477031802,
+              "union_wet_mean_absolute_peak_depth_difference_m": 0.09548620089894173,
+              "union_wet_maximum_peak_depth_difference_m": 0.4435950153907509
+            },
+            {
+              "depth_threshold_m": 2.0,
+              "js_inundated_m2": 215600.0,
+              "anuga_inundated_m2": 216800.0,
+              "area_weighted_intersection_over_union": 0.9807604214383875,
+              "union_wet_mean_absolute_peak_depth_difference_m": 0.09416930798221339,
+              "union_wet_maximum_peak_depth_difference_m": 0.4012805100237904
+            }
+          ]
+        },
+        "evidence_sha256": "32eba9349a5cf9150fd9d8eb10f2cfcf61ecd7a1ded399b7a31f58f1b37db09d"
+      },
+      {
+        "target_height_m": 20,
+        "central_roi_land": {
+          "cell_count": 753,
+          "mean_absolute_peak_depth_difference_m": 0.10372664419368903,
+          "maximum_absolute_peak_depth_difference_m": 0.9094546303078115,
+          "threshold_metrics": [
+            {
+              "depth_threshold_m": 0.1,
+              "js_inundated_m2": 288000.0,
+              "anuga_inundated_m2": 289200.0,
+              "area_weighted_intersection_over_union": 0.9937823834196892,
+              "union_wet_mean_absolute_peak_depth_difference_m": 0.10723911662300997,
+              "union_wet_maximum_peak_depth_difference_m": 0.9094546303078115
+            },
+            {
+              "depth_threshold_m": 0.5,
+              "js_inundated_m2": 287600.0,
+              "anuga_inundated_m2": 288500.0,
+              "area_weighted_intersection_over_union": 0.9941156109380408,
+              "union_wet_mean_absolute_peak_depth_difference_m": 0.10726716254989312,
+              "union_wet_maximum_peak_depth_difference_m": 0.9094546303078115
+            },
+            {
+              "depth_threshold_m": 1.0,
+              "js_inundated_m2": 286800.0,
+              "anuga_inundated_m2": 286900.0,
+              "area_weighted_intersection_over_union": 0.9933981931897151,
+              "union_wet_mean_absolute_peak_depth_difference_m": 0.10665532402725533,
+              "union_wet_maximum_peak_depth_difference_m": 0.9094546303078115
+            },
+            {
+              "depth_threshold_m": 2.0,
+              "js_inundated_m2": 282000.0,
+              "anuga_inundated_m2": 283200.0,
+              "area_weighted_intersection_over_union": 0.989440337909187,
+              "union_wet_mean_absolute_peak_depth_difference_m": 0.10426641740935419,
+              "union_wet_maximum_peak_depth_difference_m": 0.9094546303078115
+            }
+          ]
+        },
+        "evidence_sha256": "5839e4627f71e3907ce55daf097ff01c10f117d78097debc70cbb8b8212dca71"
+      }
+    ]
+  }
+}

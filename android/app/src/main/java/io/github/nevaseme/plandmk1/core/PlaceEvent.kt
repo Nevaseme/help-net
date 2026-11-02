@@ -4,14 +4,27 @@ import kotlinx.serialization.Serializable
 
 @Serializable enum class PlaceKind { BUILDING, UNIT, HOME, CARE }
 @Serializable enum class BuildingAction { CHECKING, NEEDS_HELP, COMPLETED, RECHECK, REVOKED }
+@OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+@Serializable data class BuildingLocationReference(val address:String,val plateauId:String?=null,val dataset:String?=null,@kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) val searchReference:AddressSearchReference?=null) {
+    fun validate() {
+        searchReference?.validate()
+        require(address.isNotBlank()&&address.length<=240) {"住所を240文字以内で入力してください"}
+        require((plateauId==null)==(dataset==null)) {"建物データの対応が不正です"}
+        require(plateauId==null||(plateauId.isNotBlank()&&plateauId.length<=160&&dataset!!.isNotBlank()&&dataset.length<=160)) {"建物データの対応が不正です"}
+    }
+}
+@OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
 @Serializable data class PlaceEvent(
     val groupId: String,val eventId: String,val authorId: String,val authorName: String,
     val sequence: Long,val createdAt: Long,val kind: PlaceKind,
     val buildingId: String?=null,val unitId: String?=null,val incidentId: String?=null,
     val label: String="",val latitude: Double?=null,val longitude: Double?=null,
     val action: BuildingAction?=null,val scope: String="",val unresolved: String="",val note: String="",val supersedes: String?=null,
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val locationReference: BuildingLocationReference?=null,
 ) {
     fun validate() {
+        locationReference?.let { require(kind==PlaceKind.BUILDING);it.validate() }
         val uuid=Regex("[0-9a-fA-F-]{36}")
         require(groupId.matches(Regex("[A-Za-z0-9_-]{1,40}"))&&eventId.matches(uuid)&&authorId.matches(uuid)) {"建物記録のIDが不正です"}
         require(listOf(buildingId,unitId,incidentId,supersedes).all {it==null||it.matches(uuid)}) {"関連先のIDが不正です"}

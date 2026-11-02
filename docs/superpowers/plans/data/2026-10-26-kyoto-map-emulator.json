@@ -1,0 +1,98 @@
+{
+  "device": "sdk_gphone64_x86_64",
+  "sdk": 37,
+  "initialVisibleMs": 14410,
+  "wideVisibleMs": 2252,
+  "initialFeatures": 411,
+  "overviewFeatures": 80,
+  "totalPssKb": 317231,
+  "phases": [
+    {
+      "overlay": false,
+      "animationPlusVisibleMs": [
+        1088,
+        1346,
+        7638,
+        2674,
+        1984
+      ],
+      "renderCallbackIntervalMs": [
+        46.8207,
+        52.073,
+        53.835,
+        49.999,
+        73.7404,
+        114.1582,
+        40.2207,
+        104.0504,
+        102.0262,
+        126.222,
+        160.6454,
+        414.6019,
+        321.9919,
+        7199.1285,
+        1407.0329,
+        851.7691
+      ],
+      "p50Ms": 104.0504,
+      "p95Ms": 1407.0329,
+      "over32ms": 16,
+      "frames": 16
+    },
+    {
+      "overlay": true,
+      "animationPlusVisibleMs": [
+        4552,
+        9044,
+        2777,
+        6164,
+        2923
+      ],
+      "renderCallbackIntervalMs": [
+        853.0657,
+        457.5438,
+        650.0702,
+        268.9384,
+        136.6055,
+        30.6238,
+        132.1388,
+        305.9252,
+        347.4412,
+        1464.4884
+      ],
+      "p50Ms": 305.9252,
+      "p95Ms": 853.0657,
+      "over32ms": 9,
+      "frames": 10
+    },
+    {
+      "overlay": true,
+      "animationPlusVisibleMs": [
+        2264,
+        2471,
+        7964,
+        2068,
+        3311
+      ],
+      "renderCallbackIntervalMs": [
+        249.5978,
+        181.7788,
+        355.8792,
+        376.6748,
+        52.4692,
+        1064.7158,
+        505.1435,
+        1586.5269,
+        642.9239,
+        386.0741,
+        644.8823,
+        438.7652
+      ],
+      "p50Ms": 386.0741,
+      "p95Ms": 1064.7158,
+      "over32ms": 12,
+      "frames": 12
+    }
+  ],
+  "note": "debug build; render callback intervals during 1-second camera animations, not Google Maps comparison"
+}

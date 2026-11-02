@@ -1,0 +1,3 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises';
+import {riskPercent,riskExpression} from '../web/building-risk.mjs';
+test('PWA uses every Android curve at 6.2 and preserves unknown',async()=>{const model=JSON.parse(await readFile('demo/data/cities/26100/buildings/model.json'));for(const [key,curve] of Object.entries(model.curves)){assert.equal(riskPercent(model,key,6.2),curve.full[12]);assert.equal(riskPercent(model,key,6.25),(curve.full[12]+curve.full[13])/2);}assert.equal(riskPercent(model,'missing',6.2),-1);assert.equal(riskExpression(model).at(-1),-1);});

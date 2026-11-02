@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tasukeai-sync",
+  "main": "dist/src/worker.mjs",
+  "compatibility_date": "2026-10-29",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "durable_objects": {"bindings": [{"name": "GROUPS", "class_name": "GroupJournal"}]},
+  "migrations": [{"tag": "v1", "new_sqlite_classes": ["GroupJournal"]}],
+  "ratelimits": [{"name": "SIGNUP_LIMITER", "namespace_id": "10302026", "simple": {"limit": 30, "period": 60}}],
+  "assets": {"directory": "dist/public", "binding": "ASSETS", "run_worker_first": ["/api/*"]},
+  "observability": {"enabled": true, "head_sampling_rate": 0.1}
+}
