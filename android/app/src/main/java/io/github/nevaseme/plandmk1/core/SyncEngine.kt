@@ -74,7 +74,7 @@ class SyncEngine(
         trimStoppedPosition()
         if(message.version==11||message.version==13||message.version==14||message.version==15) {guarded {relay?.receive(peer,bytes)};return}
         if(message.version==8 && store.rosterRevision(groupId)<=0)return
-        if(message.version==10 && message.type.startsWith("RESPONSE_")){guarded {receiveJournal(peer,message)};return}
+        if(message.version in listOf(10,17) && message.type.startsWith("RESPONSE_")){guarded {receiveJournal(peer,message)};return}
         if(message.version in setOf(6,7,8,9)&&(message.type.startsWith("QUAKE_")||message.type.startsWith("RESPONSE_"))) {
             if(message.version==6 && message.quake?.action==QuakeAction.EEW)return
             if(message.version!=9 && message.quake?.action==QuakeAction.TRAINING_START)return
@@ -295,7 +295,7 @@ class SyncEngine(
             is ResponseChange.Progress->change.status==WorkStatus.PLANNED
             else->false
         }
-        val outbound=message.copy(version=maxOf(message.version,minimum,if(extended)10 else 1,if(message.place?.locationReference?.searchReference!=null)16 else if(message.place?.locationReference!=null)12 else 1))
+        val outbound=message.copy(version=maxOf(message.version,minimum,if(message.response?.change is ResponseChange.Injury)17 else if(extended)10 else 1,if(message.place?.locationReference?.searchReference!=null)16 else if(message.place?.locationReference!=null)12 else 1))
         val bytes = json.encodeToString(outbound).encodeToByteArray()
         require(bytes.size <= 24_000) { "通信データが大きすぎます" }
         send(peer, bytes)

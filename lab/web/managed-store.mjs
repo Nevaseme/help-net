@@ -2,6 +2,8 @@ import {validateRoster,cloudRoster,memberFor,validateQuake,validateQuakeCommand,
 import {regionalSummary} from './regions.mjs';
 import {operationRows,operationCsv} from './operations-export.mjs';
 
+function knownPerson(tables,group,incident,id){return tables.residents.some(p=>p.groupId===group&&p.originId===id)||(tables.meta||[]).some(v=>v?.mode==='VENUE_DEMO'&&v.groupId===group&&v.incidentId===incident&&!v.closed&&[...v.placements,...v.scenario?.people||[]].some(p=>p.deviceId===id));}
+
 export class ManagedStore {
  constructor(db){this.db=db;}
  roster(group){return this.read('rosters',group);}
@@ -24,7 +26,7 @@ export class ManagedStore {
   const quakes=tables.quakes.filter(e=>e.groupId===group),selected=canonicalIncidentId(roster,quakes,incidentId),history=tables.responses.filter(e=>e.groupId===group);
   if(!quakeStates(roster,quakes).some(s=>s.incidentIds.includes(incidentId)&&!s.closed))throw Error('成立済みで開始中の災害を指定してください');
   const projected=history.map(e=>({...e,incidentId:canonicalIncidentId(roster,quakes,e.incidentId)})),heads=responseHeads(roster,projected).filter(e=>e.incidentId===selected);
-  if(target?.kind==='PERSON'&&!tables.residents.some(p=>p.groupId===group&&p.originId===target.id))throw Error('対象住民が見つかりません');
+  if(target?.kind==='PERSON'&&!knownPerson(tables,group,incidentId,target.id))throw Error('対象住民が見つかりません');
   if(target?.kind==='REPORT'&&!heads.some(e=>e.change.type==='REPORT'&&e.change.reportId===target.id&&!e.change.cancelled))throw Error('対象の通報が見つかりません');
   let sequence=history.filter(e=>e.actorDeviceId===actorDeviceId).reduce((n,e)=>Math.max(n,e.sequence),0);
   return startWorkChanges(roster,heads,actorDeviceId,target).map(plan=>{
@@ -34,7 +36,7 @@ export class ManagedStore {
  });}
  // All reads, validation and writes are inside one transaction; ACK callers await oncomplete.
  managedTransaction(work){return new Promise((resolve,reject)=>{
-  const names=['rosters','quakes','responses','incidents','residents'];
+  const names=['rosters','quakes','responses','incidents','residents','meta'];
   const tx=this.db.transaction(names,'readwrite'),tables={};let remaining=names.length,result,problem;
   for(const name of names){const q=tx.objectStore(name).getAll();q.onsuccess=()=>{
    tables[name]=q.result;if(--remaining)return;
@@ -80,7 +82,7 @@ export class ManagedStore {
   if(local){
    if(e.incidentId&&!quakeStates(r,tables.quakes).some(s=>s.incidentIds.includes(e.incidentId)&&!s.closed))throw Error('成立済みで開始中の災害を指定してください');
    const t=e.change.target;
-   if(t?.kind==='PERSON'&&!tables.residents.some(x=>x.groupId===r.groupId&&x.originId===t.id))throw Error('対象住民が見つかりません');
+   if(t?.kind==='PERSON'&&!knownPerson(tables,r.groupId,e.incidentId,t.id))throw Error('対象住民が見つかりません');
    if(t?.kind==='REPORT'&&!history.some(x=>x.eventId===t.id&&canonicalIncidentId(r,tables.quakes,x.incidentId)===canonicalIncidentId(r,tables.quakes,e.incidentId)&&x.change.type==='REPORT'))throw Error('対象の通報が見つかりません');
    validateResponseCommand(r,history.map(x=>({...x,incidentId:canonicalIncidentId(r,tables.quakes,x.incidentId)})),{...e,incidentId:canonicalIncidentId(r,tables.quakes,e.incidentId)});
   }put('responses',e);return local?e:true;

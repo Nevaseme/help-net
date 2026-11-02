@@ -37,7 +37,7 @@ data class ResponseCase(val target:ResponseTarget,val title:String,val descripti
 
 /** Keep concurrent report revisions visible in the detail; cancellation never silently wins a conflict. */
 fun responseCases(residents:List<Resident>,care:List<CareEvent>,heads:List<ResponseEvent>,memos:Map<String,String> = emptyMap(),incidentStartedAt:Long?=null,now:Long=System.currentTimeMillis()):List<ResponseCase> {
-    val recorded=heads.mapNotNull {it.change.target()?.takeIf {target->target.kind==TargetKind.PERSON}?.id}.toSet()
+    val recorded=heads.filter {it.change !is ResponseChange.Injury}.mapNotNull {it.change.target()?.takeIf {target->target.kind==TargetKind.PERSON}?.id}.toSet()
     val people=residents.filter {residentMapState(it,care)==MapSafety.SOS||it.originId in recorded}.map {
         val person=projectPersonPrivacy(MapPerson(it.originId,it.displayName(),residentMapState(it,care)),incidentStartedAt,now)
         ResponseCase(ResponseTarget(TargetKind.PERSON,it.originId),person.publicName,if(person.state==MapSafety.SOS)memos[it.originId].orEmpty()else "",person=person)
@@ -53,7 +53,7 @@ fun responseAssignments(events:List<ResponseEvent>,target:ResponseTarget)=events
 fun workLabel(status:WorkStatus)=when(status){WorkStatus.UNASSIGNED->"not_started";WorkStatus.PLANNED->"acknowledged";WorkStatus.IN_PROGRESS->"in_progress";WorkStatus.DONE->"resolved"}
 fun urgencyLabel(value:Urgency)=when(value){Urgency.UNSET->"urgency_unset";Urgency.LOW->"urgency_low";Urgency.MEDIUM->"urgency_medium";Urgency.HIGH->"urgency_high"}
 fun activityLabel(value:ActivityState)=when(value){ActivityState.UNSET->"activity_unset";ActivityState.AVAILABLE->"available";ActivityState.WORKING->"busy_activity";ActivityState.UNAVAILABLE->"unavailable"}
-@Composable private fun categoryLabel(value:String)=when(value){"道路閉塞"->uiText("road_blocked");"建物倒壊"->uiText("building_collapse");"その他"->uiText("other_report");else->value}
+@Composable private fun categoryLabel(value:String)=when(value){"道路閉塞","ROAD_BLOCKED"->uiText("road_blocked");"建物倒壊","BUILDING_DAMAGE"->uiText("building_collapse");"その他"->uiText("other_report");"WATER_OUTAGE"->if(LocalUiLanguage.current=="en")"Water outage" else "断水";else->value}
 @Composable private fun caseTitle(case:ResponseCase)=case.person?.let {personText(it)}?:categoryLabel(case.title)
 fun responseUrgency(events:List<ResponseEvent>,target:ResponseTarget)=listOf(Urgency.HIGH,Urgency.MEDIUM,Urgency.LOW).firstOrNull {value->events.any {(it.change as? ResponseChange.Priority)?.let {p->p.target==target&&p.urgency==value}==true}}?:Urgency.UNSET
 fun reportIcon(urgency:Urgency)=when(urgency){Urgency.HIGH->R.drawable.report_emergency;Urgency.MEDIUM,Urgency.LOW->R.drawable.report_normal;Urgency.UNSET->R.drawable.report_unrated}
@@ -189,13 +189,7 @@ fun responseResolved(events:List<ResponseEvent>,target:ResponseTarget):Boolean {
             val draftKey="$group:$incidentId:$mode:${selected?.kind}:${selected?.id}:$materialId"
             drafts.SaveableStateProvider(draftKey) { ResponseEditor(mode,case,point,materialId,heads,history,roster,member,coordinator,editable,model,onSaved={drafts.removeState(draftKey);editor=null}){editor=null} }
         }}
-        if(showSummary)ApprovedSheet(uiText("area_summary"),onCloseSummary){
-            Text(uiText("current_group_only"));Text(groupLabel,fontWeight=FontWeight.Bold);Text("${uiText("total_cases")}: ${cases.count {!it.cancelled}}");Text("${uiText("total_reports")}: ${cases.count {!it.cancelled&&it.report!=null}}")
-            Text("${uiText("high_open")}: ${cases.count {!it.cancelled&&responseUrgency(heads,it.target)==Urgency.HIGH&&!responseResolved(heads,it.target)}}")
-            WorkStatus.entries.forEach {status->val count=cases.count {c->val progress=heads.mapNotNull {it.change as? ResponseChange.Progress}.filter {it.target==c.target};!c.cancelled&&if(progress.isEmpty())status==WorkStatus.UNASSIGNED else progress.any {it.status==status}};Text("${uiText(workLabel(status))}: $count")}
-            Text(uiText("region_unset"))
-            if(roster!=null&&heads.groupBy {responseKey(roster,it)}.values.any {it.size>1})Text(uiText("conflicting_records"),style=MaterialTheme.typography.bodySmall)
-        }
+        if(showSummary)CommunityScreen(model,groupLabel,onCloseSummary)
     }
 }
 
@@ -212,6 +206,7 @@ fun responseResolved(events:List<ResponseEvent>,target:ResponseTarget):Boolean {
     is ResponseChange.Priority->{Text(uiText(urgencyLabel(change.urgency)));Text(change.reason)}
     is ResponseChange.Material->Text("${change.name}: ${change.arranged} / ${change.needed} ${change.unit}")
     is ResponseChange.Assignment->Text(uiText(if(change.active)"assignees" else "leave_assignment"))
+    is ResponseChange.Injury->Text(communityLabel("injury",LocalUiLanguage.current=="en")+": "+communityLabel(change.state.name,LocalUiLanguage.current=="en"))
     is ResponseChange.Availability->Text(uiText(activityLabel(change.state)))
 }}
 
@@ -234,7 +229,7 @@ fun responseResolved(events:List<ResponseEvent>,target:ResponseTarget):Boolean {
     val valid=!editorUpdated&&(reviewedHeads.size<2||reviewed)&&when(mode){"report"->text.isNotBlank()&&lat.toDoubleOrNull()?.let {it.isFinite()&&it in -85.0..85.0}==true&&lon.toDoubleOrNull()?.let {it.isFinite()&&it in -180.0..180.0}==true;"progress"->progress!=WorkStatus.DONE||text.isNotBlank();"priority"->urgency==Urgency.UNSET||text.isNotBlank();"material"->name.isNotBlank()&&unit.isNotBlank()&&listOf(needed,arranged).all {it.toDoubleOrNull()?.let {v->v.isFinite()&&v>=0}==true};"cancel"->text.isNotBlank();"restore"->true;else->false}
     val title=uiText(when(mode){"report"->if(report==null)"report_add" else "report_edit";"progress"->"progress_update";"material"->"material_add";"priority"->"urgency";"cancel"->"report_cancel";"restore"->"report_restore";else->"assignment_change"})
     ApprovedSheet(title,close,footer=if(mode=="assignment")null else {{Button(onClick={
-        val change:ResponseChange=when(mode){"report"->ResponseChange.Report(report?.reportId?:UUID.randomUUID().toString(),category,lat.toDouble(),lon.toDouble(),text,regionIds=report?.regionIds.orEmpty());"progress"->ResponseChange.Progress(target!!,progress,text);"priority"->ResponseChange.Priority(target!!,urgency,text);"material"->ResponseChange.Material(target!!,materialId?:UUID.randomUUID().toString(),name,unit,needed.toDouble(),arranged.toDouble());"restore"->report!!.copy(cancelled=false,cancelReason="");else->report!!.copy(cancelled=true,cancelReason=text)}
+        val change:ResponseChange=when(mode){"report"->ResponseChange.Report(report?.reportId?:UUID.randomUUID().toString(),category,lat.toDouble(),lon.toDouble(),text,regionIds=if(model.activeVenue.value?.scenario!=null&&lat.toDouble() in 35.0..35.04&&lon.toDouble() in 135.75..135.78)listOfNotNull(demoCommunityFor(lon.toDouble()))else report?.regionIds.orEmpty());"progress"->ResponseChange.Progress(target!!,progress,text);"priority"->ResponseChange.Priority(target!!,urgency,text);"material"->ResponseChange.Material(target!!,materialId?:UUID.randomUUID().toString(),name,unit,needed.toDouble(),arranged.toDouble());"restore"->report!!.copy(cancelled=false,cancelReason="");else->report!!.copy(cancelled=true,cancelReason=text)}
         val replaced=reviewedHeads.map {it.eventId}
         model.saveResponse(change,replaced,onSaved)
     },enabled=editable&&valid,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp),shape=RoundedCornerShape(13.dp)){Text(uiText("save"))}}}) {

@@ -130,6 +130,7 @@ export function validateResponse(r,input){
   case 'ASSIGNMENT':check(c.target&&r.members.some(m=>m.memberId===c.memberId)&&typeof c.active==='boolean'&&(c.memberId===memberFor(r,e.actorDeviceId).memberId||['ADMIN','LEADER'].includes(memberFor(r,e.actorDeviceId).role)));break;
   case 'PROGRESS':check(c.target&&['UNASSIGNED','PLANNED','IN_PROGRESS','DONE'].includes(c.status)&&typeof c.result==='string'&&(c.status!=='DONE'||nonempty(c.result)));break;
   case 'PRIORITY':check(c.target&&['ADMIN','LEADER'].includes(memberFor(r,e.actorDeviceId).role)&&['UNSET','LOW','MEDIUM','HIGH'].includes(c.urgency)&&typeof c.reason==='string'&&(c.urgency==='UNSET'||nonempty(c.reason)));break;
+  case 'INJURY':check(c.target?.kind==='PERSON'&&['UNKNOWN','INJURED','UNINJURED'].includes(c.state));break;
   case 'AVAILABILITY':check(['UNSET','AVAILABLE','WORKING','UNAVAILABLE'].includes(c.state));break;
   case 'MATERIAL':check(c.target&&uuid.test(c.requestId)&&nonempty(c.name)&&nonempty(c.unit)&&Number.isFinite(c.needed)&&c.needed>=0&&Number.isFinite(c.arranged)&&c.arranged>=0);break;
   default:throw Error('対応記録の種別が不正です');

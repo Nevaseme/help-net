@@ -6,6 +6,20 @@ import {handle} from '../src/http.mjs';
 
 const id=()=>crypto.randomUUID(),token=()=>id().replaceAll('-','')+id().replaceAll('-','');
 const password='fictional-demo-password';
+test('venue creates persistent fictional scenario without consuming audience identities',async t=>{
+ const f=fixture(t),admin=await setup(f),g=admin.groupId,requestId=id();
+ const input={requestId,password,areaId:'kyoto-gosho-south'};
+ const start=await f.call(`/groups/${g}/venue`,input,admin.token);
+ const scenario=start.body.venue.scenario;assert.equal(scenario?.people?.length,12);
+ assert.equal(start.body.roster.members.length,1);assert.equal(start.body.venue.placements.length,1);
+ assert.ok(scenario.people.every(p=>p.home.plateauId&&p.home.buildingId&&p.home.address&&p.communityId));
+ assert.deepEqual(new Set(scenario.people.map(p=>p.safety)),new Set(['SAFE','SOS','UNREPORTED']));
+ assert.ok(scenario.people.every(p=>!/[\u3040-\u30ff\u3400-\u9fff]/.test(p.note+p.name+p.home.room)));
+ assert.equal(f.get(g).history('responses').filter(r=>r.change.type==='REPORT').length,3);
+ assert.equal(f.get(g).history('incidents').filter(r=>r.kind==='CARE'&&r.action==='RESCUED').length,2);
+ const replay=await f.call(`/groups/${g}/venue`,input,admin.token);assert.deepEqual(replay.body.venue.scenario,scenario);
+ assert.equal(f.get(g).history('responses').filter(r=>r.change.type==='REPORT').length,3);
+});
 test('Kyoto participants receive real building identities and town addresses',async t=>{
  const f=fixture(t),admin=await setup(f),g=admin.groupId;
  const start=await f.call(`/groups/${g}/venue`,{requestId:id(),password,areaId:'kyoto-gosho-south'},admin.token);
@@ -23,7 +37,7 @@ test('administrator selects actual positions; join creates no invented coordinat
  assert.equal(member.venue.placements.every(p=>p.source==='DEVICE_LOCATION'&&p.latitude===null&&p.longitude===null),true);
  const {saveVenue,venuePositions}=await import('../../lab/web/venue-demo.mjs');await saveVenue({update:async(_table,_key,fn)=>fn()},member);
  const point={groupId:g,originId:member.deviceId,revision:1,latitude:35.66,longitude:139.73,acquiredAt:Date.now(),accuracyMeters:20};
- assert.equal(venuePositions(member.venue,[]).length,0);assert.equal(venuePositions(member.venue,[{...point,acquiredAt:1}]).length,0);assert.deepEqual(venuePositions(member.venue,[point]),[point]);
+ const actual=rows=>rows.filter(p=>p.originId===member.deviceId);assert.equal(actual(venuePositions(member.venue,[])).length,0);assert.equal(actual(venuePositions(member.venue,[{...point,acquiredAt:1}])).length,0);assert.deepEqual(actual(venuePositions(member.venue,[point])),[point]);assert.equal(venuePositions(member.venue,[]).length,12);
  assert.equal((await f.call(`/groups/${g}/records`,{records:[{collection:'positions',record:point}]},member.token)).status,200);
  assert.equal(f.get(g).history('residents').length,0);assert.equal(f.get(g).history('positions').length,1);
 });

@@ -24,7 +24,7 @@ class PlanDApplication : Application() {
     val database by lazy { Room.databaseBuilder(this, PlanDatabase::class.java, "pland.db").addMigrations(PlanDatabase.MIGRATION_1_2, PlanDatabase.MIGRATION_2_3, PlanDatabase.MIGRATION_3_4, PlanDatabase.MIGRATION_4_5, PlanDatabase.MIGRATION_5_6, PlanDatabase.MIGRATION_6_7, PlanDatabase.MIGRATION_7_8, PlanDatabase.MIGRATION_8_9).build() }
     val store by lazy { RoomRecordStore(database,installation.localId) }
     val quakes by lazy { io.github.nevaseme.plandmk1.data.QuakeStore(database) }
-    val responses by lazy { io.github.nevaseme.plandmk1.data.ResponseStore(database) }
+    val responses by lazy { io.github.nevaseme.plandmk1.data.ResponseStore(database){group,incident,id->cloud.venue(group)?.takeIf{it.active(group,incident)}?.allPlacements()?.any{it.deviceId==id}==true} }
     val offlineMaps by lazy { OfflineMapRepository(this) }
     val buildingAssessments by lazy { io.github.nevaseme.plandmk1.buildings.BuildingAssessmentRepository { assets.open(it) } }
     val installation by lazy { InstallationSettings(this) }

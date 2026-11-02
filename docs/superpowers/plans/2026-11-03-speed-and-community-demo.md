@@ -25,3 +25,13 @@ User instruction, 2026-11-03: finish search/picker performance and UX; then issu
 
 ## Progress
 - Baseline measured. Implementation pending.
+
+## Checkpoint 2026-11-03 08:30 JST
+- Task 1 implemented: canonical pre-normalized Android binary search packages; original source assets retained. Vivo cold candidates 17,567→3,196 ms; warm median 51.12 ms / p95 80.83 ms (24 searches), versus baseline median93.25/p95140.68. This is candidates(), not total map/GPS time. Broad package tests cover 80 evenly spaced entries per package.
+- Picker compact address summary/edit, IME resize, search/clear/current-location checks passed on emulator and dedicated PWA browser. Updated native final UI test pending.
+- Community model and issued HTML/JSON snapshots implemented in both clients. Injury remains independent, conflicting injury becomes unknown; concurrent material requests counted once using largest shortfall and conflict label. Reports persist offline; old issued reports immutable.
+- 12 session-scoped fictional residents, 3 reports/material requests, 2 rescued histories seeded once. Scene people never occupy authenticated member slots. Demo neighborhoods partition the catalogue at longitudes135.760 and135.7615; these are fictional boundaries. ACTUAL participants stay in a separate Venue participants row.
+- PWA browser passed group/password→name→answer→map,14 persons including12 samples/all building links,injury correction,JP/EN,320px,issued report persistence after offline reopen,automatic offline SOS upload after reconnect. `.implementation/community-browser/result.json`.
+- Node243/243 passed including40-client Worker test; scoped native unit/build passed. New native device community test and publication pending. Separate final reviewer dispatched per executing-plans skill.
+- Ruling: response commands recognize active venue participants/sample identities without writing fictional resident profiles into real-home tables. Membership/incident authorization unchanged; new injury wire17/cloudcapability6 prevents older decoders receiving unknown types.
+- Backup1 pushed284b576 to codex/2026-11-03-community-demo. Comparison pages and plan.txt/add.txt untouched.

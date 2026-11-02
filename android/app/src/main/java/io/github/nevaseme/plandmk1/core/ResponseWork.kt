@@ -9,9 +9,11 @@ import kotlinx.serialization.json.Json
 @Serializable data class ResponseTarget(val kind:TargetKind,val id:String)
 @Serializable enum class WorkStatus { UNASSIGNED, PLANNED, IN_PROGRESS, DONE }
 @Serializable enum class Urgency { UNSET, LOW, MEDIUM, HIGH }
+@Serializable enum class InjuryState { UNKNOWN, INJURED, UNINJURED }
 @Serializable enum class ActivityState { UNSET, AVAILABLE, WORKING, UNAVAILABLE }
 
 @Serializable sealed class ResponseChange {
+    @Serializable @SerialName("INJURY") data class Injury(val target:ResponseTarget,val state:InjuryState):ResponseChange()
     @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
     @Serializable @SerialName("REPORT") data class Report(val reportId:String,val category:String,val latitude:Double,val longitude:Double,val description:String,
         @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) val regionIds:List<String> = emptyList(),
@@ -37,6 +39,7 @@ fun ResponseChange.target():ResponseTarget?=when(this) {
     is ResponseChange.Progress->target
     is ResponseChange.Priority->target
     is ResponseChange.Material->target
+    is ResponseChange.Injury->target
     is ResponseChange.Availability->null
 }
 fun responseKey(roster:MemberRoster,event:ResponseEvent):String {
@@ -46,6 +49,7 @@ fun responseKey(roster:MemberRoster,event:ResponseEvent):String {
         is ResponseChange.Progress->"progress:${c.target.kind}:${c.target.id}"
         is ResponseChange.Priority->"priority:${c.target.kind}:${c.target.id}"
         is ResponseChange.Material->"material:${c.requestId}"
+        is ResponseChange.Injury->"injury:${c.target.kind}:${c.target.id}"
         is ResponseChange.Availability->"availability:${roster.memberForDevice(event.actorDeviceId).memberId}"
     }
     return "${event.groupId}:${event.incidentId.orEmpty()}:$value"
@@ -72,6 +76,7 @@ fun validateResponseShape(roster:MemberRoster,event:ResponseEvent) {
             require(c.urgency==Urgency.UNSET || c.reason.isNotBlank()) {"緊急度の理由を入力してください"}
         }
         is ResponseChange.Material->require(recordIdPattern.matches(c.requestId)&&c.name.isNotBlank()&&c.unit.isNotBlank()&&c.needed.isFinite()&&c.arranged.isFinite()&&c.needed>=0&&c.arranged>=0)
+        is ResponseChange.Injury->require(c.target.kind==TargetKind.PERSON)
         is ResponseChange.Availability->Unit
     }
 }
@@ -115,7 +120,7 @@ private fun authorizeResponse(roster:MemberRoster,history:List<ResponseEvent>,ev
             if(original!=null)require(original.unit==c.unit && original.target==c.target) {"異なる単位・対象の資材は別の要請として登録してください"}
         }
         is ResponseChange.Availability->require(parents.all {roster.memberForDevice(it.actorDeviceId).memberId==member.memberId})
-        is ResponseChange.Progress->Unit
+        is ResponseChange.Progress,is ResponseChange.Injury->Unit
     }
 }
 

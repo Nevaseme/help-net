@@ -38,7 +38,10 @@ class PlanViewModel(application: Application) : AndroidViewModel(application) {
             val preferred=canonicalIncidentId(authorityState.first,authorityState.second,app.installation.incidentSelection(g))
             val options=managedIncidentOptions(journal,authorityState.first,authorityState.second)
             val displayed=authorityState.third?.takeIf {it.active(g,preferred)}?.displayResidents()?:residents
-            val state=projectIncidentUi(g,displayed,care,journal,preferred,options)
+            val demo=authorityState.third?.takeIf {it.active(g,preferred)}
+            val projectedJournal=journal+demo?.scenarioJournal().orEmpty()
+            val projectedOptions=if(demo!=null)managedIncidentOptions(projectedJournal,authorityState.first,authorityState.second)else options
+            val state=projectIncidentUi(g,displayed,care,projectedJournal,preferred,projectedOptions)
             if(preferred==null&&state.selection.isNotEmpty()) {
                 try {app.installation.selectIncident(g,state.selection)}
                 catch(e: Exception) {message.value=e.localizedMessage;return@combine projectIncidentUi(g,residents,care,journal,"",options)}
@@ -55,7 +58,7 @@ class PlanViewModel(application: Application) : AndroidViewModel(application) {
     private suspend fun personForOperation(g:String,device:String):Resident?=app.cloud.venue(g)?.takeIf {it.active(g,app.installation.incidentSelection(g))}?.displayResidents()?.find {it.originId==device}?:app.store.get(g,device)
     private suspend fun ownForOperation(g:String)=personForOperation(g,localId)
     private val placeSource=group.flatMapLatest {g->combine(app.store.observePlaces(g),app.quakes.observeRoster(g),app.quakes.observe(g)) {rows,roster,quakes->g to rows.map {it.copy(incidentId=canonicalIncidentId(roster,quakes,it.incidentId))}}}
-    val places=combine(group,placeSource,activeVenue) {g,s,v->if(g!=s.first)emptyList() else if(v?.positionMode=="KYOTO") {val projected=v.placeRecords();projected+s.second.filter {it.kind!=PlaceKind.HOME&&projected.none {p->p.eventId==it.eventId}}}else s.second}.stateIn(viewModelScope,SharingStarted.Eagerly,emptyList())
+    val places=combine(group,placeSource,activeVenue) {g,s,v->if(g!=s.first)emptyList() else if(v!=null) {val projected=v.placeRecords();projected+s.second.filter {(v.positionMode!="KYOTO"||it.kind!=PlaceKind.HOME)&&projected.none {p->p.eventId==it.eventId}}}else s.second}.stateIn(viewModelScope,SharingStarted.Eagerly,emptyList())
     private val positionSource = group.flatMapLatest { g -> app.store.observePositions(g).map { g to it } }
     val positions = combine(group, positionSource) { g, data -> if (g == data.first) data.second else emptyList() }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())

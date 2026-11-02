@@ -1,3 +1,4 @@
+import {scenarioAnswers} from './venue-demo.mjs';
 import {attachProfileHome} from './profile-home.mjs';
 import './ui-accessibility.mjs';
 import {attachCityOffline} from './city-offline.mjs';
@@ -157,7 +158,8 @@ async function refresh({background=false}={}){
  const next=selection==='legacy'||options.some(v=>v.start.eventId===selection)?selection:'';
  if(next!==incidentId){incidentId=next;selected=null;$('note').value='';$('action').value='CHECKING';$('supersedes').value='';saves.clearOtherResults();}
  view=options.find(v=>v.start.eventId===incidentId)||null;
- venue=venueWithHomes(activeVenue(venueData,g,incidentId),extras[3]);const synthetic=venuePlaces(venue);if(synthetic.length){const ids=new Set(synthetic.map(r=>r.eventId));placeRows=[...placeRows.filter(r=>r.kind!=='HOME'&&!ids.has(r.eventId)),...synthetic];}
+ venue=venueWithHomes(activeVenue(venueData,g,incidentId),extras[3]);const synthetic=venuePlaces(venue);if(synthetic.length){const ids=new Set(synthetic.map(r=>r.eventId));placeRows=[...placeRows.filter(r=>(venue.positionMode==='ACTUAL'||r.kind!=='HOME')&&!ids.has(r.eventId)),...synthetic];}
+ if(venue&&view){const answers={...view.answers};for(const a of scenarioAnswers(venue))if(!answers[a.authorId])answers[a.authorId]=a;view={...view,answers};}
  const displayRows=venue?venueResidents(venue):raw;
  records=incidentId==='legacy'?raw:displayRows.map(r=>({...r,safety:view?.answers[r.originId]?.safety||'UNREPORTED',updatedAt:view?.answers[r.originId]?.createdAt||0,impactAt:latestImpact(extras[3],g,r.originId)}));
  events=incidentId==='legacy'?legacy:view?.care||[];

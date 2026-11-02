@@ -14,7 +14,7 @@ data class ResponseRow(val groupId:String,val eventId:String,val payload:String)
     @Query("SELECT * FROM response_events WHERE groupId=:group ORDER BY eventId") fun observe(group:String):Flow<List<ResponseRow>>
     @Insert(onConflict=OnConflictStrategy.ABORT) suspend fun put(row:ResponseRow)
 }
-class ResponseStore(private val db:PlanDatabase) {
+class ResponseStore(private val db:PlanDatabase,private val knownDemoPerson:(String,String?,String)->Boolean={_,_,_->false}) {
     private val quakes=QuakeStore(db)
     suspend fun reportRegionSummary(group:String,incidentId:String,catalog:RegionCatalog,assignments:Map<String,List<String>> = emptyMap()):RegionalSummary=db.withTransaction {
         val roster=requireNotNull(quakes.roster(group));val quakeHistory=quakes.events(group)
@@ -32,7 +32,7 @@ class ResponseStore(private val db:PlanDatabase) {
         val quakeHistory=quakes.events(group);val selected=canonicalIncidentId(roster,quakeHistory,incidentId)
         require(quakeStates(roster,quakeHistory).any {incidentId in it.incidentIds&&!it.closed}) {"成立済みで開始中の災害を指定してください"}
         val current=heads(group).filter {it.incidentId==selected}
-        if(target.kind==TargetKind.PERSON)require(db.residents().get(group,target.id)!=null) {"対象住民が見つかりません"}
+        if(target.kind==TargetKind.PERSON)require((db.residents().get(group,target.id)!=null||knownDemoPerson(group,incidentId,target.id))) {"対象住民が見つかりません"}
         else require(current.any {(it.change as? ResponseChange.Report)?.let {r->r.reportId==target.id&&!r.cancelled}==true}) {"対象の通報が見つかりません"}
         startWorkChanges(roster,current,actorDeviceId,target).map {plan->
             append(ResponseEvent(group,java.util.UUID.randomUUID().toString(),actorDeviceId,1,at,incidentId,plan.change,plan.replaces))
@@ -66,7 +66,7 @@ class ResponseStore(private val db:PlanDatabase) {
             require(quakes.states(next.groupId).any {next.incidentId in it.incidentIds&&!it.closed}) {"成立済みで開始中の災害を指定してください"}
         }
         next.change.target()?.let {target->
-            if(target.kind==TargetKind.PERSON)require(db.residents().get(next.groupId,target.id)!=null) {"対象住民が見つかりません"}
+            if(target.kind==TargetKind.PERSON)require((db.residents().get(next.groupId,target.id)!=null||knownDemoPerson(next.groupId,next.incidentId,target.id))) {"対象住民が見つかりません"}
             else if(next.change !is ResponseChange.Report)require(projected.any {it.eventId==target.id && it.incidentId==canonicalIncidentId(roster,quakeHistory,next.incidentId) && it.change is ResponseChange.Report}) {"対象の通報が見つかりません"}
         }
         validateResponseCommand(roster,projected,next.copy(incidentId=canonicalIncidentId(roster,quakeHistory,next.incidentId)))

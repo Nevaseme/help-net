@@ -1,3 +1,4 @@
+import {createVenueScenario,seedVenueScenario} from './venue-scenario.mjs';
 import {ApiError,requireValue,uuid} from './validation.mjs';
 import {validateDemoPassword} from './demo-auth.mjs';
 import catalogue from './venue-buildings.json' with {type:'json'};
@@ -29,7 +30,7 @@ export const venueMethods={
   const config=this.venueConfig();if(!config)return null;
   const closed=this.history('quakes').some(e=>e.action==='END'&&(e.targetId===config.sessionId||e.endedIncidentIds?.includes(config.sessionId)));
   return {version:1,mode:'VENUE_DEMO',positionMode:config.positionMode??'KYOTO',startedAt:config.startedAt??0,groupId:this.meta('groupId'),sessionId:config.sessionId,incidentId:config.sessionId,areaId:config.areaId,areaName:config.positionMode==='ACTUAL'?'参加者の現在地':area.name,closed,
-   recoveryAvailable:!config.privateTraining,inactiveMemberIds:this.inactiveMembers(),placements:this.s.all('SELECT p.body FROM venue_participants p LEFT JOIN device_access a ON a.device_id=p.device_id WHERE p.session_id=? AND COALESCE(a.revoked,0)=0 ORDER BY p.device_id',config.sessionId).map(r=>{const p=JSON.parse(r.body);if(config.positionMode==='ACTUAL')return p;const home=latestDemoHome(this.history('deviceRecords'),this.meta('groupId'),config.sessionId,p.deviceId)??p.home??config.slots[p.slotId]?.home??catalogue.homes[p.slotId];return {...p,home,latitude:home.latitude,longitude:home.longitude};})};
+   scenario:config.scenario??null,recoveryAvailable:!config.privateTraining,inactiveMemberIds:this.inactiveMembers(),placements:this.s.all('SELECT p.body FROM venue_participants p LEFT JOIN device_access a ON a.device_id=p.device_id WHERE p.session_id=? AND COALESCE(a.revoked,0)=0 ORDER BY p.device_id',config.sessionId).map(r=>{const p=JSON.parse(r.body);if(config.positionMode==='ACTUAL')return p;const home=latestDemoHome(this.history('deviceRecords'),this.meta('groupId'),config.sessionId,p.deviceId)??p.home??config.slots[p.slotId]?.home??catalogue.homes[p.slotId];return {...p,home,latitude:home.latitude,longitude:home.longitude};})};
  },
  assignVenue(deviceId,memberId,name){
   const config=this.venueConfig();requireValue(config,'venue_not_started',409);
@@ -51,9 +52,10 @@ export const venueMethods={
   this.s.transaction(()=>{
    const previous=this.venueConfig();if(previous?.sessionId===input.requestId)return;
    requireValue(!previous||this.venueSnapshot().closed,'venue_already_active',409,'現在の会場デモを終了してから、新しいデモを開始してください。');
-   const config={sessionId:input.requestId,areaId:input.areaId,privateTraining,positionMode:input.positionMode??'KYOTO',startedAt:this.now(),salt,passwordHash:hash,slots:slots()};
+   const config={sessionId:input.requestId,areaId:input.areaId,privateTraining,positionMode:input.positionMode??'KYOTO',startedAt:this.now(),salt,passwordHash:hash,slots:slots(),scenario:privateTraining?null:createVenueScenario(input.requestId)};
    this.s.run('INSERT INTO metadata(key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value','venue',JSON.stringify(config));
    this.append(actor,{collection:'quakes',record:{groupId:this.meta('groupId'),eventId:input.requestId,actorDeviceId:actor.deviceId,operatedAt:this.now(),action:'TRAINING_START',training:true,title:privateTraining?input.title.trim():'会場デモ',area:privateTraining?input.area.trim():config.positionMode==='ACTUAL'?'参加者の現在地':area.name}});
+   if(config.scenario)seedVenueScenario(this,actor,config);
    for(const member of this.snapshot().roster.members)for(const device of member.deviceIds)if(!this.s.all('SELECT revoked FROM device_access WHERE device_id=?',device)[0]?.revoked)this.assignVenue(device,member.memberId,member.activityName);
   });await this.s.flush();return this.snapshot();
  },

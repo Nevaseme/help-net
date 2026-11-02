@@ -102,10 +102,11 @@ import io.github.nevaseme.plandmk1.core.*
         val notes = memos.associateBy { it.answerId }
         residents.map { person ->
             val answer = incident.current?.answers?.get(person.originId)
+            val scenarioPerson=venue?.scenario?.people?.find {it.deviceId==person.originId}
             val base=residentMapPerson(person, places, care, locations[person.originId],
-                if (answer?.safety == Safety.SOS) notes[answer.eventId]?.takeIf {it.authorId==person.originId&&it.incidentId==answer.incidentId}?.text.orEmpty() else "").copy(impactAt=latestImpact(deviceRecords,group,person.originId,now))
-            val placement=venue?.placements?.find {it.deviceId==person.originId}
-            projectPersonPrivacy(if(placement==null)base else if(venue?.positionMode=="ACTUAL")base.copy(name=placement.name,home=null,demo=true) else base.copy(name=placement.name,point=MapPoint(checkNotNull(placement.latitude),checkNotNull(placement.longitude)),acquiredAt=incident.current?.start?.createdAt,accuracy=null,demo=true),incident.current?.start?.createdAt,now)
+                if (answer?.safety == Safety.SOS) notes[answer.eventId]?.takeIf {it.authorId==person.originId&&it.incidentId==answer.incidentId}?.text?:scenarioPerson?.note.orEmpty() else scenarioPerson?.note.orEmpty()).copy(impactAt=latestImpact(deviceRecords,group,person.originId,now))
+            val placement=venue?.allPlacements()?.find {it.deviceId==person.originId}
+            projectPersonPrivacy(if(placement==null)base else if(venue?.positionMode=="ACTUAL"&&placement.source!="SCENARIO")base.copy(name=placement.name,home=null,demo=true) else base.copy(name=placement.name,point=MapPoint(checkNotNull(placement.latitude),checkNotNull(placement.longitude)),acquiredAt=incident.current?.start?.createdAt,accuracy=null,demo=true,fictional=placement.source=="SCENARIO"),incident.current?.start?.createdAt,now)
         }
     }
     val homes = placeBuildings(places).map { MapHome(it.buildingId!!, it.displayLabel(), MapPoint(it.latitude!!, it.longitude!!)) }
