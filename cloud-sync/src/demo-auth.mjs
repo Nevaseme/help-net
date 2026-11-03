@@ -5,8 +5,7 @@ const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const normalize=value=>typeof value==='string'?value.normalize('NFKC').toUpperCase().replace(/[\s-]/g,''):'';
 const day=86400000;
 export function validateDemoPassword(value){
- const p=typeof value==='string'?value.normalize('NFKC').trim().toLowerCase():'';
- requireValue(p.length>=8&&p.length<=128&&!new Set(['password','password1','password123','12345678','123456789','1234567890','abcdefgh','qwertyui','qwerty123','11111111','00000000']).has(p)&&!/^(.)(\1)+$/u.test(p),'weak_venue_password',400,'推測されにくい参加パスワードにしてください（8文字以上）。');
+ requireValue(typeof value==='string'&&value.trim().length>0&&value.length<=128,'invalid_venue_password',400,'参加パスワードを1〜128文字で入力してください。');
 }
 export const demoAuthMethods={
  authInit(){

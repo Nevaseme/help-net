@@ -6,6 +6,21 @@ import {handle} from '../src/http.mjs';
 
 const id=()=>crypto.randomUUID(),token=()=>id().replaceAll('-','')+id().replaceAll('-','');
 const password='fictional-demo-password';
+for(const chosen of ['12345678','1','11111111','あ',' Password '])test(`chosen demo password is accepted without complexity rules: ${JSON.stringify(chosen)}`,async t=>{
+ const f=fixture(t),admin=await setup(f);
+ const started=await f.call(`/groups/${admin.groupId}/venue`,{requestId:id(),password:chosen,areaId:'kyoto-gosho-south'},admin.token);
+ assert.equal(started.status,200,JSON.stringify(started.body));
+ const join=password=>f.call('/venue/join',{groupName:'会場テスト',password,activityName:'確認',deviceId:id(),registrationToken:token()});
+ assert.equal((await join(chosen+'wrong')).status,403);
+ assert.equal((await join(chosen)).status,200);
+});
+test('blank, non-string and oversized passwords remain invalid',async t=>{
+ const f=fixture(t),admin=await setup(f);
+ for(const value of ['', '   ',null,12345678,'x'.repeat(129)]){
+  const r=await f.call(`/groups/${admin.groupId}/venue`,{requestId:id(),password:value,areaId:'kyoto-gosho-south'},admin.token);
+  assert.equal(r.status,400);assert.equal(r.body.error.code,'invalid_venue_password');
+ }
+});
 test('venue creates persistent fictional scenario without consuming audience identities',async t=>{
  const f=fixture(t),admin=await setup(f),g=admin.groupId,requestId=id();
  const input={requestId,password,areaId:'kyoto-gosho-south'};
@@ -35,7 +50,7 @@ test('administrator selects actual positions; join creates no invented coordinat
  assert.equal(start.body.venue.positionMode,'ACTUAL');assert.equal(start.body.venue.placements[0].latitude,null);
  const member=(await f.call('/venue/join',{groupName:'会場テスト',password,activityName:'六本木テスト',deviceId:id(),registrationToken:token()})).body;
  assert.equal(member.venue.placements.every(p=>p.source==='DEVICE_LOCATION'&&p.latitude===null&&p.longitude===null),true);
- const {saveVenue,venuePositions}=await import('../../lab/web/venue-demo.mjs');await saveVenue({update:async(_table,_key,fn)=>fn()},member);
+ const {saveVenue,venuePositions}=await import('../../lab/web/venue-demo.mjs');await saveVenue({read:async()=>null,update:async(_table,_key,fn)=>fn()},member);
  const point={groupId:g,originId:member.deviceId,revision:1,latitude:35.66,longitude:139.73,acquiredAt:Date.now(),accuracyMeters:20};
  const actual=rows=>rows.filter(p=>p.originId===member.deviceId);assert.equal(actual(venuePositions(member.venue,[])).length,0);assert.equal(actual(venuePositions(member.venue,[{...point,acquiredAt:1}])).length,0);assert.deepEqual(actual(venuePositions(member.venue,[point])),[point]);assert.equal(venuePositions(member.venue,[]).length,12);
  assert.equal((await f.call(`/groups/${g}/records`,{records:[{collection:'positions',record:point}]},member.token)).status,200);
@@ -64,9 +79,9 @@ test('recovery retains one member and placement, revokes previous credential, an
  assert.equal(revoked.body.roster.members.length,2,'history retained');
 });
 
-test('weak passwords, invitation after closure, expired code and idle member session are rejected',async t=>{
+test('empty passwords, invitation after closure, expired code and idle member session are rejected',async t=>{
  const f=fixture(t),admin=await setup(f),g=admin.groupId,sessionId=id();
- assert.equal((await f.call(`/groups/${g}/venue`,{requestId:sessionId,password:'12345678',areaId:'kyoto-gosho-south'},admin.token)).status,400);
+ assert.equal((await f.call(`/groups/${g}/venue`,{requestId:sessionId,password:'',areaId:'kyoto-gosho-south'},admin.token)).status,400);
  await f.call(`/groups/${g}/venue`,{requestId:sessionId,password,areaId:'kyoto-gosho-south'},admin.token);
  const original=(await f.call('/venue/join',{groupName:'会場テスト',password,activityName:'本人',deviceId:id(),registrationToken:token()})).body;
  const code=(await f.call(`/groups/${g}/access`,{action:'issue'},original.token)).body.code;

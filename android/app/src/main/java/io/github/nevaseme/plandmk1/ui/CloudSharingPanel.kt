@@ -196,7 +196,7 @@ fun CloudSyncButton(busy: Boolean, onSync: () -> Unit) {
     var attempted by rememberSaveable {mutableStateOf(false)}
     var visible by rememberSaveable {mutableStateOf(false)}
     val keyboard=LocalSoftwareKeyboardController.current
-    val invalid=password.length !in 8..128
+    val invalid=password.isBlank() || password.length > 128
     fun submit(){if(!busy){attempted=true;if(!invalid){keyboard?.hide();onStart(if(actualPosition)"ACTUAL" else "KYOTO")}}}
     Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
         Text(tr("参加者を表示する位置","Participant locations"),style=MaterialTheme.typography.titleSmall)
@@ -206,7 +206,7 @@ fun CloudSyncButton(busy: Boolean, onSync: () -> Unit) {
         Text(if(actualPosition)tr("虎ノ門ヒルズ周辺の地図・住所を自動で準備します。位置情報の許可が必要です。","Maps and addresses around Toranomon Hills are prepared automatically. Location permission is required.") else tr("京都の建物に分散して割り当て、京都の地図を自動で準備します。","Assign participants to buildings across Kyoto and prepare the map automatically."),style=MaterialTheme.typography.bodySmall)
         OutlinedTextField(password,onPassword,label={Text(tr("参加パスワード","Participation password"))},
             visualTransformation=if(visible)VisualTransformation.None else PasswordVisualTransformation(),singleLine=true,enabled=!busy,
-            isError=attempted&&invalid,supportingText={Text(if(attempted&&invalid)tr("8〜128文字で入力してください（現在${password.length}文字）","Enter 8–128 characters (${password.length} entered).") else tr("8〜128文字。参加者に伝えるパスワードです。","8–128 characters. Share this with participants."))},
+            isError=attempted&&invalid,supportingText={Text(if(attempted&&invalid)tr("1〜128文字で入力してください（現在${password.length}文字）","Enter 1–128 characters (${password.length} entered).") else tr("1〜128文字。参加者に伝えるパスワードです。","1–128 characters. Share this with participants."))},
             trailingIcon={TextButton(onClick={visible=!visible}){Text(if(visible)tr("隠す","Hide") else tr("表示","Show"))}},
             keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Password,imeAction=ImeAction.Done),keyboardActions=KeyboardActions(onDone={submit()}),modifier=Modifier.fillMaxWidth())
         Button(onClick=::submit,enabled=!busy,modifier=Modifier.fillMaxWidth()){Text(if(busy)tr("開始しています…","Starting…") else tr("デモを開始する","Start demo"))}

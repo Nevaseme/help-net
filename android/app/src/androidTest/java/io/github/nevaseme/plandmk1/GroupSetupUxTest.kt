@@ -16,8 +16,8 @@ import org.junit.Assert.*
 class GroupSetupUxTest {
     @get:Rule val compose=createEmptyComposeRule()
 
-    @Test fun shortPasswordExplainsRequirementAndValidPasswordStartsSelectedMode() {
-        var password by mutableStateOf("123456")
+    @Test fun blankPasswordExplainsRequirementAndSimplePasswordStartsSelectedMode() {
+        var password by mutableStateOf("")
         var mode by mutableStateOf("KYOTO")
         var starts=0
         var submitted=""
@@ -28,17 +28,20 @@ class GroupSetupUxTest {
         } }
         val start=compose.onNodeWithText("デモを開始する")
         start.assertIsEnabled().performScrollTo().performClick()
-        compose.onNodeWithText("8〜128文字で入力してください（現在6文字）").assertExists()
+        compose.onNodeWithText("1〜128文字で入力してください（現在0文字）").assertExists()
         assertEquals(0,starts)
         compose.onNodeWithText("参加パスワード").performTextReplacement("12345678")
         compose.onNodeWithText("参加者の現在地").performScrollTo().performClick()
         start.performScrollTo().performClick()
         assertEquals(1,starts)
         assertEquals("ACTUAL",submitted)
+        compose.onNodeWithText("参加パスワード").performTextReplacement("1")
+        start.performScrollTo().performClick()
+        assertEquals(2,starts)
         compose.onNodeWithText("参加パスワード").performTextReplacement("x".repeat(129))
         start.performScrollTo().performClick()
-        compose.onNodeWithText("8〜128文字で入力してください（現在129文字）").assertExists()
-        assertEquals(1,starts)
+        compose.onNodeWithText("1〜128文字で入力してください（現在129文字）").assertExists()
+        assertEquals(2,starts)
     }
 
     @Test fun inFlightStartShowsProgressAndPreventsAnotherSubmission() {

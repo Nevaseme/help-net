@@ -242,7 +242,7 @@ class CloudController(private val app:PlanDApplication) {
     private fun safeError(error:Exception)=when(error) {
         is CloudHttpException->when(error.code){
             "invalid_venue_credentials"->"グループ名またはパスワードを確認してください"
-            "weak_venue_password"->"推測されにくい参加パスワードにしてください（8文字以上）"
+            "weak_venue_password", "invalid_venue_password"->"参加パスワードを1〜128文字で入力してください"
             "invalid_recovery"->"復元コードを確認してください。発行から24時間以内に1回使えます"
             "access_revoked"->"この参加登録は停止されています。管理者に確認してください"
             "session_expired"->"接続の有効期限が切れました。復元コードを使うか、管理者に確認してください"

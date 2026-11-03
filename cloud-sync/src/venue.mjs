@@ -9,7 +9,7 @@ const hex=bytes=>Array.from(new Uint8Array(bytes),v=>v.toString(16).padStart(2,'
 const sha=async text=>hex(await crypto.subtle.digest('SHA-256',enc.encode(text)));
 const normalize=name=>typeof name==='string'?name.normalize('NFKC').trim().toLowerCase():'';
 async function passwordHash(password,salt){
- requireValue(typeof password==='string'&&password.length>=8&&password.length<=128,'invalid_venue_password',400,'参加パスワードは8〜128文字にしてください。');
+ validateDemoPassword(password);
  const key=await crypto.subtle.importKey('raw',enc.encode(password),'PBKDF2',false,['deriveBits']);
  return hex(await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',iterations:100000,salt:enc.encode(salt)},key,256));
 }
