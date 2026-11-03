@@ -101,3 +101,17 @@
 - JVM261件とエミュレーター13件成功。追加のアダプター試験では、探索OFF中のSDK広告非呼出し、既存データ受信の継続、ON復帰時に既存接続を作り直さず探索再開することを確認した。
 - 両端末を1.5.55へ更新済み。`safety-radio-1793696872`で安否・通報の双方向共有を確認し、Bluetooth OFF観察を開始する準備ができた。以降の実機結果は継続記録する。
 - 証拠：`.implementation/discovery-pause-build.log`、`discovery-pause-emulator.log`、`mi9t-bluetooth-auto-enable-1554.txt`。
+
+
+### 1.5.55 実機結果（18:20時点、継続中）
+
+試験グループ `safety-radio-1793696872`、vivo V2417A / Mi 9T、両端末1.5.55。
+
+- Bluetooth OFF・Wi-Fi ON・ネット未接続・消灯で、両端末のBluetooth OFFが維持された。共有サービスも稼働を保持したが、接続数は0となり、新しい安否・通報は約54秒の観察中に届かなかった。
+- SDKログでは実接続はBLUETOOTH。vivoはWIFI_LANをWITHOUT_CONNECTED_WIFI_NETWORKで利用不可とし、Mi 9Tはアップグレード候補がBLUETOOTHのみだった。Bluetooth切断に対してSDKの再接続が失敗し、SDK onDisconnectedの後にアプリの接続後処理が発生している。Wi-Fi Directへ切り替わった証拠はない。
+- この結果は今回の2台・P2P_CLUSTER・設定での結果であり、Wi-Fi単独通信全般の不可能性を示すものではない。抽象化は経路選択をSDKへ委ねる意味であり、利用可能な代替経路や切替成功の保証ではない。Wi-Fi ONだけで代替経路が成立するとの説明は訂正した。
+- 利用者が両端末のBluetoothをONに戻して消灯した後、アプリの接続・同期ボタンを押さず接続数1へ復帰した。
+- 消灯状態を確認して15秒後に新しいSOSと通報を各端末で生成し、両方向で受信・保存した（両方screen-pass）。その時点でも画面OFF、ネット未接続。
+- 続けて、vivoのBluetooth/Wi-Fi両方OFF中の蓄積と復帰後再送、その後の実OS再起動を試験する。これらはまだ合格扱いにしない。
+
+証拠：`.implementation/safety-radio-1793696872/` 内の各端末 `-phases.jsonl` / `-network.jsonl` / `-medium-logs.txt`。SDKログは当該サービスIDと時刻で照合した。Google Play開発者サービスはvivo 26.43.30、Mi 9T 25.50.34。
