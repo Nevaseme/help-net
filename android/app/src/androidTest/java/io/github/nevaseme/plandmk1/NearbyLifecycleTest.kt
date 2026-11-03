@@ -24,12 +24,18 @@ class NearbyLifecycleTest {
         lateinit var receiver: PayloadCallback
         var requested: ConnectionLifecycleCallback? = null
         var advertiseGate: TaskCompletionSource<Void>? = null
+        var advertisingOptions: AdvertisingOptions? = null
+        var connectionOptions: ConnectionOptions? = null
         val value = Proxy.newProxyInstance(ConnectionsClient::class.java.classLoader, arrayOf(ConnectionsClient::class.java)) { _, method, args ->
             calls.add(method.name to (args?.firstOrNull() as? String))
             if (method.name == "startDiscovery") discovery=args!![1] as EndpointDiscoveryCallback
-            if (method.name == "requestConnection") requested=args!![2] as ConnectionLifecycleCallback
+            if (method.name == "requestConnection") {
+                requested=args!![2] as ConnectionLifecycleCallback
+                connectionOptions=args.getOrNull(3) as? ConnectionOptions
+            }
             if (method.name == "acceptConnection") receiver=args!![1] as PayloadCallback
             if (method.name == "startAdvertising") {
+                advertisingOptions=args!![3] as AdvertisingOptions
                 lifecycle = args!![2] as ConnectionLifecycleCallback
                 advertiseGate?.task ?: Tasks.forResult<Void>(null)
             } else if (Task::class.java.isAssignableFrom(method.returnType)) Tasks.forResult<Void>(null)
@@ -46,11 +52,13 @@ class NearbyLifecycleTest {
             p.configureAutomatic(left);p.onConnected={joins++};p.start("A");p.setVisible(false)
         };idle()
         main {
+            assertEquals("Advertising must respect radio switches", ConnectionType.NON_DISRUPTIVE, client.advertisingOptions!!.connectionType)
             client.discovery.onEndpointFound("B",DiscoveredEndpointInfo(left.serviceId,right.endpoint("B")))
         }
         Thread.sleep(1_500); idle()
         main {
             assertTrue(client.calls.any{it.first=="requestConnection"})
+            assertEquals("Connections must respect radio switches", ConnectionType.NON_DISRUPTIVE, client.connectionOptions?.connectionType)
             client.requested!!.onConnectionInitiated("B",ConnectionInfo(right.endpoint("B"),"connection-token",false))
             assertTrue(p.state.value.verifications.isEmpty())
             client.requested!!.onConnectionResult("B",ConnectionResolution(Status.RESULT_SUCCESS))

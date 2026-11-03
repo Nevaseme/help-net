@@ -108,7 +108,8 @@ class NearbyTransport(
             previous?.join()
             if (!validSearch(token, epoch)) return@launch
             try {
-                client.startAdvertising(endpointName, automatic?.serviceId ?: SERVICE_ID, lifecycle(token), AdvertisingOptions.Builder().setStrategy(Strategy.P2P_CLUSTER).build())
+                client.startAdvertising(endpointName, automatic?.serviceId ?: SERVICE_ID, lifecycle(token), AdvertisingOptions.Builder()
+                    .setStrategy(Strategy.P2P_CLUSTER).setConnectionType(ConnectionType.NON_DISRUPTIVE).build())
                     .addOnSuccessListener { if (owner == latestOwner && !validSearch(token, epoch)) client.stopAdvertising() }.awaitResult()
                 if (!validSearch(token, epoch)) return@launch
                 client.startDiscovery(automatic?.serviceId ?: SERVICE_ID, discovery(token, epoch), DiscoveryOptions.Builder().setStrategy(Strategy.P2P_CLUSTER).build())
@@ -191,7 +192,8 @@ class NearbyTransport(
         mutable.update { it.copy(connecting = it.connecting + peer.id) }
         val callback = lifecycle(token, peer.id)
         val owner = connectionOwners[peer.id]
-        client.requestConnection(endpointName, peer.id, callback).addOnFailureListener {
+        client.requestConnection(endpointName, peer.id, callback, ConnectionOptions.Builder()
+            .setConnectionType(ConnectionType.NON_DISRUPTIVE).build()).addOnFailureListener {
             if (generation == token && connectionOwners[peer.id] == owner) {
                 if (automatic != null) { failAutomatic(peer.id); return@addOnFailureListener }
                 connectionOwners.remove(peer.id)

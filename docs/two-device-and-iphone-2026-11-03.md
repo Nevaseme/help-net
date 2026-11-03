@@ -79,3 +79,16 @@
 - 実再起動後はアプリ起動や追加のinstrumentationより前に、通常サービスの起動とRoom内の相手由来の安否・通報を読み取る。試験用グループの復元情報は端末内に残し、検証後に元のグループへ戻す。
 
 参考：Google公式の[Nearbyの通信方式](https://developers.google.com/nearby/connections/overview)、[接続構成](https://developers.google.com/nearby/connections/strategies)、[起動時のForeground Service条件](https://developer.android.com/develop/background-work/services/fgs/restrictions-bg-start)。SDKが無線を選択するため、Bluetooth OFF時の成功を測定せずにWi-Fi Direct成功とは呼ばない。
+
+## 1.5.53の実機経過と1.5.54の追加修正
+
+- 両端末の1.5.53で、ネット未接続・Bluetooth/Wi-Fi ONの安否と通報が双方向に届いた（`safety-radio-1793695484`、`safety-radio-1793695666`の`initial-pass`）。
+- 最初の実行はビルド中に試験コードを編集したため、試験APKにWi-Fi・再起動段階が入っていなかった。元グループへ戻し、試験APKだけ再生成・更新。再生成APK内の`wifi-observation` / `reboot-queued`を確認した。
+- 2回目はMi 9TのUSB切断でPC監視が停止。両端末の試験を終了して元グループへ復元した。Wi-Fi単独、消灯、自動再接続の合格とは扱わない。
+- 利用者がMi 9TのBluetoothをOFFにしてもONへ戻ると報告。`dumpsys bluetooth_manager`のEnable logで、17:48:43〜17:49:50に利用者OFFの後、`com.google.android.gms`がONを要求していることを確認した。
+- Nearby広告・接続要求の既定値BALANCEDから、`ConnectionType.NON_DISRUPTIVE`を明示する1.5.54へ変更した。Google公式では無線状態を変更しない設定。実端末での尊重は再確認が必要。
+- SDKへ渡される設定の回帰テストは修正前に失敗（expected 2 / actual 0）、修正後に成功。1.5.54のJVM261件、NearbyLifecycleTest9件成功。
+- PC側監視はUSB一時切断を記録して再接続待ちにし、勝手に試験中断しないよう変更した。USB不通期間のネット状態を確認済みとは扱わない。
+- 1.5.54通常版を両端末へ配布・更新中。試験APKは1.5.53-v2を継続使用できる。
+
+追加証拠：`.implementation/non-disruptive-red.log`、`non-disruptive-build.log`、`non-disruptive-emulator.log`。参考：[Google ConnectionType](https://developers.google.com/android/reference/com/google/android/gms/nearby/connection/ConnectionType)。
