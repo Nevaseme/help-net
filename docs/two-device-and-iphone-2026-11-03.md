@@ -92,3 +92,12 @@
 - 1.5.54通常版を両端末へ配布・更新中。試験APKは1.5.53-v2を継続使用できる。
 
 追加証拠：`.implementation/non-disruptive-red.log`、`non-disruptive-build.log`、`non-disruptive-emulator.log`。参考：[Google ConnectionType](https://developers.google.com/android/reference/com/google/android/gms/nearby/connection/ConnectionType)。
+
+## 1.5.55：探索と接続保持をさらに分離
+
+- 1.5.54でも両端末でBluetoothが自動ONへ戻った。Mi 9Tでは17:59:08/20の利用者OFF後、17:59:16/22にGoogle Play開発者サービスからON要求が記録された。NON_DISRUPTIVE指定だけでは今回の探索中の挙動を抑制できなかった。
+- 1.5.55はBluetoothのTURNING_OFF通知で広告・探索を停止し、OFF中はその再試行と新しい接続要求を行わない。既存の接続・認証済み受信経路は保持する。ユーザーがBluetoothをONに戻したら探索を再開する。
+- 起動時にBluetoothがOFFなら、Wi-FiがONでも探索を始めてBluetoothをONにしようとはしない。既存接続を保持できることと、新規探索を開始することを別条件にした。
+- JVM261件とエミュレーター13件成功。追加のアダプター試験では、探索OFF中のSDK広告非呼出し、既存データ受信の継続、ON復帰時に既存接続を作り直さず探索再開することを確認した。
+- 両端末を1.5.55へ更新済み。`safety-radio-1793696872`で安否・通報の双方向共有を確認し、Bluetooth OFF観察を開始する準備ができた。以降の実機結果は継続記録する。
+- 証拠：`.implementation/discovery-pause-build.log`、`discovery-pause-emulator.log`、`mi9t-bluetooth-auto-enable-1554.txt`。

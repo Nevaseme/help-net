@@ -26,13 +26,23 @@ class SharingService : Service() {
     private var automatic = false
     private val radios = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
+            if (automatic && intent.action == BluetoothAdapter.ACTION_STATE_CHANGED &&
+                intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1) == BluetoothAdapter.STATE_TURNING_OFF) {
+                // Stop SDK discovery before it can respond to OFF by enabling Bluetooth again.
+                // Existing payload channels are deliberately left intact.
+                session?.setDiscoveryAllowed(false)
+                return
+            }
             val settled = when (intent.action) {
                 BluetoothAdapter.ACTION_STATE_CHANGED -> intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1) in setOf(BluetoothAdapter.STATE_ON, BluetoothAdapter.STATE_OFF)
                 WifiManager.WIFI_STATE_CHANGED_ACTION -> intent.getIntExtra(WifiManager.EXTRA_WIFI_STATE, -1) in setOf(WifiManager.WIFI_STATE_ENABLED, WifiManager.WIFI_STATE_DISABLED)
                 else -> false
             }
             if (!settled) return
-            if (automatic) session?.setRadiosReady(ready(), changed = true)
+            if (automatic) {
+                session?.setDiscoveryAllowed(bluetoothReady())
+                session?.setRadiosReady(ready(), changed = true)
+            }
             else if (session != null && !ready()) app.sharing.stop("通信権限またはBluetooth・Wi-FiがOFFになったため共有を停止しました")
         }
     }
@@ -101,6 +111,7 @@ class SharingService : Service() {
                 onDurableReceipt={withContext(Dispatchers.IO) {io.github.nevaseme.plandmk1.cloud.CloudSyncWork.enqueue(app,group,afterChange=true)}})
             if (!app.sharing.attach(token, value)) { stopSelfResult(startId); return@launch }
             session = value
+            value.setDiscoveryAllowed(bluetoothReady())
             value.setRadiosReady(ready())
             value.start(own?.name ?: intent.getStringExtra("name") ?: "PlanD")
             value.setForeground(app.sharing.foreground)
@@ -108,6 +119,7 @@ class SharingService : Service() {
                 while(isActive && app.sharing.isCurrent(token)) {
                     delay(10_000)
                     if(group!=app.installation.group.value){app.sharing.stop();break}
+                    value.setDiscoveryAllowed(bluetoothReady())
                     value.setRadiosReady(ready())
                 }
             }
@@ -120,6 +132,9 @@ class SharingService : Service() {
         }
         return if(automatic) START_STICKY else START_NOT_STICKY
     }
+    private fun bluetoothReady(): Boolean = try {
+        getSystemService(BluetoothManager::class.java)?.adapter?.isEnabled == true
+    } catch (_: SecurityException) { false }
     private fun ready(): Boolean = try {
         val bluetooth = getSystemService(BluetoothManager::class.java)?.adapter?.isEnabled == true
         val wifi = (applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager).isWifiEnabled

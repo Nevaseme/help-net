@@ -60,10 +60,11 @@ class NearbyTransport(
     private var retryJob: Job? = null
     private var nextSearchAt = 0L
     private var searchBackoff = 5_000L
+    private var discoveryAllowed = true
     private val devices = mutableMapOf<String, String>()
     private val challenges = mutableMapOf<String, ByteArray>()
     private fun now() = android.os.SystemClock.elapsedRealtime()
-    private val canSearch get() = visible || automatic != null
+    private val canSearch get() = discoveryAllowed && (visible || automatic != null)
     override fun configureAutomatic(link: GroupLink) { check(!mutable.value.active); automatic = link }
     override var onConnected: suspend (String) -> Unit = {}
     override var onDisconnected: (String) -> Unit = {}
@@ -154,6 +155,14 @@ class NearbyTransport(
         if (automatic == null || !mutable.value.active) return
         pauseSearch()
         searchBackoff = 5_000L; nextSearchAt = now() + 1_000L
+    }
+
+    override fun setDiscoveryAllowed(allowed: Boolean) {
+        if (discoveryAllowed == allowed) return
+        discoveryAllowed = allowed
+        if (!mutable.value.active) return
+        if (!allowed) pauseSearch()
+        else { searchBackoff = 5_000L; nextSearchAt = 0L; resumeSearch() }
     }
 
     override fun setVisible(visible: Boolean) {
@@ -351,7 +360,7 @@ class NearbyTransport(
     }
 
     private fun reconcileAutomatic() {
-        if (!mutable.value.active) return
+        if (!mutable.value.active || !canSearch) return
         val plan = topology?.poll(now()) ?: return
         plan.disconnect.forEach { dropAutomatic(it) }
         plan.connect?.let { id ->

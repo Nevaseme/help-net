@@ -116,6 +116,39 @@ class NearbyLifecycleTest {
         };idle()
         main {assertEquals(0,joins);assertEquals(0,records);assertTrue(p.state.value.connected.isEmpty());assertTrue(client.calls.contains("disconnectFromEndpoint" to "A"));p.stop();scope.cancel()}
     }
+    @Test fun radioDiscoveryPauseKeepsEstablishedPayloadChannelAndResumesWithoutReconnect() {
+        val client=Client(); val scope=CoroutineScope(SupervisorJob()+Dispatchers.Main.immediate)
+        val local=GroupLink("g","00000000-0000-0000-0000-000000000002","ab".repeat(32))
+        val remote=GroupLink("g","00000000-0000-0000-0000-000000000001","ab".repeat(32))
+        lateinit var p:NearbyTransport; var received=""
+        main {
+            p=NearbyTransport(instrumentation.targetContext,scope,client.value){true}
+            p.configureAutomatic(local);p.setDiscoveryAllowed(false);p.start("local")
+            assertFalse(client.calls.any {it.first=="startAdvertising"})
+            p.setDiscoveryAllowed(true)
+        };idle()
+        main {
+            client.lifecycle.onConnectionInitiated("peer",ConnectionInfo(remote.endpoint("remote"),"token",true))
+            client.lifecycle.onConnectionResult("peer",ConnectionResolution(Status.RESULT_SUCCESS))
+            client.receiver.onPayloadReceived("peer",Payload.fromBytes(remote.proof("token".toByteArray(),remote.device,local.device)))
+            p.onBytes={_,bytes->received=bytes.decodeToString()}
+            p.setDiscoveryAllowed(false);p.refreshDiscovery()
+        }
+        Thread.sleep(5_500);idle()
+        main {
+            assertEquals(1,client.calls.count {it.first=="startAdvertising"})
+            assertFalse(p.state.value.discovering);assertEquals(setOf("peer"),p.state.value.connected)
+            assertFalse(client.calls.any {it.first=="stopAllEndpoints"})
+            client.receiver.onPayloadReceived("peer",Payload.fromBytes("wifi record".toByteArray()))
+            assertEquals("wifi record",received)
+            p.setDiscoveryAllowed(true)
+        };idle()
+        main {
+            assertEquals(2,client.calls.count {it.first=="startAdvertising"})
+            assertEquals(setOf("peer"),p.state.value.connected)
+            p.stop();scope.cancel()
+        }
+    }
     @Test fun twentyDiscoveredDevicesCannotExceedFourPendingLinksOrBypassRingPolicy() {
         val client = Client(); val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
         fun link(i: Int) = GroupLink("g", "00000000-0000-0000-0000-${i.toString().padStart(12, '0')}", "ab".repeat(32))

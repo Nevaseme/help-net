@@ -83,6 +83,9 @@ class SharingSession(
             publish(NearbyState(active=true,error="BluetoothまたはWi-Fiが使える状態に戻ると自動で共有を再開します"))
         } else port.start(name)
     }
+    fun setDiscoveryAllowed(allowed: Boolean) {
+        if (automatic) port.setDiscoveryAllowed(allowed)
+    }
     fun setForeground(visible: Boolean) {
         foreground = visible
         if (!alive) return
