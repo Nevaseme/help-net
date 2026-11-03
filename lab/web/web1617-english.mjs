@@ -74,7 +74,7 @@ export const englishUI = {
   "{hours}時間前": "{hours} hr ago",
   "3日以上更新なし": "No location update for 3 days or more",
   "最後のスマホ位置を地図に表示しています。": "The map shows the last phone location.",
-  "スマホの観測": "Phone sensor readings",
+  "検知情報": "Detected events",
   "衝撃": "Impact detected",
   "衝撃あり": "Impact detected",
   "閉所": "Enclosed space detected",

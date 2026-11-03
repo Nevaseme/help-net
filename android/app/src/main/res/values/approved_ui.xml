@@ -50,7 +50,7 @@
     <string name="approved_accuracy">精度 約%1$dm</string>
     <string name="approved_home_sleeping">普段の住居・寝室</string>
     <string name="approved_see_building">建物を見る</string>
-    <string name="approved_phone_observations">スマホの観測</string>
+    <string name="approved_phone_observations">検知情報</string>
     <string name="approved_impact">衝撃</string>
     <string name="approved_enclosed">閉所</string>
     <string name="approved_waiting_disclosure">応答なしの方の詳細は、安否確認の開始から3分後に表示します。</string>

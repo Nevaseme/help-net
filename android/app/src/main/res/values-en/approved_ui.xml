@@ -50,7 +50,7 @@
     <string name="approved_accuracy">Accuracy about %1$d m</string>
     <string name="approved_home_sleeping">Home and sleeping area</string>
     <string name="approved_see_building">View building</string>
-    <string name="approved_phone_observations">Phone observations</string>
+    <string name="approved_phone_observations">Detected events</string>
     <string name="approved_impact">Impact detected</string>
     <string name="approved_enclosed">Enclosed space detected</string>
     <string name="approved_waiting_disclosure">Details of residents with no response are shown 3 minutes after safety confirmation starts.</string>
