@@ -3,6 +3,7 @@ import {ApiError,requireValue,uuid} from './validation.mjs';
 import {validateDemoPassword} from './demo-auth.mjs';
 import catalogue from './venue-buildings.json' with {type:'json'};
 import {latestDemoHome} from '../../lab/web/device-records.mjs';
+import {withDemoObservations} from '../../lab/web/venue-observations.mjs';
 
 const enc=new TextEncoder();
 const hex=bytes=>Array.from(new Uint8Array(bytes),v=>v.toString(16).padStart(2,'0')).join('');
@@ -30,7 +31,7 @@ export const venueMethods={
   const config=this.venueConfig();if(!config)return null;
   const closed=this.history('quakes').some(e=>e.action==='END'&&(e.targetId===config.sessionId||e.endedIncidentIds?.includes(config.sessionId)));
   return {version:1,mode:'VENUE_DEMO',positionMode:config.positionMode??'KYOTO',startedAt:config.startedAt??0,groupId:this.meta('groupId'),sessionId:config.sessionId,incidentId:config.sessionId,areaId:config.areaId,areaName:config.positionMode==='ACTUAL'?'参加者の現在地':area.name,closed,
-   scenario:config.scenario??null,recoveryAvailable:!config.privateTraining,inactiveMemberIds:this.inactiveMembers(),placements:this.s.all('SELECT p.body FROM venue_participants p LEFT JOIN device_access a ON a.device_id=p.device_id WHERE p.session_id=? AND COALESCE(a.revoked,0)=0 ORDER BY p.device_id',config.sessionId).map(r=>{const p=JSON.parse(r.body);if(config.positionMode==='ACTUAL')return p;const home=latestDemoHome(this.history('deviceRecords'),this.meta('groupId'),config.sessionId,p.deviceId)??p.home??config.slots[p.slotId]?.home??catalogue.homes[p.slotId];return {...p,home,latitude:home.latitude,longitude:home.longitude};})};
+   scenario:withDemoObservations(config.scenario)??null,recoveryAvailable:!config.privateTraining,inactiveMemberIds:this.inactiveMembers(),placements:this.s.all('SELECT p.body FROM venue_participants p LEFT JOIN device_access a ON a.device_id=p.device_id WHERE p.session_id=? AND COALESCE(a.revoked,0)=0 ORDER BY p.device_id',config.sessionId).map(r=>{const p=JSON.parse(r.body);if(config.positionMode==='ACTUAL')return p;const home=latestDemoHome(this.history('deviceRecords'),this.meta('groupId'),config.sessionId,p.deviceId)??p.home??config.slots[p.slotId]?.home??catalogue.homes[p.slotId];return {...p,home};})};
  },
  assignVenue(deviceId,memberId,name){
   const config=this.venueConfig();requireValue(config,'venue_not_started',409);

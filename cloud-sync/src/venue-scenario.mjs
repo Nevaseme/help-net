@@ -1,4 +1,5 @@
 import catalogue from './venue-buildings.json' with {type:'json'};
+import {withDemoObservations} from '../../lab/web/venue-observations.mjs';
 
 export const demoCommunities=[
  {id:'demo-west',nameJa:'御所南西町内会（デモ）',nameEn:'Gosho South West (demo)'},
@@ -15,7 +16,7 @@ export function createVenueScenario(sessionId){
   const community=demoCommunities[i%3],home=homes.find(h=>demoCommunityAt(h.longitude)===community.id&&!used.has(h.buildingId))||homes.find(h=>!used.has(h.buildingId));used.add(home.buildingId);
   return {deviceId:crypto.randomUUID(),name,safety:i<4?'SAFE':i<8?'UNREPORTED':'SOS',injury:i===8||i===10?'INJURED':i<4?'UNINJURED':'UNKNOWN',note:i>=8?'I need help. The doorway is blocked.':'',communityId:demoCommunityAt(home.longitude),home:{...home,floor:String(i%3+1),room:i%2?'Bedroom facing the street':'Bedroom at the back'}};
  });
- return {version:1,sessionId,communities:demoCommunities,people};
+ return withDemoObservations({version:1,sessionId,communities:demoCommunities,people});
 }
 
 export function seedVenueScenario(journal,actor,config){

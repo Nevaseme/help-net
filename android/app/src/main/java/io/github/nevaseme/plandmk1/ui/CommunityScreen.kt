@@ -27,7 +27,7 @@ import java.util.UUID
  val incident=state.current;val incidentId=incident?.start?.eventId;val heads=allHeads.filter {it.groupId==group&&it.incidentId==incidentId};val changes=heads.map {it.change}
  val editable=incident!=null&&!incident.closed&&roster?.members?.any {model.localId in it.deviceIds}==true
  val scenario=venue?.scenario;val communities=scenario?.communities?.map {CommunityName(it.id,it.nameJa,it.nameEn)}?.let{if(venue?.positionMode=="ACTUAL")it+CommunityName("venue","会場参加者","Venue participants")else it}?:listOf(CommunityName("group",groupName,groupName))
- val people=residents.map {p->val placement=venue?.allPlacements()?.find {it.deviceId==p.originId};CommunityPerson(p.originId,p.name,if(scenario!=null){if(venue?.positionMode=="ACTUAL"&&scenario.people.none{it.deviceId==p.originId})"venue" else demoCommunityFor(p.longitude)}else "group",residentMapState(p,care).name,scenario?.people?.any {it.deviceId==p.originId}==true,placement?.home?.buildingId)}
+ val people=residents.map {p->val placement=venue?.allPlacements()?.find {it.deviceId==p.originId};CommunityPerson(p.originId,p.name,if(scenario!=null){if(venue?.positionMode=="ACTUAL"&&scenario.people.none{it.deviceId==p.originId})"venue" else demoCommunityFor(placement?.home?.longitude?:p.longitude)}else "group",residentMapState(p,care).name,scenario?.people?.any {it.deviceId==p.originId}==true,placement?.home?.buildingId)}
  val rows=communityOverview(people,changes,communities)
  val codec=remember{Json{encodeDefaults=true;ignoreUnknownKeys=true}}
  val directory=remember(group,incidentId){File(context.filesDir,"community-reports/$group/${incidentId?:"none"}")}

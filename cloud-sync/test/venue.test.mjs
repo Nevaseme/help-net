@@ -44,6 +44,26 @@ test('Kyoto participants receive real building identities and town addresses',as
  assert.equal(f.get(g).history('residents').length,0,'real homes remain untouched');
 });
 
+test('home edits update the building but never move the assigned phone/SOS location',async t=>{
+ const f=fixture(t),admin=await setup(f),g=admin.groupId,sessionId=id();
+ const start=await f.call(`/groups/${g}/venue`,{requestId:sessionId,password,areaId:'kyoto-gosho-south'},admin.token);
+ const before=start.body.venue.placements[0],home={...before.home,buildingId:id(),address:'Changed demo home',latitude:35.06,longitude:135.8,plateauId:null,floor:'',room:''};
+ const record={groupId:g,eventId:id(),authorId:admin.deviceId,sequence:1,createdAt:Date.now(),kind:'DEMO_HOME',sessionId,home};
+ const result=await f.call(`/groups/${g}/records`,{records:[{collection:'deviceRecords',record}]},admin.token);assert.equal(result.status,200,JSON.stringify(result.body));
+ const refreshed=(await f.call(`/groups/${g}/roster`,undefined,admin.token)).body.venue;
+ assert.deepEqual(refreshed.placements[0].home,home);
+ assert.equal(refreshed.placements[0].latitude,before.latitude);assert.equal(refreshed.placements[0].longitude,before.longitude);
+ const {venueWithHomes,venuePositions,venuePlaces}=await import('../../lab/web/venue-demo.mjs');
+ const offline=venueWithHomes(start.body.venue,[record]);
+ assert.equal(venuePositions(offline).find(p=>p.originId===admin.deviceId).latitude,before.latitude);
+ assert.equal(venuePlaces(offline).find(p=>p.kind==='BUILDING'&&p.buildingId===home.buildingId).latitude,home.latitude);
+ assert.equal(f.get(g).history('residents').length,0,'real home remains unchanged');
+ const journal=f.get(g),old=journal.venueConfig();old.scenario.people.forEach(p=>delete p.observations);
+ journal.s.run('UPDATE metadata SET value=? WHERE key=?',JSON.stringify(old),'venue');
+ assert.ok(journal.venueSnapshot().scenario.people[6].observations.enclosed);
+ assert.equal(journal.venueConfig().scenario.people[6].observations,undefined,'no rewrite of stored legacy scenario');
+});
+
 test('administrator selects actual positions; join creates no invented coordinates or home records',async t=>{
  const f=fixture(t),admin=await setup(f),g=admin.groupId;
  const start=await f.call(`/groups/${g}/venue`,{requestId:id(),password,positionMode:'ACTUAL',areaId:'kyoto-gosho-south'},admin.token);assert.equal(start.status,200);
@@ -116,7 +136,7 @@ function fixture(t){
   }catch(e){return {status:e.status??503,body:{error:{code:e.code??'storage_unavailable',message:e.message}}};}
  }})}};
  t.after(()=>dbs.forEach(db=>db.close()));
- const call=async(path,body,auth,ip='fixture-ip')=>{const r=await handle(new Request('https://sync.test/api/v1'+path,{method:body===undefined?'GET':'POST',headers:{'content-type':'application/json','CF-Connecting-IP':ip,...(auth?{Authorization:'Bearer '+auth}:{})},...(body===undefined?{}:{body:JSON.stringify(body)})}),env);return {status:r.status,body:await r.json()};};
+ const call=async(path,body,auth,ip='fixture-ip')=>{const r=await handle(new Request('https://sync.test/api/v1'+path,{method:body===undefined?'GET':'POST',headers:{'content-type':'application/json','X-PlanD-Records-Version':'6','CF-Connecting-IP':ip,...(auth?{Authorization:'Bearer '+auth}:{})},...(body===undefined?{}:{body:JSON.stringify(body)})}),env);return {status:r.status,body:await r.json()};};
  return {get,call};
 }
 async function setup(f){

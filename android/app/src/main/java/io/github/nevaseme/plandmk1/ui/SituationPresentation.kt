@@ -39,7 +39,7 @@ data class MapPerson(
 
 /** Display projection only; the stored profile and incident's earliest formation time are retained. */
 fun projectPersonPrivacy(person:MapPerson,incidentStartedAt:Long?,now:Long):MapPerson {
-    if(person.demo)return person.copy(identityVisible=true,registeredPlaceVisible=person.home!=null,impactAt=person.impactAt,enclosedAt=null)
+    if(person.demo)return person.copy(identityVisible=true,registeredPlaceVisible=person.home!=null,impactAt=person.impactAt.takeUnless {person.state in setOf(MapSafety.SAFE,MapSafety.RESCUED)},enclosedAt=person.enclosedAt.takeUnless {person.state in setOf(MapSafety.SAFE,MapSafety.RESCUED)})
     val anonymous=person.state==MapSafety.UNANSWERED && (incidentStartedAt==null || now-incidentStartedAt<180_000)
     val homeVisible=when(person.state) {
         MapSafety.UNANSWERED -> !anonymous

@@ -23,7 +23,7 @@ let syncError='';
 let incidentRows=[],incidentId='',view=null,refreshRevision=0;
 let placeRows=[],roster=null;
 let cloudUi=null,cloudMode=false,profileHome=null,lastRenderKey=null;
-let activePage='buildings',responseFilter='all';
+let activePage='buildings',responseFilter='all',startupNavigationChosen=false;
 let designUi=null,venue=null,lastVenueSession=null;
 let venueWatch=null,venueWatchSession=null,venueLocationWrite=Promise.resolve(),venueLocated=null;
 function updateVenueLocation(){
@@ -126,7 +126,7 @@ function renderFeedback(){
 const message=text=>{$('message').textContent=text;};
 function task(fn){return Promise.resolve().then(fn).catch(e=>message(e.message||'操作できませんでした'));}
 function tab(name){if(name==='settings'){document.body.dataset.settingsView='profile';$('settings').querySelector('h2').textContent='自分の登録情報';}designUi?.closeSheets();tsunamiMap.cancelPick?.();activePage=name;document.body.dataset.page=name;for(const x of ['safety','residents','buildings','response','settings','property'])$(x).hidden=x!==name;document.querySelectorAll('[data-tab]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tab===name)));$('app-menu').close();$('menu-open').setAttribute('aria-expanded','false');window.scrollTo({top:0,behavior:'instant'});if(name==='buildings')tsunamiMap.show();if(name==='response')renderResponse();}
-document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
+document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{startupNavigationChosen=true;tab(b.dataset.tab);});
 wireSheetHandle($('app-menu'));
 $('menu-open').onclick=()=>{if($('app-menu').open){$('app-menu').close();return;}designUi?.closeSheets();$('app-menu').show();$('menu-close').focus({preventScroll:true});$('menu-open').setAttribute('aria-expanded','true');};
 $('menu-close').onclick=()=>$('app-menu').close();
@@ -161,7 +161,7 @@ async function refresh({background=false}={}){
  venue=venueWithHomes(activeVenue(venueData,g,incidentId),extras[3]);const synthetic=venuePlaces(venue);if(synthetic.length){const ids=new Set(synthetic.map(r=>r.eventId));placeRows=[...placeRows.filter(r=>(venue.positionMode==='ACTUAL'||r.kind!=='HOME')&&!ids.has(r.eventId)),...synthetic];}
  if(venue&&view){const answers={...view.answers};for(const a of scenarioAnswers(venue))if(!answers[a.authorId])answers[a.authorId]=a;view={...view,answers};}
  const displayRows=venue?venueResidents(venue):raw;
- records=incidentId==='legacy'?raw:displayRows.map(r=>({...r,safety:view?.answers[r.originId]?.safety||'UNREPORTED',updatedAt:view?.answers[r.originId]?.createdAt||0,impactAt:latestImpact(extras[3],g,r.originId)}));
+ records=incidentId==='legacy'?raw:displayRows.map(r=>({...r,safety:view?.answers[r.originId]?.safety||'UNREPORTED',updatedAt:view?.answers[r.originId]?.createdAt||0,impactAt:r.fictional?r.impactAt:latestImpact(extras[3],g,r.originId)}));
  events=incidentId==='legacy'?legacy:view?.care||[];
  $('incident-select').innerHTML='<option value="">災害を選択してください</option>'+options.map(v=>`<option value="${v.start.eventId}">${esc(v.start.training?'訓練':'地震')}：${esc(v.start.title)}・${esc(v.start.area)}${v.closed?'（終了）':''} [${v.start.eventId.slice(0,8)}]</option>`).join('')+'<option value="legacy">過去の情報（災害未分類・閲覧のみ）</option>';$('incident-select').value=incidentId;
  $('incident-state').textContent=view?`${view.start.training?'訓練':'地震'}・${view.closed?'終了・閲覧のみ':'安否確認中'}：${view.start.title}／${view.start.area}。開始：${time(view.start.createdAt)}、${view.start.authorName}${!view.closed&&!canEnd()?(roster?'。終了は管理者が行います。':'。終了できるのは開始した人だけです。'):''}`:incidentId==='legacy'?'以前の安否・対応記録です。今回の地震への回答ではありません。':active.length>1?'複数の安否確認があります。対象を選択してください。':'安否確認は始まっていません。「地震発生」から開始できます。';
@@ -182,7 +182,7 @@ async function refresh({background=false}={}){
  document.querySelector('.incident-context > summary').textContent=view?`${view.start.training?'訓練':'地震'}：${view.start.title}${view.closed?'（終了）':''}`:'災害・訓練を選ぶ';
  $('own').innerHTML=own?`<strong>${esc(own.name)}</strong> ${badge(own)}<p>${own.updatedAt?'安否更新 '+esc(time(own.updatedAt)):view?'今回の回答はまだありません':'安否確認は始まっていません'}</p>`:'安否を記録するには「設定」で自分の登録情報を開くしてください。';
  for(const [key,value] of [['safe','SAFE'],['sos','SOS']])$(key).setAttribute('aria-pressed',String(own?.safety===value));
- const savedOwn=venue?.positionMode!=='ACTUAL'&&venue?own:raw.find(r=>r.originId===id);if(savedOwn&&!dirty){$('name').value=savedOwn.name;$('lat').value=savedOwn.latitude;$('lon').value=savedOwn.longitude;$('floor').value=savedOwn.floor;$('room').value=savedOwn.room;profileHome?.setHome(venue?.placements.find(p=>p.deviceId===id)?.home??placeBuildings(placeRows).find(b=>b.buildingId===validHome(placeRows,id)?.buildingId)?.locationReference??null);}
+ const savedOwn=venue?.positionMode!=='ACTUAL'&&venue&&own?{...own,latitude:own.homeLatitude??own.latitude,longitude:own.homeLongitude??own.longitude}:raw.find(r=>r.originId===id);if(savedOwn&&!dirty){$('name').value=savedOwn.name;$('lat').value=savedOwn.latitude;$('lon').value=savedOwn.longitude;$('floor').value=savedOwn.floor;$('room').value=savedOwn.room;profileHome?.setHome(venue?.placements.find(p=>p.deviceId===id)?.home??placeBuildings(placeRows).find(b=>b.buildingId===validHome(placeRows,id)?.buildingId)?.locationReference??null);}
  profileHome?.render();
  $('count').textContent=`${records.length}人`;
  const shown=records.filter(r=>$('filter').value==='ALL'||($('filter').value==='NONSAFE'?r.safety!=='SAFE':r.safety===$('filter').value)).sort((a,b)=>(a.safety==='SOS'?-1:0)-(b.safety==='SOS'?-1:0)||a.name.localeCompare(b.name,'ja'));
@@ -266,9 +266,9 @@ await task(async()=>{
  attachCityOffline({store,getGroup:()=>group,host:document.querySelector('.appearance-settings').parentElement});
  if($('cloud-map-preview'))$('cloud-map-preview').onclick=()=>tab('buildings');$('tsunami-back').onclick=()=>tab('settings');
  if($('cloud-map-preview'))$('cloud-map-preview').textContent='地図を見る';
- document.querySelector('footer').textContent='Tasukeai · PWA 1.6.27 · この端末に記録を保存';
+ document.querySelector('footer').textContent='Tasukeai · PWA 1.6.29 · この端末に記録を保存';
  await refresh();
- if(document.body.classList.contains('registration-needed'))openSettings('group');else await afterJoining();
+ if(document.body.classList.contains('registration-needed'))openSettings('group');else if(!startupNavigationChosen)await afterJoining();
  if('serviceWorker'in navigator){await setupAppUpdates();$('offline').textContent=cloudMode?'オフライン起動の準備ができました。接続できるときに記録を共有します。':'オフライン起動の準備ができました。通信には同じWi-Fiと実験サーバーが必要です。';}
 });
 

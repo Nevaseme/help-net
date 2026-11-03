@@ -350,8 +350,8 @@ private fun SettingsScreen(model: PlanViewModel, own: Resident?, group: String, 
     }
     var address by rememberSaveable(group,own?.originId,demoHome?.buildingId,storedReference?.address) {mutableStateOf(demoHome?.address?:storedReference?.address.orEmpty())}
     var name by rememberSaveable(group,own?.originId,demoHome?.buildingId,storedReference?.address) { mutableStateOf(own?.displayName().orEmpty()) }
-    var lat by rememberSaveable(group,own?.originId,demoHome?.buildingId,storedReference?.address) { mutableStateOf(own?.latitude?.toString().orEmpty()) }
-    var lon by rememberSaveable(group,own?.originId,demoHome?.buildingId,storedReference?.address) { mutableStateOf(own?.longitude?.toString().orEmpty()) }
+    var lat by rememberSaveable(group,own?.originId,demoHome?.buildingId,storedReference?.address) { mutableStateOf((demoHome?.latitude?:own?.latitude)?.toString().orEmpty()) }
+    var lon by rememberSaveable(group,own?.originId,demoHome?.buildingId,storedReference?.address) { mutableStateOf((demoHome?.longitude?:own?.longitude)?.toString().orEmpty()) }
     var floor by rememberSaveable(group,own?.originId,demoHome?.buildingId,storedReference?.address) { mutableStateOf(own?.floor.orEmpty()) }
     var room by rememberSaveable(group,own?.originId,demoHome?.buildingId,storedReference?.address) { mutableStateOf(own?.room.orEmpty()) }
     var coordinates by rememberSaveable {mutableStateOf(false)}

@@ -2,6 +2,14 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 export const communityLabels=en=>en?{title:'Neighborhood overview',total:'People',fictional:'Fictional residents',safe:'Safe',sos:'SOS',rescued:'Rescued',unreported:'No response',injured:'Injured',injuryUnknown:'Injury unknown',reports:'Reports',materials:'Material shortfalls',none:'None recorded',issue:'Issue report',saved:'Issued reports',unknown:'Unassigned',injury:'Injury information',UNINJURED:'Not injured',INJURED:'Injured',UNKNOWN:'Unknown',demo:'Demo neighborhoods',conflict:'Concurrent updates — largest shortfall shown',source:'Source record IDs'}:{title:'町内会の状況',total:'人数',fictional:'架空住民',safe:'無事',sos:'SOS',rescued:'救助済み',unreported:'応答なし',injured:'負傷者',injuryUnknown:'負傷状況不明',reports:'通報',materials:'不足資材',none:'記録なし',issue:'レポートを発行',saved:'発行済みレポート',unknown:'未分類',injury:'負傷情報',UNINJURED:'負傷なし',INJURED:'負傷あり',UNKNOWN:'不明',demo:'デモ用の町内会',conflict:'同時更新あり・最大の不足数を表示',source:'集計元の記録ID'};
 export const demoCommunityFor=lon=>!Number.isFinite(lon)?null:lon<135.760?'demo-west':lon<135.7615?'demo-central':'demo-east';
 export function injuryFor(heads,id){const values=[...new Set(heads.filter(e=>e.change.type==='INJURY'&&e.change.target?.kind==='PERSON'&&e.change.target.id===id).map(e=>e.change.state))];return values.length===1?values[0]:'UNKNOWN';}
+/** Map summaries contain counts only; other neighborhoods never become person links. */
+export function communityMapOverview(input,ownId){
+ const own=input.people.find(p=>p.id===ownId)?.communityId;
+ return communityOverview(input).filter(r=>r.id!==own).flatMap(r=>{
+  const points=input.people.filter(p=>p.communityId===r.id&&Number.isFinite(p.latitude)&&Number.isFinite(p.longitude));
+  return points.length?[{...r,latitude:points.reduce((n,p)=>n+p.latitude,0)/points.length,longitude:points.reduce((n,p)=>n+p.longitude,0)/points.length}]:[];
+ });
+}
 /** Inputs are current heads only. Never infer injury from SOS or rescue. */
 export function communityOverview({people=[],heads=[],communities=[]}){
  const unique=[...new Map(people.map(p=>[p.id,p])).values()],known=new Set(communities.map(c=>c.id));

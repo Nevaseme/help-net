@@ -322,6 +322,7 @@ fun filteredPeople(people:List<MapPerson>,filter:String?,now:Long)=when(filter){
         if(needsHelp) {
             if (person.impactAt != null || person.enclosedAt != null) {
                 HorizontalDivider(); Text(uiText("phone_observations"), style = MaterialTheme.typography.titleMedium)
+                if(person.fictional) Text(if(LocalUiLanguage.current=="en") "Simulated demo observations" else "デモの模擬検知",style=MaterialTheme.typography.bodySmall)
                 person.impactAt?.let { Observation(R.drawable.impact, "${uiText("impact")} ${formatTime(it)}") }
                 person.enclosedAt?.let { Observation(R.drawable.enclosed, "${uiText("enclosed")} ${formatTime(it)}") }
             }

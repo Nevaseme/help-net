@@ -6,6 +6,27 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class VenueModeTest {
+    @Test fun changingDemoHomeDoesNotMovePhonePosition() {
+        val home=io.github.nevaseme.plandmk1.core.DemoHome("building","Changed home",35.1,135.1,null)
+        val placement=io.github.nevaseme.plandmk1.demo.DemoPlacement("s","device","member","Demo",0,35.0,135.0)
+        val venue=io.github.nevaseme.plandmk1.demo.VenueSession(groupId="g",sessionId="s",incidentId="s",areaId="kyoto-gosho-south",placements=listOf(placement))
+        val edited=venue.withHomes(listOf(io.github.nevaseme.plandmk1.core.DeviceRecord("g","record","device",1,1000,"DEMO_HOME",sessionId="s",home=home)))
+        assertEquals(35.0,edited.placements.single().latitude!!,0.0)
+        assertEquals(135.0,edited.placements.single().longitude!!,0.0)
+        assertEquals(home,edited.placements.single().home)
+        assertEquals(35.1,edited.placeRecords().first {it.kind==io.github.nevaseme.plandmk1.core.PlaceKind.BUILDING}.latitude!!,0.0)
+    }
+    @Test fun oldScenariosGainOnlyFictionalObservationsAndSafePeopleHideThem() {
+        val home=io.github.nevaseme.plandmk1.core.DemoHome("building","Demo address",35.0,135.0,null)
+        val people=(0..11).map {io.github.nevaseme.plandmk1.demo.ScenarioPerson("p$it","Demo $it","UNREPORTED","UNKNOWN","","west",home)}
+        val venue=io.github.nevaseme.plandmk1.demo.VenueSession(groupId="g",sessionId="s",incidentId="s",areaId="kyoto-gosho-south",placements=emptyList(),startedAt=1000,scenario=io.github.nevaseme.plandmk1.demo.VenueScenario(sessionId="s",communities=emptyList(),people=people))
+        assertEquals(1000L to 1000L,venue.observationTimes("p6"))
+        assertEquals(null to 1000L,venue.observationTimes("p5"))
+        assertEquals(null to null,venue.observationTimes("real participant"))
+        val p=io.github.nevaseme.plandmk1.ui.MapPerson("p6","Demo",io.github.nevaseme.plandmk1.ui.MapSafety.UNANSWERED,demo=true,fictional=true,impactAt=1000,enclosedAt=1000)
+        assertEquals(1000L,io.github.nevaseme.plandmk1.ui.projectPersonPrivacy(p,0,2000).enclosedAt)
+        assertNull(io.github.nevaseme.plandmk1.ui.projectPersonPrivacy(p.copy(state=io.github.nevaseme.plandmk1.ui.MapSafety.SAFE),0,2000).enclosedAt)
+    }
     @Test fun actualModeDoesNotTurnUnknownLocationIntoKyotoOrHome() {
         val venue=io.github.nevaseme.plandmk1.demo.VenueSession(groupId="group",sessionId="demo",incidentId="demo",areaId="kyoto-gosho-south",positionMode="ACTUAL",placements=listOf(io.github.nevaseme.plandmk1.demo.DemoPlacement("demo","device","member","参加者",0,null,null,"DEVICE_LOCATION")))
         val person=venue.displayResidents().single();assertTrue(person.latitude.isNaN());assertTrue(person.longitude.isNaN())
