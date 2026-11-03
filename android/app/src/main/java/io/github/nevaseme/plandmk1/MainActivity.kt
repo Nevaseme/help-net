@@ -24,6 +24,7 @@ import org.maplibre.android.MapLibre
 class MainActivity : ComponentActivity() {
     private val model by lazy { ViewModelProvider(this)[PlanViewModel::class.java] }
     private lateinit var positionAccess: PositionAccess
+    val permissionRequestActive: kotlinx.coroutines.flow.StateFlow<Boolean> get() = positionAccess.requesting
     private val networkCallback=object:android.net.ConnectivityManager.NetworkCallback(){
         override fun onCapabilitiesChanged(network:android.net.Network, capabilities:android.net.NetworkCapabilities){
             if(capabilities.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED))runOnUiThread {

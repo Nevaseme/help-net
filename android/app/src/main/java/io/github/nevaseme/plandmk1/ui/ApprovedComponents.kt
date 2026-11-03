@@ -126,7 +126,7 @@ import androidx.compose.ui.unit.sp
     }
 }
 
-@Composable fun LanguageSettings(onNavigate:((Int)->Unit)?=null,onClose:()->Unit) {
+@Composable fun LanguageSettings(onNavigate:((Int)->Unit)?=null,onAutostart:(()->Unit)?=null,onClose:()->Unit) {
     val selected=LocalUiLanguage.current
     val change=LocalSetUiLanguage.current
     val appearance=io.github.nevaseme.plandmk1.ui.theme.LocalAppearance.current
@@ -153,6 +153,7 @@ import androidx.compose.ui.unit.sp
         if(onNavigate!=null) {
             HorizontalDivider()
             Column {
+                if(onAutostart!=null) ApprovedMenuRow(uiText("autostart_settings"),"settings",onAutostart)
                 ApprovedMenuRow(uiText("position_history"),"target",{onNavigate(9)})
                 ApprovedMenuRow(uiText("offline_map"),"map",{onNavigate(5)})
                 ApprovedMenuRow(uiText("app_information"),"settings",{onNavigate(7)})

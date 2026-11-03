@@ -204,5 +204,16 @@
     <string name="approved_earthquake_report_section">Actual earthquake</string>
     <string name="approved_building_choose">Choose your building and dwelling</string>
     <string name="approved_coordinates">Enter coordinates</string>
+    <string name="approved_autostart_title">Keep safety sharing after a restart</string>
+    <string name="approved_autostart_explanation">This phone may need Autostart permission to resume sharing in the background. It will not open the app screen by itself.</string>
+    <string name="approved_autostart_xiaomi_steps">In Autostart or Background autostart, turn on PlanD Mk1.</string>
+    <string name="approved_autostart_vivo_steps">In Autostart, turn on PlanD Mk1.</string>
+    <string name="approved_autostart_open">Open settings</string>
+    <string name="approved_autostart_reviewed">Reviewed</string>
+    <string name="approved_autostart_later">Later</string>
+    <string name="approved_autostart_settings">Sharing after a restart</string>
+    <string name="approved_autostart_later_hint">You can return here from App settings → Sharing after a restart.</string>
+    <string name="approved_autostart_fallback">Could not open the Autostart page directly. Search for Autostart in your phone settings, then enable PlanD Mk1.</string>
+    <string name="approved_autostart_unavailable">Could not open settings. Open your phone settings and search for Autostart, then enable PlanD Mk1.</string>
 </resources>
 

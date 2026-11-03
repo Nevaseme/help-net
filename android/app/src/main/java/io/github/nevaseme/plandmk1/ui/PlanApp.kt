@@ -98,6 +98,10 @@ private fun PlanAppContent(model: PlanViewModel) {
     val snackbar = remember { SnackbarHostState() }
     val screenState = rememberSaveableStateHolder()
     val context = LocalContext.current
+    val autostart = remember(context) { io.github.nevaseme.plandmk1.sharing.AutostartSettings(context) }
+    var autostartRequested by rememberSaveable { mutableStateOf(false) }
+    val activity = remember(context) { generateSequence(context) { (it as? android.content.ContextWrapper)?.baseContext }.filterIsInstance<MainActivity>().firstOrNull() }
+    val permissionRequestActive by (activity?.permissionRequestActive ?: remember { kotlinx.coroutines.flow.MutableStateFlow(false) }).collectAsStateWithLifecycle()
     val openSafety by model.openSafety.collectAsStateWithLifecycle()
     var notificationsEnabled by remember { mutableStateOf(NotificationManagerCompat.from(context).areNotificationsEnabled()) }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { notificationsEnabled = NotificationManagerCompat.from(context).areNotificationsEnabled() }
@@ -271,7 +275,8 @@ private fun PlanAppContent(model: PlanViewModel) {
                     }
                 }
                 if(menuOpen) ApprovedMenu(groupLabel,{menuOpen=false},::navigate,{menuOpen=false;languageSettings=true})
-                if(languageSettings) LanguageSettings(onClose={languageSettings=false},onNavigate={languageSettings=false;navigate(it);appSettingsChild=true})
+                if(languageSettings) LanguageSettings(onClose={languageSettings=false},onNavigate={languageSettings=false;navigate(it);appSettingsChild=true},
+                    onAutostart=if(autostart.vendor!=null){{languageSettings=false;autostartRequested=true}}else null)
                 if(incidentDetails)incident.current?.let {current->
                     var now by remember(current.start.eventId) {mutableLongStateOf(System.currentTimeMillis())}
                     LaunchedEffect(current.start.eventId){while(true){now=System.currentTimeMillis();kotlinx.coroutines.delay(60_000)}}
@@ -284,6 +289,13 @@ private fun PlanAppContent(model: PlanViewModel) {
             }
         }
     }
+    AutostartGuidanceHost(autostart,
+        eligible=cloudState.groupId==group && cloudState.nearbyReady && nearby.active &&
+            roster?.takeIf {it.groupId==group}?.members?.any {model.localId in it.deviceIds}==true &&
+            !firstAnswer && tab in listOf(1,8) && !permissionRequestActive && !saving &&
+            !menuOpen && !languageSettings && !picking && detailId==null && buildingId==null &&
+            !incidentDetails && !responseSummary && nearby.verifications.isEmpty(),
+        requested=autostartRequested,onRequestHandled={autostartRequested=false})
     nearby.verifications.firstOrNull()?.let { verification ->
         AlertDialog(onDismissRequest = { model.sharing.verify(verification.id, false) },
             title = { Text("接続コードの確認") },
