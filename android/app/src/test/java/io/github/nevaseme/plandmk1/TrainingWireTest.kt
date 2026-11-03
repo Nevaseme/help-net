@@ -87,4 +87,23 @@ class TrainingWireTest {
         val legacy=Json {encodeDefaults=true}.encodeToString(basic)
         assertFalse(legacy.contains("cancelled"));assertFalse(legacy.contains("regionIds"));assertFalse(legacy.contains("cancelReason"))
     }
+
+    @Test fun materialRecordsUseV18AndKeepCancellationAndUnitCorrectionAcrossSync()=runTest {
+        val store=Store();val sent=mutableListOf<WireMessage>();val training=start();store.quakes+=training
+        val request=id();val material=ResponseChange.Material(ResponseTarget(TargetKind.PERSON,member),request,"水","本",12.0,6.0)
+        val original=ResponseEvent(group,request,admin,1,20,training.eventId,material)
+        val corrected=original.copy(eventId=id(),sequence=2,replaces=listOf(request),change=material.copy(unit="箱",needed=2.0,arranged=1.0))
+        val cancelled=corrected.copy(eventId=id(),sequence=3,replaces=listOf(corrected.eventId),change=(corrected.change as ResponseChange.Material).copy(cancelled=true,cancelReason="不要"))
+        store.responses+=listOf(original,corrected,cancelled)
+        val sender=SyncEngine(group,member,store,{_,bytes->sent+=Json.decodeFromString<WireMessage>(bytes.decodeToString())})
+        sender.connected("A");sent.clear()
+        sender.receive("A",Json.encodeToString(WireMessage(9,group,"RESPONSE_REQUEST",entries=store.responses.map{VersionEntry(it.eventId,1)})).encodeToByteArray())
+        val records=sent.filter{it.type=="RESPONSE_RECORD"};assertEquals(3,records.size);assertTrue(records.all{it.version==18})
+        val receiver=Store();receiver.quakes+=training;val replies=mutableListOf<WireMessage>()
+        val other=SyncEngine(group,member,receiver,{_,bytes->replies+=Json.decodeFromString<WireMessage>(bytes.decodeToString())})
+        other.connected("B");replies.clear()
+        records.forEach{other.receive("B",Json.encodeToString(it).encodeToByteArray())}
+        assertEquals(store.responses,receiver.responses);assertTrue(replies.filter{it.type=="RESPONSE_ACK"}.all{it.version==18})
+        assertEquals(3,replies.count{it.type=="RESPONSE_ACK"})
+    }
 }

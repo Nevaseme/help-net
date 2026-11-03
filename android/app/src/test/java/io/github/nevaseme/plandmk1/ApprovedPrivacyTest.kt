@@ -9,7 +9,7 @@ class ApprovedPrivacyTest {
     private val home=MapHome("home","登録された住所",MapPoint(35.0,135.0))
     private fun person(state:MapSafety,position:Boolean=true)=MapPerson("resident","実名",state,
         point=if(position)MapPoint(35.1,135.1)else null,acquiredAt=if(position)start else null,
-        home=home,bedroom="2階 寝室",impactAt=start,enclosedAt=start)
+        home=home,bedroom="2階 寝室",memo="個人のメモ",impactAt=start,enclosedAt=start)
 
     @Test fun unansweredIdentityAndHomeOpenAtThreeMinutesWithoutChangingSource(){
         val source=person(MapSafety.UNANSWERED)
@@ -33,11 +33,25 @@ class ApprovedPrivacyTest {
         listOf(MapSafety.SAFE,MapSafety.RESCUED).forEach {state->
             val known=projectPersonPrivacy(person(state),start,start+1)
             assertNotEquals("実名",known.publicName);assertNull(known.home);assertNull(known.impactAt);assertNull(known.enclosedAt)
-            assertNotNull(projectPersonPrivacy(person(state,false),start,start+1).home)
+            for(position in listOf(false,true))for(demo in listOf(false,true)) {
+                val projected=projectPersonPrivacy(person(state,position).copy(demo=demo),start,start+1)
+                assertNull(projected.home);assertEquals("",projected.bedroom);assertEquals("",projected.memo)
+                assertFalse(projected.registeredPlaceVisible);assertFalse(projected.identityVisible)
+                assertEquals("",projected.name);assertNotEquals("実名",projected.publicName)
+                assertNull(projected.impactAt);assertNull(projected.enclosedAt)
+            }
         }
     }
     @Test fun absentOrFutureIncidentNeverRevealsUnansweredIdentity(){
         assertFalse(projectPersonPrivacy(person(MapSafety.UNANSWERED),null,start).identityVisible)
         assertFalse(projectPersonPrivacy(person(MapSafety.UNANSWERED),start+1,start).identityVisible)
+    }
+
+    @Test fun alreadyOpenHomeRechecksPrivacyAfterSafetyChanges(){
+        val source=person(MapSafety.UNANSWERED)
+        val disclosed=projectPersonPrivacy(source,start,start+180_000)
+        assertEquals(home,visibleHomeDetail(home.id,source.id,listOf(disclosed),listOf(home),home))
+        val safe=projectPersonPrivacy(source.copy(state=MapSafety.SAFE),start,start+180_001)
+        assertNull(visibleHomeDetail(home.id,source.id,listOf(safe),emptyList(),home))
     }
 }

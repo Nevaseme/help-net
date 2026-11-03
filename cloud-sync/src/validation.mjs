@@ -51,5 +51,5 @@ export function validateContext(collection,record,identity,roster,history){
    return validateResponse(roster,record);
   }
   return record;
- }catch(e){if(e instanceof ApiError)throw e;throw new ApiError(400,'invalid_record',e.message);}
+ }catch(e){if(e instanceof ApiError)throw e;if(e.code==='response_forbidden')throw new ApiError(403,e.code,e.message);throw new ApiError(400,'invalid_record',e.message);}
 }

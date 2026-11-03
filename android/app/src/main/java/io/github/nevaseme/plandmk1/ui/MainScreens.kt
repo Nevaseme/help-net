@@ -97,7 +97,18 @@ import io.github.nevaseme.plandmk1.core.*
         }
     }
     val venue by model.activeVenue.collectAsStateWithLifecycle()
-    val people = remember(residents, places, care, positions, memos, incident, now,venue,deviceRecords) {
+    val app=LocalContext.current.applicationContext as PlanDApplication
+    val registeredBuildings=remember(places){placeBuildings(places)}
+    val homes by produceState(registeredBuildings.map {MapHome(it.buildingId!!,it.displayLabel(),MapPoint(it.latitude!!,it.longitude!!))},registeredBuildings) {
+        value=registeredBuildings.map {building->
+            val home=MapHome(building.buildingId!!,building.displayLabel(),MapPoint(building.latitude!!,building.longitude!!))
+            val id=building.locationReference?.plateauId
+            if(id==null)home else try {
+                app.buildingAssessments.registeredBuilding(id,building.latitude,building.longitude)?.let {home.withBuildingAttributes(it)}?:home.copy(attributesUnavailable=true)
+            }catch(e:kotlinx.coroutines.CancellationException){throw e}catch(_:Exception){home.copy(attributesUnavailable=true)}
+        }
+    }
+    val people = remember(residents, places, care, positions, memos, incident, now,venue,deviceRecords,homes) {
         val locations = positions.filter {venue?.positionMode!="ACTUAL"||it.acquiredAt>=venue!!.startedAt}.associateBy { it.originId }
         val notes = memos.associateBy { it.answerId }
         residents.map { person ->
@@ -107,10 +118,10 @@ import io.github.nevaseme.plandmk1.core.*
             val base=residentMapPerson(person, places, care, locations[person.originId],
                 if (answer?.safety == Safety.SOS) notes[answer.eventId]?.takeIf {it.authorId==person.originId&&it.incidentId==answer.incidentId}?.text?:scenarioPerson?.note.orEmpty() else scenarioPerson?.note.orEmpty()).copy(impactAt=if(scenarioPerson!=null)simulated?.first else latestImpact(deviceRecords,group,person.originId,now),enclosedAt=simulated?.second)
             val placement=venue?.allPlacements()?.find {it.deviceId==person.originId}
-            projectPersonPrivacy(if(placement==null)base else if(venue?.positionMode=="ACTUAL"&&placement.source!="SCENARIO")base.copy(name=placement.name,home=null,demo=true) else base.copy(name=placement.name,home=base.home.takeIf {placement.home!=null},bedroom=base.bedroom.takeIf {placement.home!=null}.orEmpty(),point=MapPoint(checkNotNull(placement.latitude),checkNotNull(placement.longitude)),acquiredAt=incident.current?.start?.createdAt,accuracy=null,demo=true,fictional=placement.source=="SCENARIO"),incident.current?.start?.createdAt,now)
+            val enriched=base.copy(home=base.home?.let {home->homes.find {it.id==home.id}?:home})
+            projectPersonPrivacy(if(placement==null)enriched else if(venue?.positionMode=="ACTUAL"&&placement.source!="SCENARIO")enriched.copy(name=placement.name,home=null,demo=true) else enriched.copy(name=placement.name,home=enriched.home.takeIf {placement.home!=null},bedroom=base.bedroom.takeIf {placement.home!=null}.orEmpty(),point=MapPoint(checkNotNull(placement.latitude),checkNotNull(placement.longitude)),acquiredAt=incident.current?.start?.createdAt,accuracy=null,demo=true,fictional=placement.source=="SCENARIO"),incident.current?.start?.createdAt,now)
         }
     }
-    val homes = placeBuildings(places).map { MapHome(it.buildingId!!, it.displayLabel(), MapPoint(it.latitude!!, it.longitude!!)) }
     val incidentResponses=responses.filter {it.groupId==group&&it.incidentId==incident.current?.start?.eventId}
     val groupName=cloud.takeIf {it.groupId==group}?.groupName?.takeIf {it.isNotBlank()}?:uiText("group_label")
     val communityPeople=communityPeopleFor(residents,care,venue)

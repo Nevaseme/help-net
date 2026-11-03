@@ -7,16 +7,28 @@ export function inRing(ring,x,y){let inside=false;for(let i=0;i<ring.length-1;i+
 const contains=(b,x,y)=>b&&x>=b[0]&&x<=b[2]&&y>=b[1]&&y<=b[3];
 export const containsBuilding=(b,x,y)=>contains(b.bbox,x,y)&&b.geometry?.coordinates.some(p=>p.length&&inRing(p[0],x,y)&&!p.slice(1).some(r=>inRing(r,x,y)));
 const indexes=new Map(),chunks=new Map();
-export async function buildingsAt(latitude,longitude,code){
+async function buildingChunksAt(latitude,longitude,code){
  if(!['26100','13103'].includes(code))return [];
  let index=indexes.get(code);
  if(!index){const r=await fetch(CITY_DATA+code+'/buildings/index.json');if(!r.ok)throw Error('建物データを取得できません。市全域の地図を保存すると圏外でも使えます。');index=await r.json();indexes.set(code,index);}
+ return index.chunks.filter(c=>contains(c.bbox,longitude,latitude));
+}
+async function readBuildingChunk(code,chunk){
+ let rows=chunks.get(code+chunk.mesh);if(!rows){const body=await gunzipJson(await verifiedBytes(await fetch(CITY_DATA+code+'/buildings/'+chunk.file),chunk.sha256));rows=body.buildings;if(chunks.size>=2)chunks.delete(chunks.keys().next().value);chunks.set(code+chunk.mesh,rows);}
+ return rows;
+}
+export async function buildingsAt(latitude,longitude,code){
  const result=[];
- for(const chunk of index.chunks.filter(c=>contains(c.bbox,longitude,latitude))){
-  let rows=chunks.get(code+chunk.mesh);if(!rows){const body=await gunzipJson(await verifiedBytes(await fetch(CITY_DATA+code+'/buildings/'+chunk.file),chunk.sha256));rows=body.buildings;if(chunks.size>=2)chunks.delete(chunks.keys().next().value);chunks.set(code+chunk.mesh,rows);}
-  result.push(...rows.filter(b=>containsBuilding(b,longitude,latitude)));
- }
+ for(const chunk of await buildingChunksAt(latitude,longitude,code))result.push(...(await readBuildingChunk(code,chunk)).filter(b=>containsBuilding(b,longitude,latitude)));
  return result;
+}
+/** A registered ID is authoritative; the pin only limits which source chunks are read. */
+export async function buildingById(id,latitude,longitude,code){
+ for(const chunk of await buildingChunksAt(latitude,longitude,code)){
+  const found=(await readBuildingChunk(code,chunk)).find(b=>b.id===id);
+  if(found)return found;
+ }
+ return null;
 }
 export function pickBuilding({latitude,longitude,code,query='',initialCandidate=null,initialAddress=''}){
  return new Promise(resolve=>{

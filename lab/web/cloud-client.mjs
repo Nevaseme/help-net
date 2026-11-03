@@ -16,7 +16,7 @@ export class CloudClient {
  async request(path,{session,body}={}){
   const timeout=new AbortController();const timer=setTimeout(()=>timeout.abort(),20000);
   try {
-   const response=await this.fetcher(`${this.base}/api/v1${path}`,{method:body===undefined?'GET':'POST',headers:{'Content-Type':'application/json','X-PlanD-Records-Version':'6',...(session?{Authorization:`Bearer ${session.token}`}:{})},body:body===undefined?undefined:JSON.stringify(body),cache:'no-store',signal:timeout.signal});
+   const response=await this.fetcher(`${this.base}/api/v1${path}`,{method:body===undefined?'GET':'POST',headers:{'Content-Type':'application/json','X-PlanD-Records-Version':'7',...(session?{Authorization:`Bearer ${session.token}`}:{})},body:body===undefined?undefined:JSON.stringify(body),cache:'no-store',signal:timeout.signal});
    const data=await response.json();if(!response.ok)throw new CloudApiError(response.status,data);return data;
   }finally{clearTimeout(timer);}
  }

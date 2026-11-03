@@ -46,7 +46,7 @@ class VenueModeTest {
         assertEquals(35.014,rendered.latitude,0.0)
         val person=io.github.nevaseme.plandmk1.ui.MapPerson("device","参加者",io.github.nevaseme.plandmk1.ui.MapSafety.SAFE,demo=true)
         val safe=io.github.nevaseme.plandmk1.ui.projectPersonPrivacy(person,0,1)
-        assertEquals("参加者",safe.publicName);assertNull(safe.home);assertFalse(safe.registeredPlaceVisible)
+        assertEquals("無事の人",safe.publicName);assertNull(safe.home);assertFalse(safe.registeredPlaceVisible)
     }
     @Test fun venueMetadataFromServerSurvivesAndroidDecodingForOfflineUse() {
         val group="00000000-0000-0000-0000-000000000001"

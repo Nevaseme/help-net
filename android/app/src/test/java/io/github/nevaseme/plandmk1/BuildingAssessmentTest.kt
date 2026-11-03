@@ -1,6 +1,7 @@
 package io.github.nevaseme.plandmk1
 
 import io.github.nevaseme.plandmk1.buildings.*
+import io.github.nevaseme.plandmk1.ui.withBuildingAttributes
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.*
 import org.junit.Assert.*
@@ -79,4 +80,32 @@ class BuildingAssessmentTest {
         assertEquals(0.13, repository().atPoint(35.001,135.001,6.3).first().rates!!.full, 0.0)
     }
 
+
+    @Test fun registeredLookupUsesIdEvenForCourtyardAndNeverSubstitutesNeighbors() = runTest {
+        assertEquals("real-id",repository().registeredBuilding("real-id",35.005,135.005)?.id)
+        assertNull(repository().registeredBuilding("missing-id",35.001,135.001))
+    }
+    @Test fun registeredAttributesPopulateMapHomeWithoutInventingMissingValues() {
+        val building=AssessedBuilding("real",Json.parseToJsonElement("""{"year":2012,"floors":3,"structureCode":"603"}""").jsonObject,profile=null,status="unknown",reasons=emptyList())
+        val home=io.github.nevaseme.plandmk1.ui.MapHome("registered","住所",MapPoint(35.0,135.0))
+        val projected=home.withBuildingAttributes(building)
+        assertEquals(2012,projected.built);assertEquals(3,projected.floors);assertEquals("RC造",projected.material)
+        val unknown=home.withBuildingAttributes(building.copy(attributes=JsonObject(emptyMap())))
+        assertNull(unknown.built);assertNull(unknown.floors);assertEquals("不明",unknown.material)
+    }
+
+    @Test fun venueScenarioHomesUseBundledSourceAttributes() = runTest {
+        val catalogue=Json.parseToJsonElement(java.io.File("../../cloud-sync/src/venue-buildings.json").readText()).jsonObject.getValue("homes").jsonArray.map{it.jsonObject}.sortedBy{it.getValue("buildingId").jsonPrimitive.content}
+        val selected=mutableListOf<JsonObject>()
+        repeat(12){i->val region=listOf("demo-west","demo-central","demo-east")[i%3];selected+=catalogue.first{it !in selected&&io.github.nevaseme.plandmk1.core.demoCommunityFor(it.getValue("longitude").jsonPrimitive.double)==region}}
+        val repository=BuildingAssessmentRepository {java.io.File("src/main/assets",it).inputStream()}
+        val mapped=selected.map {home->
+            val lat=home.getValue("latitude").jsonPrimitive.double;val lon=home.getValue("longitude").jsonPrimitive.double
+            val source=repository.registeredBuilding(home.getValue("plateauId").jsonPrimitive.content,lat,lon)
+            assertNotNull("The registered PLATEAU building must be present in the packaged data",source)
+            io.github.nevaseme.plandmk1.ui.MapHome(home.getValue("buildingId").jsonPrimitive.content,"登録住所",MapPoint(lat,lon)).withBuildingAttributes(source!!)
+        }
+        assertEquals(10,mapped.count{it.built!=null});assertEquals(11,mapped.count{it.floors!=null});assertEquals(10,mapped.count{it.material!="不明"})
+        assertEquals(10,mapped.count{it.built!=null&&it.floors!=null&&it.material!="不明"})
+    }
 }

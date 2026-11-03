@@ -8,12 +8,10 @@ import org.junit.Test
 class ApprovedResponseTest {
     private val target=ResponseTarget(TargetKind.PERSON,"person")
     private fun event(id:String,change:ResponseChange)=ResponseEvent("group",id,"actor",1,1,"incident",change)
-    @Test fun completedThenSafePersonRetainsCaseAndMaterialsWithoutIdentity(){
+    @Test fun completedThenSafePersonDoesNotExposeResponseHistory(){
         val person=Resident("group","person",1,0,"公開しない氏名",35.0,135.0,"2階","寝室",safety=Safety.SAFE)
         val heads=listOf(event("material",ResponseChange.Material(target,"material","飲料水","本",4.0,1.0)),event("done",ResponseChange.Progress(target,WorkStatus.DONE,"完了")))
-        val case=responseCases(listOf(person),emptyList(),heads).single()
-        assertEquals(target,case.target);assertEquals(MapSafety.SAFE,case.person!!.state)
-        assertNotEquals(person.name,case.title);assertEquals("",case.description)
+        assertTrue(responseCases(listOf(person),emptyList(),heads).isEmpty())
         assertTrue(responseResolved(heads,target))
     }
     @Test fun mixedProgressNeverCountsAsResolved(){

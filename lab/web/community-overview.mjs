@@ -58,8 +58,16 @@ export function communityOverview({people=[],heads=[],communities=[]}){
  const personRegions=new Map();for(const p of unique){const r=get(p.communityId);personRegions.set(p.id,r.id);r.total++;if(p.fictional)r.fictional++;r[({SAFE:'safe',SOS:'sos',RESCUED:'rescued'})[p.status]||'unreported']++;const injury=injuryFor(heads,p.id);if(injury==='INJURED')r.injured++;if(injury==='UNKNOWN')r.injuryUnknown++;}
  const reports=new Map();for(const e of heads.filter(e=>e.change.type==='REPORT'&&!e.change.cancelled)){const c=e.change;const ids=reports.get(c.reportId)||new Set();ids.add(region(c.regionIds?.[0]));reports.set(c.reportId,ids);}
  const reportRegions=new Map();for(const [id,ids]of reports){const r=get(ids.size===1?[...ids][0]:null);r.reports++;reportRegions.set(id,r.id);const related=heads.filter(e=>e.change.target?.kind==='REPORT'&&e.change.target.id===id),progress=related.filter(e=>e.change.type==='PROGRESS');if(related.some(e=>e.change.type==='PRIORITY'&&e.change.urgency==='HIGH')&&(!progress.length||progress.some(e=>e.change.status!=='DONE')))r.urgentOpen++;}
- const requests=new Map();for(const e of heads.filter(e=>e.change.type==='MATERIAL')){const c=e.change,key=c.requestId;const list=requests.get(key)||[];list.push(c);requests.set(key,list);}
- for(const revisions of requests.values()){const c=revisions[0],target=c.target;const regionId=target.kind==='PERSON'?personRegions.get(target.id):reportRegions.get(target.id);if(!regionId)continue;const r=get(regionId),amount=Math.max(...revisions.map(x=>Math.max(0,x.needed-x.arranged)));if(amount===0)continue;const labels=[...new Set(revisions.map(x=>x.name+'\u0000'+x.unit))];const name=labels.length===1?c.name:revisions.map(x=>x.name).filter((x,i,a)=>a.indexOf(x)===i).join(' / '),unit=labels.length===1?c.unit:'?';let m=r.materials.find(x=>x.name===name&&x.unit===unit);if(!m){m={name,unit,shortfall:0,conflict:false};r.materials.push(m);}m.shortfall+=amount;m.conflict||=revisions.length>1;}
+ const requests=new Map();for(const e of heads.filter(e=>e.change.type==='MATERIAL'&&!e.change.cancelled)){const c=e.change,key=c.requestId;const list=requests.get(key)||[];list.push(c);requests.set(key,list);}
+ for(const revisions of requests.values()){
+  const target=revisions[0].target,regionId=target.kind==='PERSON'?personRegions.get(target.id):reportRegions.get(target.id);if(!regionId)continue;const r=get(regionId);
+  // Compare quantities only within the same name/unit; mixed units are separate conflict rows.
+  const variants=new Map();for(const c of revisions){const key=JSON.stringify([c.name,c.unit]),list=variants.get(key)||[];list.push(c);variants.set(key,list);}
+  for(const comparable of variants.values()){
+   const {name,unit}=comparable[0],amount=Math.max(...comparable.map(x=>Math.max(0,x.needed-x.arranged)));if(amount===0)continue;
+   let m=r.materials.find(x=>x.name===name&&x.unit===unit);if(!m){m={name,unit,shortfall:0,conflict:false};r.materials.push(m);}m.shortfall+=amount;m.conflict||=revisions.length>1;
+  }
+ }
  return [...rows.values()];
 }
 export function issueCommunityReport(input,language='ja',issuedAt=Date.now(),id=crypto.randomUUID()) {return structuredClone({version:1,id,issuedAt,language,groupId:input.groupId,groupName:input.groupName,incidentId:input.incidentId,demo:!!input.demo,rows:communityOverview(input),people:input.people.map(p=>input.visiblePersonIds!==undefined&&!new Set(input.visiblePersonIds).has(p.id)?{id:p.id,communityId:p.communityId,status:p.status,fictional:p.fictional}:p),sourceIds:[...new Set([...(input.sourceIds||[]),...input.heads.map(e=>e.eventId).filter(Boolean)])].sort()});}

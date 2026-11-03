@@ -24,8 +24,12 @@ import kotlinx.serialization.json.Json
     @Serializable @SerialName("PROGRESS") data class Progress(val target:ResponseTarget,val status:WorkStatus,val result:String):ResponseChange()
     @Serializable @SerialName("PRIORITY") data class Priority(val target:ResponseTarget,val urgency:Urgency,val reason:String):ResponseChange()
     @Serializable @SerialName("AVAILABILITY") data class Availability(val state:ActivityState):ResponseChange()
-    @Serializable @SerialName("MATERIAL") data class Material(val target:ResponseTarget,val requestId:String,val name:String,val unit:String,val needed:Double,val arranged:Double):ResponseChange() {
-        val shortfall:Double get()=(needed-arranged).coerceAtLeast(0.0)
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @Serializable @SerialName("MATERIAL") data class Material(val target:ResponseTarget,val requestId:String,val name:String,val unit:String,val needed:Double,val arranged:Double,
+        @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) val cancelled:Boolean=false,
+        @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) val cancelReason:String="",
+    ):ResponseChange() {
+        val shortfall:Double get()=if(cancelled)0.0 else (needed-arranged).coerceAtLeast(0.0)
     }
 }
 @Serializable data class ResponseEvent(
@@ -75,13 +79,28 @@ fun validateResponseShape(roster:MemberRoster,event:ResponseEvent) {
             require(roster.canCoordinate(event.actorDeviceId)) {"緊急度は班長・管理者が変更します"}
             require(c.urgency==Urgency.UNSET || c.reason.isNotBlank()) {"緊急度の理由を入力してください"}
         }
-        is ResponseChange.Material->require(recordIdPattern.matches(c.requestId)&&c.name.isNotBlank()&&c.unit.isNotBlank()&&c.needed.isFinite()&&c.arranged.isFinite()&&c.needed>=0&&c.arranged>=0)
+        is ResponseChange.Material->{require(recordIdPattern.matches(c.requestId)&&c.name.isNotBlank()&&c.unit.isNotBlank()&&c.needed.isFinite()&&c.arranged.isFinite()&&c.needed>=0&&c.arranged>=0);require(!c.cancelled||c.cancelReason.isNotBlank()) {"取消理由を入力してください"}}
         is ResponseChange.Injury->require(c.target.kind==TargetKind.PERSON)
         is ResponseChange.Availability->Unit
     }
 }
 
 data class StartWorkChange(val change:ResponseChange,val replaces:List<String>)
+
+/** Use the immutable original event, never the latest editor, to establish report ownership. */
+fun canManageResponseTarget(roster:MemberRoster,history:List<ResponseEvent>,actorDeviceId:String,target:ResponseTarget,incidentId:String?):Boolean {
+    val member=roster.members.find {actorDeviceId in it.deviceIds}?:return false
+    if(roster.canCoordinate(actorDeviceId)||target.kind==TargetKind.PERSON)return true
+    val original=history.find {it.eventId==target.id&&it.groupId==roster.groupId&&it.incidentId==incidentId&&(it.change as? ResponseChange.Report)?.reportId==target.id}?:return false
+    return roster.members.find {original.actorDeviceId in it.deviceIds}?.memberId==member.memberId
+}
+fun canEditMaterial(roster:MemberRoster,history:List<ResponseEvent>,actorDeviceId:String,material:ResponseChange.Material,incidentId:String?):Boolean {
+    val member=roster.members.find {actorDeviceId in it.deviceIds}?:return false
+    if(roster.canCoordinate(actorDeviceId))return true
+    val original=history.find {it.eventId==material.requestId&&it.groupId==roster.groupId&&it.incidentId==incidentId&&it.change is ResponseChange.Material}
+    if(original!=null&&roster.members.find {original.actorDeviceId in it.deviceIds}?.memberId==member.memberId)return true
+    return material.target.kind==TargetKind.REPORT&&canManageResponseTarget(roster,history,actorDeviceId,material.target,incidentId)
+}
 /** One local command does not resolve concurrent progress or reopen completed work. */
 fun startWorkChanges(roster:MemberRoster,heads:List<ResponseEvent>,actorDeviceId:String,target:ResponseTarget):List<StartWorkChange> {
     val member=roster.memberForDevice(actorDeviceId)
@@ -112,15 +131,17 @@ private fun authorizeResponse(roster:MemberRoster,history:List<ResponseEvent>,ev
     }
     when(val c=event.change) {
         is ResponseChange.Report->require(creator(c.reportId).memberId==member.memberId||coordinator) {"通報を訂正する権限がありません"}
-        is ResponseChange.Assignment->require(c.memberId==member.memberId||coordinator) {"他の人の担当は班長・管理者が調整します"}
+        is ResponseChange.Assignment->{require(c.memberId==member.memberId||coordinator) {"他の人の担当は班長・管理者が調整します"};require(canManageResponseTarget(roster,history,event.actorDeviceId,c.target,event.incidentId)) {"この通報は閲覧のみです"}}
         is ResponseChange.Priority->require(coordinator) {"緊急度は班長・管理者が変更します"}
         is ResponseChange.Material->{
-            require(creator(c.requestId).memberId==member.memberId||coordinator) {"資材要請を訂正する権限がありません"}
+            val owner=creator(c.requestId)
+            require(if(event.eventId==c.requestId)canManageResponseTarget(roster,history,event.actorDeviceId,c.target,event.incidentId) else owner.memberId==member.memberId||canEditMaterial(roster,history,event.actorDeviceId,c,event.incidentId)) {"資材要請を訂正する権限がありません"}
             val original=history.find {it.eventId==c.requestId&&it.groupId==event.groupId}?.change as? ResponseChange.Material
-            if(original!=null)require(original.unit==c.unit && original.target==c.target) {"異なる単位・対象の資材は別の要請として登録してください"}
+            if(original!=null)require(original.target==c.target) {"異なる対象の資材は別の要請として登録してください"}
         }
         is ResponseChange.Availability->require(parents.all {roster.memberForDevice(it.actorDeviceId).memberId==member.memberId})
-        is ResponseChange.Progress,is ResponseChange.Injury->Unit
+        is ResponseChange.Progress->require(canManageResponseTarget(roster,history,event.actorDeviceId,c.target,event.incidentId)) {"この通報は閲覧のみです"}
+        is ResponseChange.Injury->Unit
     }
 }
 

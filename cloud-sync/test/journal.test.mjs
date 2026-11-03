@@ -26,6 +26,36 @@ async function member(j,a){const invite=await j.invite(a.token);return j.join({d
 const resident=(a,revision=1)=>({groupId:a.groupId,originId:a.deviceId,revision,updatedAt:1,name:'本人',floor:'',room:'',latitude:35,longitude:135,safety:'SAFE'});
 const push=(j,a,record,collection='residents')=>j.push(a.token,{records:[{collection,record}]});
 
+test('report viewers cannot mutate work or materials through direct or signed offline uploads',async t=>{
+ const f=fixture(t),admin=await create(f.j),owner=await member(f.j,admin),other=await member(f.j,admin),key=await relayKey();
+ await f.j.registerRelayKey(other.token,key.registration);
+ let sequence=0;const make=(who,change,eventId=id(),replaces=[])=>({groupId:admin.groupId,incidentId,actorDeviceId:who.deviceId,eventId,sequence:++sequence,operatedAt:1,change,replaces});
+ const incidentId=id(),reportId=id(),report=make(owner,{type:'REPORT',reportId,category:'道路',description:'倒木',latitude:35,longitude:135},reportId),target={kind:'REPORT',id:reportId};
+ await push(f.j,owner,report,'responses');
+ const requestId=id(),material=make(admin,{type:'MATERIAL',target,requestId,name:'水',unit:'本',needed:5,arranged:1},requestId);await push(f.j,admin,material,'responses');
+ const materialId=id(),forged=[
+  make(other,{...report.change,cancelled:true,cancelReason:'偽の取消'},id(),[reportId]),
+  make(other,{type:'ASSIGNMENT',target,memberId:other.memberId,active:true}),
+  make(other,{type:'PROGRESS',target,status:'DONE',result:'偽の完了'}),
+  make(other,{type:'MATERIAL',target,requestId:materialId,name:'偽の資材',unit:'本',needed:1,arranged:0},materialId),
+  make(other,{...material.change,cancelled:true,cancelReason:'偽の取消'},id(),[requestId])
+ ];
+ for(const event of forged){
+  await assert.rejects(push(f.j,other,event,'responses'),{status:403,code:'response_forbidden'});
+  await assert.rejects(f.j.push(admin.token,{records:[await signedItem(key,'responses',event)]}),{status:403,code:'response_forbidden'});
+ }
+ assert.equal((await f.j.pull(owner.token,0,100)).records.length,2);
+ // The report's original reporter may correct a coordinator-created material, including its unit.
+ const corrected=make(owner,{...material.change,unit:'箱',needed:1,arranged:0},id(),[requestId]);await push(f.j,owner,corrected,'responses');
+ const cancel=make(owner,{...corrected.change,cancelled:true,cancelReason:'不要'},id(),[corrected.eventId]);await push(f.j,owner,cancel,'responses');
+ f.restart();const records=(await f.j.pull(owner.token,0,100)).records.map(row=>row.record);
+ assert.deepEqual(records[1],material);assert.deepEqual(records.at(-1),cancel);
+ const ownerKey=await relayKey();await f.j.registerRelayKey(owner.token,ownerKey.registration);
+ const restored=make(owner,{...cancel.change,cancelled:false,cancelReason:''},id(),[cancel.eventId]);
+ assert.equal((await f.j.push(other.token,{records:[await signedItem(ownerKey,'responses',restored)]})).acks[0].status,'stored');
+ assert.equal((await push(f.j,other,report,'responses')).acks[0].status,'duplicate');
+});
+
 test('relay key registration is authenticated, immutable per device, group scoped and durably acknowledged',async t=>{
  const f=fixture(t),other=fixture(t),a=await create(f.j),b=await member(f.j,a),outsider=await create(other.j),key=await relayKey();
  await assert.rejects(f.j.registerRelayKey(outsider.token,key.registration),{code:'unauthorized'});
@@ -141,7 +171,7 @@ test('planned work and report cancellation/restoration retain history across clo
  await push(f.j,a,original,'responses');
  const planned={...original,eventId:id(),sequence:2,change:{type:'PROGRESS',target:{kind:'REPORT',id:reportId},status:'PLANNED',result:''}};await push(f.j,a,planned,'responses');
  const canceled={...original,eventId:id(),sequence:3,replaces:[reportId],change:{...original.change,cancelled:true,cancelReason:'重複する通報'}};await push(f.j,a,canceled,'responses');
- await assert.rejects(push(f.j,b,{...canceled,eventId:id(),actorDeviceId:b.deviceId,sequence:1,replaces:[canceled.eventId],change:{...original.change,cancelled:false,cancelReason:''}},'responses'),{code:'invalid_record'});
+ await assert.rejects(push(f.j,b,{...canceled,eventId:id(),actorDeviceId:b.deviceId,sequence:1,replaces:[canceled.eventId],change:{...original.change,cancelled:false,cancelReason:''}},'responses'),{code:'response_forbidden',status:403});
  f.restart();const restored={...original,eventId:id(),sequence:4,replaces:[canceled.eventId],change:{...original.change,cancelled:false,cancelReason:''}};await push(f.j,a,restored,'responses');
  const page=await f.j.pull(b.token,0,100);assert.deepEqual(page.records.map(r=>r.record),[original,planned,canceled,restored]);
  assert.equal((await push(f.j,a,canceled,'responses')).acks[0].status,'duplicate');

@@ -56,7 +56,7 @@ fun positionDescription(person: MapPerson, now: Long): String = when {
 }
 
 @Composable fun safetyText(state:MapSafety)=if(state==MapSafety.SOS)"SOS" else uiText(when(state){MapSafety.SOS->"my_sos";MapSafety.UNANSWERED->"no_response";MapSafety.SAFE->"safe";MapSafety.RESCUED->"rescued"})
-@Composable fun personText(person:MapPerson)=when {person.demo->person.name;person.state==MapSafety.SAFE->uiText("safe_person");person.state==MapSafety.RESCUED->uiText("rescued_person");!person.identityVisible->uiText("no_response");person.name.isBlank()->uiText("registered_resident");else->person.name}
+@Composable fun personText(person:MapPerson)=when {person.state==MapSafety.SAFE->uiText("safe_person");person.state==MapSafety.RESCUED->uiText("rescued_person");person.demo->person.name;!person.identityVisible->uiText("no_response");person.name.isBlank()->uiText("registered_resident");else->person.name}
 @Composable private fun positionText(person:MapPerson,now:Long):String=if(person.point==null||person.acquiredAt==null)uiText("position_unreceived") else uiText("position_time",SimpleDateFormat("HH:mm",Locale.getDefault()).format(Date(person.acquiredAt)),((now-person.acquiredAt)/60_000).coerceAtLeast(0))+(person.accuracy?.let {" · "+uiText("accuracy",it)}?:"")
 
 @OptIn(ExperimentalMaterial3Api::class,ExperimentalLayoutApi::class)
@@ -88,6 +88,7 @@ fun SituationScreen(
     var sheet by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
     var homeId by rememberSaveable { mutableStateOf<String?>(null) }
+    var homePersonId by rememberSaveable { mutableStateOf<String?>(null) }
     var areaIds by rememberSaveable { mutableStateOf<List<String>?>(null) }
     var listFilter by rememberSaveable { mutableStateOf<String?>(null) }
     var extraHome by remember { mutableStateOf<MapHome?>(null) }
@@ -135,7 +136,7 @@ fun SituationScreen(
         Box(Modifier.weight(1f).fillMaxWidth()) {
             SituationMap(people, homes, center, showSafe, now, preview, camera, initialZoom=initialZoom, tsunamiResult=tsunamiResult,neighborhoods=neighborhoods.filter {it.row.id!=ownNeighborhoodId},onNeighborhood={neighborhoodId=it;sheet="neighborhood"},
                 onPerson = { selectedId = it.id; sheet = "person" },
-                onHome = { extraHome = it; homeId = it.id; sheet = "home" },
+                onHome = { extraHome = it; homePersonId = null; homeId = it.id; sheet = "home" },
                 onOverlapping = { areaIds = it.map(MapPerson::id); listFilter = null; sheet = "overlap" }, onError = { failed = true }, modifier = Modifier.fillMaxSize(),
                 assessmentIntensity=assessmentIntensity,onReportPoint=if(choosingReport){{point->choosingReport=false;onAddReport?.invoke(point)}}else null,reports=reports,onReport=onReport)
             if(onAddReport!=null)Button(onClick={choosingReport=!choosingReport},modifier=Modifier.align(Alignment.BottomEnd).padding(end=14.dp,bottom=96.dp).heightIn(min=48.dp),shape=RoundedCornerShape(10.dp),contentPadding=PaddingValues(horizontal=15.dp,vertical=10.dp)){Text(uiText(if(choosingReport)"cancel" else "report_add"),fontSize=14.sp,fontWeight=FontWeight(750))}
@@ -174,9 +175,9 @@ fun SituationScreen(
                     }
                 }
                 "person" -> people.find { it.id == selectedId }?.let { person ->
-                    PersonMapDetail(person, now, canRescue, canUndo(person), onRescue, onUndo, onHome = { home -> extraHome = home; homeId = home.id; sheet = "home" }, onClose = close, history = { history(person) }, feedback = { feedback(person) },showActions=false,onResponse=onPersonResponse?.let {action->{action(person.id)}})
+                    PersonMapDetail(person, now, canRescue, canUndo(person), onRescue, onUndo, onHome = { home -> extraHome = home; homePersonId = person.id; homeId = home.id; sheet = "home" }, onClose = close, history = { history(person) }, feedback = { feedback(person) },showActions=false,onResponse=onPersonResponse?.let {action->{action(person.id)}})
                 }
-                "home" -> (extraHome?.takeIf {it.id==homeId} ?: homes.find { it.id == homeId })?.let { home ->
+                "home" -> visibleHomeDetail(homeId,homePersonId,people,homes,extraHome)?.let { home ->
                     Column(Modifier.fillMaxWidth().fillMaxHeight(.86f).verticalScroll(rememberScrollState()).padding(horizontal = 22.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         DetailHeading(uiText("building_details"), home.address, close)
                         HomeAttributes(home,showYear=true)
@@ -266,6 +267,7 @@ fun filteredPeople(people:List<MapPerson>,filter:String?,now:Long)=when(filter){
 }
 
 @Composable private fun HomeAttributes(home: MapHome,showYear:Boolean=false) {
+    if(home.attributesUnavailable)Text(if(LocalUiLanguage.current=="en")"Building information is unavailable" else "建物情報を読み込めません",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.error)
     if(showYear&&home.assessmentIntensity!=null) {
         Text("想定震度 ${home.assessmentIntensity}・全壊率 ${home.fullDamagePercent?.let {String.format(Locale.JAPAN,"%.1f%%",it)} ?: "不明"}",style=MaterialTheme.typography.titleMedium)
         if(home.assessmentAssumed)Text("16階以上は被害率0とする仮定を適用",style=MaterialTheme.typography.bodySmall)
@@ -298,7 +300,7 @@ fun filteredPeople(people:List<MapPerson>,filter:String?,now:Long)=when(filter){
         }
         Column(Modifier.weight(1f,fill=false).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(16.dp)) {
         Text("${uiText("last_position")} · ${positionText(person, now)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        if(!person.identityVisible)Text(uiText("waiting_disclosure"),style=MaterialTheme.typography.bodySmall)
+        if(!person.identityVisible&&person.state==MapSafety.UNANSWERED)Text(uiText("waiting_disclosure"),style=MaterialTheme.typography.bodySmall)
         if (needsHelp) {
             if (person.identityVisible && person.state == MapSafety.SOS && person.memo.isNotBlank()) {
                 Text(uiText("sos_memo"), style = MaterialTheme.typography.titleMedium)

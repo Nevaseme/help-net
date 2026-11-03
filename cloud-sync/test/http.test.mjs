@@ -2,6 +2,40 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {handle,readJson} from '../src/http.mjs';
 
+test('all material snapshots require v7 before upload writes or pull cursor acknowledgement',async()=>{
+ const path=`https://sync.test/api/v1/groups/${crypto.randomUUID()}/records`;
+ for(const change of [{type:'MATERIAL',unit:'本',needed:5,arranged:1},{type:'MATERIAL',unit:'箱',needed:1,arranged:0},{type:'MATERIAL',cancelled:true,cancelReason:'不要'},{type:'MATERIAL',cancelled:false,cancelReason:''}]){
+  const rows=[{cursor:7,collection:'responses',record:{change}}];let writes=0;
+  const env={GROUPS:{getByName:()=>({dispatch:async op=>{if(op==='push')writes++;return {status:200,body:{records:rows,nextCursor:7,acks:[{status:'stored'}]}};}})}};
+  for(const version of [undefined,'1','2','3','4','5','6']){
+   const headers={Authorization:`Bearer ${'a'.repeat(64)}`,'Content-Type':'application/json',...(version?{'X-PlanD-Records-Version':version}:{})};
+   for(const method of ['GET','POST']){
+    const response=await handle(new Request(path,{method,headers,...(method==='POST'?{body:JSON.stringify({records:rows})}:{})}),env);
+    assert.equal(response.status,426);const body=await response.json();assert.equal(body.error.code,'client_update_required');assert.equal(body.nextCursor,undefined);assert.equal(body.acks,undefined);
+   }
+  }
+  assert.equal(writes,0);
+  const headers={Authorization:`Bearer ${'a'.repeat(64)}`,'Content-Type':'application/json','X-PlanD-Records-Version':'7'};
+  const pull=await handle(new Request(path,{headers}),env);assert.equal(pull.status,200);assert.deepEqual((await pull.json()).records,rows);
+  const push=await handle(new Request(path,{headers,method:'POST',body:JSON.stringify({records:rows})}),env);assert.equal(push.status,200);assert.equal(writes,1);
+ }
+});
+
+test('v7 accepts every earlier capability and v6 still reads non-material records',async()=>{
+ const path=`https://sync.test/api/v1/groups/${crypto.randomUUID()}/records`,rows=[
+  {collection:'responses',record:{change:{type:'REPORT',cancelled:true,cancelReason:'重複',regionIds:['north']}}},
+  {collection:'responses',record:{change:{type:'PROGRESS',status:'PLANNED'}}},
+  {collection:'places',record:{locationReference:{searchReference:{source:'ISJ'}}}},
+  {collection:'deviceRecords',record:{home:{searchReference:{source:'ISJ'}}}},
+  {collection:'responses',record:{change:{type:'INJURY',state:'INJURED'}}}
+ ];
+ const env={GROUPS:{getByName:()=>({dispatch:async()=>({status:200,body:{records:rows,nextCursor:7}})})}};
+ for(const version of ['6','7'])for(const method of ['GET','POST']){
+  const headers={Authorization:`Bearer ${'a'.repeat(64)}`,'Content-Type':'application/json','X-PlanD-Records-Version':version};
+  assert.equal((await handle(new Request(path,{method,headers,...(method==='POST'?{body:JSON.stringify({records:rows})}:{})}),env)).status,200);
+ }
+});
+
 test('address references require v3 before read cursor or upload acknowledgement',async()=>{
  const path=`https://sync.test/api/v1/groups/${crypto.randomUUID()}/records`,rows=[{collection:'places',record:{locationReference:{address:'試験町'}}}];let writes=0;
  const env={GROUPS:{getByName:()=>({dispatch:async op=>{if(op==='push')writes++;return {status:200,body:{records:rows,nextCursor:3}};}})}};

@@ -18,7 +18,7 @@ test('safe names and observations are not presented as distress cases',()=>{
  assert.equal(p.name,'無事の人');assert.equal(p.showObservations,false);
  assert.equal(responseCases({records:[{...person,safety:'SAFE'}],events:[],id:'me'},[]).length,0);
  assert.equal(personPresentation({...person,safety:'SAFE'},[],null,'me',2000,{latitude:35,longitude:139}).showHome,false);
- assert.equal(personPresentation({...person,safety:'SAFE'},[],null,'me',2000).showHome,true);
+ assert.equal(personPresentation({...person,safety:'SAFE'},[],null,'me',2000).showHome,false);
  assert.equal(personPresentation(person,[],{start:{createdAt:0}},'me',180000,{latitude:35,longitude:139}).showHome,true);
 });
 test('case projection preserves conflicting progress and material heads',()=>{
@@ -74,4 +74,15 @@ test('map, people and task scopes use the same home community; outside reports r
  assert.deepEqual(rows.map(r=>r.target.id),['west','outside']);
  assert.deepEqual(visiblePeople({...snapshot,id:'absent'}),[]);
  assert.equal(visiblePeople({...snapshot,venue:null}).length,3);
+});
+
+// Safe/rescued status must not expose another resident's private detail, including venue demos.
+test('safe and rescued privacy holds across venue, location and own-id variants',()=>{
+ for(const safety of ['SAFE','RESCUED'])for(const venue of [false,true])for(const position of [null,{latitude:35,longitude:135}]){
+  const p={...person,safety,venueSessionId:venue?'demo':null,homeAddress:'Private address',room:'Private bedroom',impactAt:99};
+  const r=personPresentation(p,[],{start:{eventId:'demo',createdAt:0}},'me',999999,position);
+  assert.equal(r.showHome,false);assert.equal(r.showDetails,false);assert.equal(r.showObservations,false);assert.notEqual(r.name,p.name);
+ }
+ const rescued=personPresentation({...person,safety:'SOS'},[{eventId:'care',subjectId:'other',action:'RESCUED',createdAt:100}],{start:{createdAt:0}},'me',200,null);
+ assert.equal(rescued.showDetails,false);assert.equal(rescued.showHome,false);
 });

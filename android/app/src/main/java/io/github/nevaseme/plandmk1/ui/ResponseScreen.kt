@@ -38,7 +38,7 @@ data class ResponseCase(val target:ResponseTarget,val title:String,val descripti
 /** Keep concurrent report revisions visible in the detail; cancellation never silently wins a conflict. */
 fun responseCases(residents:List<Resident>,care:List<CareEvent>,heads:List<ResponseEvent>,memos:Map<String,String> = emptyMap(),incidentStartedAt:Long?=null,now:Long=System.currentTimeMillis(),demoIds:Set<String> = emptySet()):List<ResponseCase> {
     val recorded=heads.filter {it.change !is ResponseChange.Injury}.mapNotNull {it.change.target()?.takeIf {target->target.kind==TargetKind.PERSON}?.id}.toSet()
-    val people=residents.filter {residentMapState(it,care)==MapSafety.SOS||it.originId in recorded}.map {
+    val people=residents.filter {residentMapState(it,care)==MapSafety.SOS||(residentMapState(it,care)==MapSafety.UNANSWERED&&it.originId in recorded)}.map {
         val person=projectPersonPrivacy(MapPerson(it.originId,it.displayName(),residentMapState(it,care),demo=it.originId in demoIds),incidentStartedAt,now)
         ResponseCase(ResponseTarget(TargetKind.PERSON,it.originId),person.publicName,if(person.state==MapSafety.SOS)memos[it.originId].orEmpty()else "",person=person)
     }
@@ -155,9 +155,10 @@ fun responseResolved(events:List<ResponseEvent>,target:ResponseTarget):Boolean {
             val events=heads.filter {it.change.target()==case.target}
             val assignments=responseAssignments(heads,case.target)
             val ownAssigned=member?.memberId in assignments
-            val creator=history.filter {(it.change as? ResponseChange.Report)?.reportId==case.target.id}.minByOrNull {it.operatedAt}?.actorDeviceId
-            val mayEditReport=editable&&(coordinator||roster?.members?.find {creator in it.deviceIds}?.memberId==member?.memberId)
-            ApprovedSheet(caseTitle(case),{selected=null},footer={if(!case.cancelled)Button(onClick={
+            val creator=history.find {it.eventId==case.target.id&&(it.change as? ResponseChange.Report)?.reportId==case.target.id}?.actorDeviceId
+            val mayManage=editable&&roster?.let {canManageResponseTarget(it,history,model.localId,case.target,incidentId)}==true
+            val mayEditReport=mayManage
+            ApprovedSheet(caseTitle(case),{selected=null},footer={if(mayManage&&!case.cancelled)Button(onClick={
                 if(ownAssigned&&member!=null)model.saveResponse(ResponseChange.Assignment(case.target,member.memberId,false),events.filter {(it.change as? ResponseChange.Assignment)?.memberId==member.memberId}.map {it.eventId})
                 else model.startResponse(case.target)
             },enabled=editable,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp),shape=RoundedCornerShape(13.dp)){Text(uiText(if(ownAssigned)"leave_assignment" else "start_work"))}}){
@@ -166,7 +167,7 @@ fun responseResolved(events:List<ResponseEvent>,target:ResponseTarget):Boolean {
                     val reporter=residents.find {it.originId==creator}
                     val reporterCommunity=communityPeople.find {it.id==creator}?.communityId
                     val reporterHome=creator?.let {validHome(places,it)}?.buildingId?.let {id->placeBuildings(places).find {it.buildingId==id}?.displayLabel()}
-                    Text((if(LocalUiLanguage.current=="en")"Reported by: " else "通報者：")+(if(coordinator&&reporterCommunity==ownCommunity)reporter?.displayName().orEmpty() else reporterHome?:uiText("unregistered")),fontSize=13.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text((if(LocalUiLanguage.current=="en")"Reported by: " else "通報者：")+(if(reporter!=null&&residentMapState(reporter,care) in setOf(MapSafety.SAFE,MapSafety.RESCUED))if(english)"Reporter" else "通報者" else if(coordinator&&reporterCommunity==ownCommunity)reporter?.displayName().orEmpty() else reporterHome?:uiText("unregistered")),fontSize=13.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
                     ResponseFact(if(LocalUiLanguage.current=="en")"Region" else "地域",report.regionIds.joinToString(" / "){id->regions.find {it.id==id}?.let {if(english)it.nameEn else it.nameJa}?:id}.ifBlank {uiText("region_unset")},mayEditReport&&!case.cancelled,mayEditReport){editor="report"}
                     if(report.cancelled)Text(report.cancelReason,color=MaterialTheme.colorScheme.error)
                 }
@@ -175,16 +176,17 @@ fun responseResolved(events:List<ResponseEvent>,target:ResponseTarget):Boolean {
                 val progresses=events.mapNotNull {it.change as? ResponseChange.Progress}
                 val priorities=events.mapNotNull {it.change as? ResponseChange.Priority}
                 Column {
-                    ResponseFact(uiText("assignees"),if(assignments.isEmpty())uiText("unassigned")else assignments.joinToString("、"){id->roster?.members?.find {it.memberId==id}?.activityName.orEmpty()},editable&&!case.cancelled){editor="assignment"}
-                    ResponseFact(uiText("progress"),if(progresses.isEmpty())uiText("not_started")else progresses.map {uiText(workLabel(it.status))}.distinct().joinToString(" / "),editable&&!case.cancelled){editor="progress"}
+                    ResponseFact(uiText("assignees"),if(assignments.isEmpty())uiText("unassigned")else assignments.joinToString("、"){id->roster?.members?.find {it.memberId==id}?.activityName.orEmpty()},mayManage&&!case.cancelled,mayManage){editor="assignment"}
+                    ResponseFact(uiText("progress"),if(progresses.isEmpty())uiText("not_started")else progresses.map {uiText(workLabel(it.status))}.distinct().joinToString(" / "),mayManage&&!case.cancelled,mayManage){editor="progress"}
                     ResponseFact(uiText("urgency"),if(priorities.isEmpty())uiText("urgency_unset")else priorities.map {uiText(urgencyLabel(it.urgency))}.distinct().joinToString(" / "),editable&&!case.cancelled,coordinator){editor="priority"}
                 }
                 progresses.filter {it.result.isNotBlank()}.forEach {Text(it.result,fontSize=14.sp)}
                 priorities.filter {it.reason.isNotBlank()}.forEach {Text(it.reason,fontSize=14.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)}
-                Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){Text(uiText("materials"),Modifier.weight(1f),fontWeight=FontWeight.Bold);TextButton(onClick={materialId=null;editor="material"},enabled=editable&&!case.cancelled){Text(uiText("material_add"))}}
-                val materials=events.mapNotNull {it.change as? ResponseChange.Material};if(materials.isEmpty())Text(uiText("no_materials"))
-                materials.forEach {m->val author=history.filter {(it.change as? ResponseChange.Material)?.requestId==m.requestId}.minByOrNull {it.operatedAt}?.actorDeviceId;val allowed=coordinator||roster?.members?.find {author in it.deviceIds}?.memberId==member?.memberId
-                    OutlinedCard(onClick={materialId=m.requestId;editor="material"},enabled=editable&&allowed&&!case.cancelled){Column(Modifier.fillMaxWidth().padding(12.dp)){Text(m.name,fontWeight=FontWeight.Bold);Text("${uiText("needed")} ${m.needed} / ${uiText("arranged")} ${m.arranged} ${m.unit}");Text(uiText("shortfall",m.shortfall,m.unit))}}
+                Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){Text(uiText("materials"),Modifier.weight(1f),fontWeight=FontWeight.Bold);TextButton(onClick={materialId=null;editor="material"},enabled=mayManage&&!case.cancelled){Text(uiText("material_add"))}}
+                val materials=events.mapNotNull {it.change as? ResponseChange.Material}.filterNot {it.cancelled};if(materials.isEmpty())Text(uiText("no_materials"))
+                materials.forEach {m->val allowed=editable&&roster?.let {canEditMaterial(it,history,model.localId,m,incidentId)}==true
+                    OutlinedCard(onClick={materialId=m.requestId;editor="material"},enabled=allowed&&!case.cancelled){Column(Modifier.fillMaxWidth().padding(12.dp)){Text(m.name,fontWeight=FontWeight.Bold);Text("${uiText("needed")} ${m.needed} / ${uiText("arranged")} ${m.arranged} ${m.unit}");Text(uiText("shortfall",m.shortfall,m.unit))}}
+                    if(allowed&&!case.cancelled)TextButton(onClick={materialId=m.requestId;editor="material_cancel"}){Text(if(english)"Cancel material request" else "資材要請を取り消す")}
                 }
                 if(case.report!=null&&mayEditReport){if(case.cancelled)OutlinedButton(onClick={editor="restore"}){Text(uiText("report_restore"))}else Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){OutlinedButton(onClick={editor="report"}){Text(uiText("report_edit"))};TextButton(onClick={editor="cancel"}){Text(uiText("report_cancel"))}}}
                 var historyOpen by remember(case.target) {mutableStateOf(false)}
@@ -216,7 +218,7 @@ fun responseResolved(events:List<ResponseEvent>,target:ResponseTarget):Boolean {
     is ResponseChange.Report->{Text(categoryLabel(change.category));Text(change.description);if(change.cancelled)Text("${uiText("cancelled")}: ${change.cancelReason}")}
     is ResponseChange.Progress->{Text(uiText(workLabel(change.status)));if(change.result.isNotBlank())Text(change.result)}
     is ResponseChange.Priority->{Text(uiText(urgencyLabel(change.urgency)));Text(change.reason)}
-    is ResponseChange.Material->Text("${change.name}: ${change.arranged} / ${change.needed} ${change.unit}")
+    is ResponseChange.Material->{Text("${change.name}: ${change.arranged} / ${change.needed} ${change.unit}");if(change.cancelled)Text("${uiText("cancelled")}: ${change.cancelReason}")}
     is ResponseChange.Assignment->Text(uiText(if(change.active)"assignees" else "leave_assignment"))
     is ResponseChange.Injury->Text(communityLabel("injury",LocalUiLanguage.current=="en")+": "+communityLabel(change.state.name,LocalUiLanguage.current=="en"))
     is ResponseChange.Availability->Text(uiText(activityLabel(change.state)))
@@ -227,7 +229,7 @@ fun responseResolved(events:List<ResponseEvent>,target:ResponseTarget):Boolean {
     val targetHeads=heads.filter {it.change.target()==target}
     val report=case?.report
     val oldMaterial=targetHeads.mapNotNull {it.change as? ResponseChange.Material}.firstOrNull {it.requestId==materialId}
-    val currentHeads=targetHeads.filter {when(mode){"report","cancel","restore"->it.change is ResponseChange.Report;"progress"->it.change is ResponseChange.Progress;"priority"->it.change is ResponseChange.Priority;"material"->(it.change as? ResponseChange.Material)?.let {material->material.requestId==materialId}==true;else->false}}
+    val currentHeads=targetHeads.filter {when(mode){"report","cancel","restore"->it.change is ResponseChange.Report;"progress"->it.change is ResponseChange.Progress;"priority"->it.change is ResponseChange.Priority;"material","material_cancel"->(it.change as? ResponseChange.Material)?.let {material->material.requestId==materialId}==true;else->false}}
     var reviewedIds by rememberSaveable { mutableStateOf(currentHeads.map {it.eventId}) }
     val reviewedHeads=currentHeads.filter {it.eventId in reviewedIds}
     val editorUpdated=currentHeads.map {it.eventId}.toSet()!=reviewedIds.toSet()
@@ -242,8 +244,15 @@ fun responseResolved(events:List<ResponseEvent>,target:ResponseTarget):Boolean {
     var progress by rememberSaveable {mutableStateOf(targetHeads.mapNotNull {it.change as? ResponseChange.Progress}.singleOrNull()?.status?:WorkStatus.UNASSIGNED)}
     var urgency by rememberSaveable {mutableStateOf(targetHeads.mapNotNull {it.change as? ResponseChange.Priority}.singleOrNull()?.urgency?:Urgency.UNSET)}
     var name by rememberSaveable {mutableStateOf(oldMaterial?.name.orEmpty())};var unit by rememberSaveable {mutableStateOf(oldMaterial?.unit.orEmpty())};var needed by rememberSaveable {mutableStateOf(oldMaterial?.needed?.toString().orEmpty())};var arranged by rememberSaveable {mutableStateOf(oldMaterial?.arranged?.toString()?:"0")}
-    val valid=!editorUpdated&&(reviewedHeads.size<2||reviewed)&&when(mode){"report"->category.isNotBlank()&&text.isNotBlank()&&lat.toDoubleOrNull()?.let {it.isFinite()&&it in -85.0..85.0}==true&&lon.toDoubleOrNull()?.let {it.isFinite()&&it in -180.0..180.0}==true;"progress"->progress!=WorkStatus.DONE||text.isNotBlank();"priority"->urgency==Urgency.UNSET||text.isNotBlank();"material"->name.isNotBlank()&&unit.isNotBlank()&&listOf(needed,arranged).all {it.toDoubleOrNull()?.let {v->v.isFinite()&&v>=0}==true};"cancel"->text.isNotBlank();"restore"->true;else->false}
-    val title=uiText(when(mode){"report"->if(report==null)"report_add" else "report_edit";"progress"->"progress_update";"material"->"material_add";"priority"->"urgency";"cancel"->"report_cancel";"restore"->"report_restore";else->"assignment_change"})
+    val mayManage=target!=null&&roster?.let {canManageResponseTarget(it,history,model.localId,target,model.incidentUi.value.current?.start?.eventId)}==true
+    val permitted=editable&&when(mode){
+        "priority"->coordinator
+        "report"->report==null||mayManage
+        "material","material_cancel"->if(oldMaterial==null)mayManage else roster?.let {canEditMaterial(it,history,model.localId,oldMaterial,model.incidentUi.value.current?.start?.eventId)}==true
+        else->mayManage
+    }
+    val valid=!editorUpdated&&(reviewedHeads.size<2||reviewed)&&when(mode){"report"->category.isNotBlank()&&text.isNotBlank()&&lat.toDoubleOrNull()?.let {it.isFinite()&&it in -85.0..85.0}==true&&lon.toDoubleOrNull()?.let {it.isFinite()&&it in -180.0..180.0}==true;"progress"->progress!=WorkStatus.DONE||text.isNotBlank();"priority"->urgency==Urgency.UNSET||text.isNotBlank();"material"->name.isNotBlank()&&unit.isNotBlank()&&listOf(needed,arranged).all {it.toDoubleOrNull()?.let {v->v.isFinite()&&v>=0}==true};"cancel"->text.isNotBlank();"material_cancel"->oldMaterial!=null&&text.isNotBlank();"restore"->true;else->false}
+    val title=if(mode=="material_cancel")if(LocalUiLanguage.current=="en")"Cancel material request" else "資材要請を取り消す" else uiText(when(mode){"report"->if(report==null)"report_add" else "report_edit";"progress"->"progress_update";"material"->"material_add";"priority"->"urgency";"cancel"->"report_cancel";"restore"->"report_restore";else->"assignment_change"})
     if(choosingLocation) {
         ApprovedSheet(if(LocalUiLanguage.current=="en")"Choose report location" else "通報地点を選択",{choosingLocation=false},scrollContent=false) {
             Text(if(LocalUiLanguage.current=="en")"Tap the report location on the map" else "地図上で通報地点をタップしてください",Modifier.padding(16.dp))
@@ -254,10 +263,10 @@ fun responseResolved(events:List<ResponseEvent>,target:ResponseTarget):Boolean {
         return
     }
     ApprovedSheet(title,close,footer=if(mode=="assignment")null else {{Button(onClick={
-        val change:ResponseChange=when(mode){"report"->ResponseChange.Report(report?.reportId?:UUID.randomUUID().toString(),category,lat.toDouble(),lon.toDouble(),text,regionIds=regionId.takeIf {it.isNotBlank()}?.let {listOf(it)}?:emptyList());"progress"->ResponseChange.Progress(target!!,progress,text);"priority"->ResponseChange.Priority(target!!,urgency,text);"material"->ResponseChange.Material(target!!,materialId?:UUID.randomUUID().toString(),name,unit,needed.toDouble(),arranged.toDouble());"restore"->report!!.copy(cancelled=false,cancelReason="");else->report!!.copy(cancelled=true,cancelReason=text)}
+        val change:ResponseChange=when(mode){"report"->ResponseChange.Report(report?.reportId?:UUID.randomUUID().toString(),category,lat.toDouble(),lon.toDouble(),text,regionIds=regionId.takeIf {it.isNotBlank()}?.let {listOf(it)}?:emptyList());"progress"->ResponseChange.Progress(target!!,progress,text);"priority"->ResponseChange.Priority(target!!,urgency,text);"material"->ResponseChange.Material(target!!,materialId?:UUID.randomUUID().toString(),name,unit,needed.toDouble(),arranged.toDouble());"restore"->report!!.copy(cancelled=false,cancelReason="");"material_cancel"->oldMaterial!!.copy(cancelled=true,cancelReason=text);else->report!!.copy(cancelled=true,cancelReason=text)}
         val replaced=reviewedHeads.map {it.eventId}
         model.saveResponse(change,replaced,onSaved)
-    },enabled=editable&&valid,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp),shape=RoundedCornerShape(13.dp)){Text(uiText("save"))}}}) {
+    },enabled=permitted&&valid,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp),shape=RoundedCornerShape(13.dp)){Text(uiText("save"))}}}) {
         if(editorUpdated) {
             Text(uiText("editor_updated"),color=MaterialTheme.colorScheme.error)
             currentHeads.forEach { ResponseEventText(it.change) }
@@ -276,10 +285,10 @@ fun responseResolved(events:List<ResponseEvent>,target:ResponseTarget):Boolean {
         }
         if(mode=="progress")ChoiceField(WorkStatus.entries.map {it to uiText(workLabel(it))},progress,uiText("progress"),editable){progress=it}
         if(mode=="priority")ChoiceField(Urgency.entries.map {it to uiText(urgencyLabel(it))},urgency,uiText("urgency"),editable){urgency=it}
-        if(mode in listOf("report","progress","priority","cancel"))ApprovedField(text,{text=it.take(4000)},uiText(when(mode){"report"->"report_description";"progress"->if(progress==WorkStatus.DONE)"result_required" else "result";"cancel"->"cancel_reason";else->"reason"}),minLines=4,modifier=Modifier.fillMaxWidth(),enabled=editable)
+        if(mode in listOf("report","progress","priority","cancel","material_cancel"))ApprovedField(text,{text=it.take(4000)},uiText(when(mode){"report"->"report_description";"progress"->if(progress==WorkStatus.DONE)"result_required" else "result";"cancel","material_cancel"->"cancel_reason";else->"reason"}),minLines=4,modifier=Modifier.fillMaxWidth(),enabled=editable)
         if(mode=="material"){
             ApprovedField(name,{name=it},uiText("material_name"),Modifier.fillMaxWidth(),enabled=editable)
-            ApprovedField(unit,{unit=it},uiText("unit"),Modifier.fillMaxWidth(),enabled=editable&&oldMaterial==null)
+            ApprovedField(unit,{unit=it},uiText("unit"),Modifier.fillMaxWidth(),enabled=editable)
             Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){
                 ApprovedField(needed,{needed=it},uiText("needed"),Modifier.weight(1f),enabled=editable)
                 ApprovedField(arranged,{arranged=it},uiText("arranged"),Modifier.weight(1f),enabled=editable)

@@ -93,6 +93,15 @@ class BuildingAssessmentRepository(private val additionalPackages:List<String> =
     suspend fun metadata(): JsonObject = withContext(Dispatchers.IO) { lock.withLock { indexLocked() } }
     suspend fun mesh(code: String): List<AssessedBuilding> = withContext(Dispatchers.IO) { lock.withLock { chunkLocked(code) } }
 
+    /** Registered identifiers are authoritative; a footprint/nearby building must not replace them. */
+    suspend fun registeredBuilding(id:String,latitude:Double,longitude:Double):AssessedBuilding? = withContext(Dispatchers.IO) {
+        lock.withLock {
+            indexLocked().getValue("chunks").jsonArray.map {it.jsonObject}.filter {item->
+                item["bbox"]?.takeUnless {it==JsonNull}?.jsonArray?.map {it.jsonPrimitive.double}?.let {contains(it,longitude,latitude)}==true
+            }.firstNotNullOfOrNull {item->chunkLocked(item.getValue("mesh").jsonPrimitive.content).find {it.id==id}}
+        }
+    }
+
     /** Returns every containing footprint (including overlapping models); no nearest-building guess.
      * Empty means no matching published footprint, not zero damage. Unknown rates remain null.
      */

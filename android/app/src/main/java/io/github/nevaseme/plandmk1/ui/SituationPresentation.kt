@@ -3,6 +3,8 @@ package io.github.nevaseme.plandmk1.ui
 import io.github.nevaseme.plandmk1.MapPoint
 import io.github.nevaseme.plandmk1.core.*
 import kotlin.math.*
+import kotlinx.serialization.json.*
+import io.github.nevaseme.plandmk1.buildings.AssessedBuilding
 
 const val DAY = 86_400_000L
 const val INDIVIDUAL_ZOOM = 14.0
@@ -20,7 +22,16 @@ data class MapHome(
     val rating: Int? = null,
     val fullDamagePercent: Double? = null, val assessmentIntensity: Double? = null,
     val assessmentAssumed: Boolean = false,
+    val attributesUnavailable:Boolean=false,
 )
+
+fun MapHome.withBuildingAttributes(building:AssessedBuilding):MapHome {
+    fun positive(key:String)=building.attributes[key]?.jsonPrimitive?.intOrNull?.takeIf {it>0}
+    val material=when(building.attributes["structureCode"]?.jsonPrimitive?.contentOrNull){
+        "601"->"木造・土蔵造";"602"->"SRC造";"603"->"RC造";"604"->"鉄骨造";"605"->"軽量鉄骨造";"606"->"組積造";"610"->"非木造";else->"不明"
+    }
+    return copy(built=positive("year"),floors=positive("floors"),material=material)
+}
 
 data class MapPerson(
     val id: String, val name: String, val state: MapSafety,
@@ -29,7 +40,7 @@ data class MapPerson(
     val impactAt: Long? = null, val enclosedAt: Long? = null,
     val identityVisible: Boolean = true, val registeredPlaceVisible: Boolean = true, val demo:Boolean=false,val fictional:Boolean=false,
 ) {
-    val publicName get() = if(demo)name else when (state) {
+    val publicName get() = when (state) {
         MapSafety.SAFE -> "無事の人"
         MapSafety.RESCUED -> "救助済みの人"
         else -> if(!identityVisible) "応答なし" else name.ifBlank { "登録住民" }
@@ -39,7 +50,8 @@ data class MapPerson(
 
 /** Display projection only; the stored profile and incident's earliest formation time are retained. */
 fun projectPersonPrivacy(person:MapPerson,incidentStartedAt:Long?,now:Long):MapPerson {
-    if(person.demo)return person.copy(identityVisible=true,registeredPlaceVisible=person.home!=null&&(person.state!=MapSafety.SOS||!person.hasPosition(now)),home=person.home.takeUnless {person.state==MapSafety.SOS&&person.hasPosition(now)},bedroom=person.bedroom.takeUnless {person.state==MapSafety.SOS&&person.hasPosition(now)}.orEmpty(),impactAt=person.impactAt.takeUnless {person.state in setOf(MapSafety.SAFE,MapSafety.RESCUED)},enclosedAt=person.enclosedAt.takeUnless {person.state in setOf(MapSafety.SAFE,MapSafety.RESCUED)})
+    if(person.state in setOf(MapSafety.SAFE,MapSafety.RESCUED))return person.copy(name="",identityVisible=false,registeredPlaceVisible=false,home=null,bedroom="",memo="",impactAt=null,enclosedAt=null)
+    if(person.demo)return person.copy(identityVisible=true,registeredPlaceVisible=person.home!=null&&(person.state!=MapSafety.SOS||!person.hasPosition(now)),home=person.home.takeUnless {person.state==MapSafety.SOS&&person.hasPosition(now)},bedroom=person.bedroom.takeUnless {person.state==MapSafety.SOS&&person.hasPosition(now)}.orEmpty())
     val anonymous=person.state==MapSafety.UNANSWERED && (incidentStartedAt==null || now-incidentStartedAt<180_000)
     val homeVisible=when(person.state) {
         MapSafety.UNANSWERED -> !anonymous
@@ -50,6 +62,11 @@ fun projectPersonPrivacy(person:MapPerson,incidentStartedAt:Long?,now:Long):MapP
         home=person.home.takeIf {homeVisible},bedroom=if(homeVisible)person.bedroom else "",memo=if(anonymous)""else person.memo,
         impactAt=person.impactAt.takeIf {observations},enclosedAt=person.enclosedAt.takeIf {observations})
 }
+
+/** Re-check live disclosure when an already-open building sheet outlives a safety update. */
+fun visibleHomeDetail(homeId:String?,personId:String?,people:List<MapPerson>,homes:List<MapHome>,extraHome:MapHome?):MapHome? =
+    if(personId!=null)people.find {it.id==personId&&it.registeredPlaceVisible}?.home?.takeIf {it.id==homeId}
+    else homes.find {it.id==homeId}?:extraHome?.takeIf {it.id==homeId}
 
 fun situationList(people: List<MapPerson>, state: MapSafety?, unknownOnly: Boolean, areaIds: Set<String>?, now: Long) =
     people.filter { (state == null || it.state == state) && (!unknownOnly || !it.hasPosition(now)) &&

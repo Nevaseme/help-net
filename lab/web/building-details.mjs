@@ -14,6 +14,6 @@ export function registeredBuildingForPerson(rows,id){
 }
 export async function buildingAtRegisteredPlace(place){
  const id=place.locationReference?.plateauId;
- if(id){const {buildingsAt}=await import('./building-picker.mjs');const rows=await buildingsAt(place.latitude,place.longitude,place.longitude>139?'13103':'26100');const found=rows.find(b=>b.id===id);if(found)return {...found,registeredId:place.buildingId,label:place.label};}
- return {id:id||place.buildingId,registeredId:place.buildingId,label:place.label,attributes:{}};
+ if(id){const {buildingById}=await import('./building-picker.mjs');const found=await buildingById(id,place.latitude,place.longitude,place.longitude>139?'13103':'26100');if(found)return {...found,registeredId:place.buildingId,label:place.label,attributesStatus:['year','floors','structureCode'].some(key=>found.attributes?.[key])?'available':'source-missing'};}
+ return {id:id||place.buildingId,registeredId:place.buildingId,label:place.label,attributes:{},attributesStatus:id?'unmatched':'unlinked'};
 }

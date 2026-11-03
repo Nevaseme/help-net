@@ -10,11 +10,14 @@ export async function readJson(request){
 }
 const headers={'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer'};
 const needsResponseV2=row=>row?.collection==='responses'&&(row.record?.change?.status==='PLANNED'||['regionIds','cancelled','cancelReason'].some(key=>Object.hasOwn(row.record?.change??{},key)));
-const requireResponseV2=(request,rows)=>requireValue(!Array.isArray(rows)||!rows.some(needsResponseV2)||['2','3','4','5','6'].includes(request.headers.get('X-PlanD-Records-Version')),'client_update_required',426,'このグループの新しい対応記録を読むには、アプリを最新版へ更新してください。端末内の記録は保持されています。');
-const requireAddressV3=(request,rows)=>requireValue(!Array.isArray(rows)||!rows.some(r=>r.collection==='places'&&r.record?.locationReference)||['3','4','5','6'].includes(request.headers.get('X-PlanD-Records-Version')),'client_update_required',426,'建物の住所情報を共有するため、アプリを最新版へ更新してください。');
-const requireDeviceV4=(request,rows)=>requireValue(!Array.isArray(rows)||!rows.some(r=>r.collection==='deviceRecords')||['4','5','6'].includes(request.headers.get('X-PlanD-Records-Version')),'client_update_required',426,'衝撃・デモ住居の記録を共有するため、アプリを最新版へ更新してください。');
-const requireHomeV5=(request,rows)=>requireValue(!Array.isArray(rows)||!rows.some(r=>r.record?.locationReference?.searchReference||r.record?.home?.searchReference)||['5','6'].includes(request.headers.get('X-PlanD-Records-Version')),'client_update_required',426,'住居の検索情報を共有するため、アプリを更新してください。');
-const requireInjuryV6=(request,rows)=>requireValue(!Array.isArray(rows)||!rows.some(r=>r.collection==='responses'&&r.record?.change?.type==='INJURY')||request.headers.get('X-PlanD-Records-Version')==='6','client_update_required',426,'負傷情報を共有するため、アプリを最新版へ更新してください。');
+const requireResponseV2=(request,rows)=>requireValue(!Array.isArray(rows)||!rows.some(needsResponseV2)||['2','3','4','5','6','7'].includes(request.headers.get('X-PlanD-Records-Version')),'client_update_required',426,'このグループの新しい対応記録を読むには、アプリを最新版へ更新してください。端末内の記録は保持されています。');
+const requireAddressV3=(request,rows)=>requireValue(!Array.isArray(rows)||!rows.some(r=>r.collection==='places'&&r.record?.locationReference)||['3','4','5','6','7'].includes(request.headers.get('X-PlanD-Records-Version')),'client_update_required',426,'建物の住所情報を共有するため、アプリを最新版へ更新してください。');
+const requireDeviceV4=(request,rows)=>requireValue(!Array.isArray(rows)||!rows.some(r=>r.collection==='deviceRecords')||['4','5','6','7'].includes(request.headers.get('X-PlanD-Records-Version')),'client_update_required',426,'衝撃・デモ住居の記録を共有するため、アプリを最新版へ更新してください。');
+const requireHomeV5=(request,rows)=>requireValue(!Array.isArray(rows)||!rows.some(r=>r.record?.locationReference?.searchReference||r.record?.home?.searchReference)||['5','6','7'].includes(request.headers.get('X-PlanD-Records-Version')),'client_update_required',426,'住居の検索情報を共有するため、アプリを更新してください。');
+const requireInjuryV6=(request,rows)=>requireValue(!Array.isArray(rows)||!rows.some(r=>r.collection==='responses'&&r.record?.change?.type==='INJURY')||['6','7'].includes(request.headers.get('X-PlanD-Records-Version')),'client_update_required',426,'負傷情報を共有するため、アプリを最新版へ更新してください。');
+// Every material snapshot requires v7: old readers can discard cancellation or reject changed units.
+// Gate legacy-shaped material rows too, without modifying their signed payloads.
+const requireMaterialV7=(request,rows)=>requireValue(!Array.isArray(rows)||!rows.some(r=>r.collection==='responses'&&r.record?.change?.type==='MATERIAL')||request.headers.get('X-PlanD-Records-Version')==='7','client_update_required',426,'資材の取消・単位訂正を正しく共有するため、アプリを最新版へ更新してください。端末内の記録は保持されています。');
 export async function handle(request,env){
  const url=new URL(request.url),origin=request.headers.get('origin'),allowed=new Set([url.origin,...(env.ALLOWED_ORIGINS??'').split(',').map(x=>x.trim()).filter(Boolean)]);
  const responseHeaders={...headers,...(origin&&allowed.has(origin)?{'Access-Control-Allow-Origin':origin,'Vary':'Origin'}:{})};
@@ -51,10 +54,10 @@ export async function handle(request,env){
   if(!['create','join'].includes(action))requireValue(token,'unauthorized',401);
   const operation=action==='municipality'?'setMunicipality':action==='records'?(request.method==='GET'?'pull':'push'):action==='relay-keys'?(request.method==='GET'?'relayKeys':'registerRelayKey'):action==='invitations'?'invite':action;
   const args=operation==='create'?{...payload,groupId}:operation==='pull'?{after:Number(url.searchParams.get('after')??0),limit:Number(url.searchParams.get('limit')??100)}:payload;
-  if(operation==='push'){requireResponseV2(request,payload?.records);requireAddressV3(request,payload?.records);requireDeviceV4(request,payload?.records);requireHomeV5(request,payload?.records);requireInjuryV6(request,payload?.records);}
+  if(operation==='push'){requireResponseV2(request,payload?.records);requireAddressV3(request,payload?.records);requireDeviceV4(request,payload?.records);requireHomeV5(request,payload?.records);requireInjuryV6(request,payload?.records);requireMaterialV7(request,payload?.records);}
   const result=await env.GROUPS.getByName(groupId).dispatch(operation,token,args);
   // Never acknowledge a cursor while an older client would lose cancellation or planned status.
-  if(operation==='pull'&&result.status===200){requireResponseV2(request,result.body?.records);requireAddressV3(request,result.body?.records);requireDeviceV4(request,result.body?.records);requireHomeV5(request,result.body?.records);requireInjuryV6(request,result.body?.records);}
+  if(operation==='pull'&&result.status===200){requireResponseV2(request,result.body?.records);requireAddressV3(request,result.body?.records);requireDeviceV4(request,result.body?.records);requireHomeV5(request,result.body?.records);requireInjuryV6(request,result.body?.records);requireMaterialV7(request,result.body?.records);}
   return json(result.body,result.status);
  }catch(e){if(e instanceof ApiError)return json({error:{code:e.code,message:e.message}},e.status);return json({error:{code:'storage_unavailable',message:'保存を確認できませんでした。同じ記録を再送してください。'}},503);}
 }

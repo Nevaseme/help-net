@@ -92,4 +92,34 @@ class ResponseWorkTest {
         validateResponseCommand(roster,history,reconcile)
         assertEquals(listOf(reconcile),responseHeads(roster,(history+reconcile).reversed()))
     }
+
+    @Test fun othersReportsAreReadOnlyButReportersCanManageTheirResponse() {
+        val reportId=id();val root=event(b,ResponseChange.Report(reportId,"道路",35.0,135.0,"倒木"),eventId=reportId)
+        val target=ResponseTarget(TargetKind.REPORT,reportId)
+        for(actor in listOf(a,b,c)) {
+            val changes=listOf(ResponseChange.Progress(target,WorkStatus.IN_PROGRESS,""),ResponseChange.Assignment(target,actor,true),ResponseChange.Material(target,id(),"水","本",3.0,1.0))
+            changes.forEach {change->
+                val command=event(actor,change,eventId=(change as? ResponseChange.Material)?.requestId?:id())
+                if(actor==c)try{validateResponseCommand(roster,listOf(root),command);fail("other member may only view")}catch(_:IllegalArgumentException){}
+                else validateResponseCommand(roster,listOf(root),command)
+            }
+        }
+    }
+    @Test fun materialCancellationAndAtomicUnitCorrectionKeepHistoryAndOwnership() {
+        val reportId=id();val root=event(b,ResponseChange.Report(reportId,"道路",35.0,135.0,"倒木"),eventId=reportId)
+        val request=id();val material=ResponseChange.Material(ResponseTarget(TargetKind.REPORT,reportId),request,"飲料水","本",12.0,6.0)
+        val first=event(a,material,eventId=request)
+        val corrected=event(b,material.copy(unit="箱",needed=2.0,arranged=1.0),listOf(request))
+        validateResponseCommand(roster,listOf(root,first),corrected)
+        val cancel=event(b,(corrected.change as ResponseChange.Material).copy(cancelled=true,cancelReason="不要になった"),listOf(corrected.eventId))
+        val history=listOf(root,first,corrected)
+        validateResponseCommand(roster,history,cancel)
+        try{validateResponseCommand(roster,history,cancel.copy(actorDeviceId=c));fail("other member cancellation")}catch(_:IllegalArgumentException){}
+        try{validateResponseShape(roster,cancel.copy(change=(cancel.change as ResponseChange.Material).copy(cancelReason="")));fail("reason required")}catch(_:IllegalArgumentException){}
+        assertEquals(0.0,(cancel.change as ResponseChange.Material).shortfall,0.0)
+        assertEquals(listOf(cancel),responseHeads(roster,(history+cancel).reversed()).filter {it.change is ResponseChange.Material})
+        val encoded=Json {encodeDefaults=true}.encodeToString(first)
+        assertFalse(encoded.contains("cancelled"));assertFalse(encoded.contains("cancelReason"))
+        assertEquals(cancel,Json.decodeFromString<ResponseEvent>(Json.encodeToString(cancel)))
+    }
 }

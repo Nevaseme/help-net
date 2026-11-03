@@ -17,7 +17,14 @@ fun communityOverview(people:List<CommunityPerson>,changes:List<ResponseChange>,
  for(p in people.distinctBy {it.id}){val r=get(p.communityId);personRegions[p.id]=r.id;r.total++;if(p.fictional)r.fictional++;when(p.status){"SAFE"->r.safe++;"SOS"->r.sos++;"RESCUED"->r.rescued++;else->r.unreported++};when(communityInjury(changes,p.id)){InjuryState.INJURED->r.injured++;InjuryState.UNKNOWN->r.injuryUnknown++;else->Unit}}
  val reportRegions=mutableMapOf<String,String>()
  for((id,reports)in changes.filterIsInstance<ResponseChange.Report>().filter {!it.cancelled}.groupBy {it.reportId}){val ids=reports.map {region(it.regionIds.firstOrNull())}.distinct();val r=get(ids.singleOrNull());r.reports++;reportRegions[id]=r.id}
- for(revisions in changes.filterIsInstance<ResponseChange.Material>().groupBy {it.requestId}.values){val c=revisions.first();val id=if(c.target.kind==TargetKind.PERSON)personRegions[c.target.id]else reportRegions[c.target.id];if(id==null)continue;val amount=revisions.maxOf {it.shortfall};if(amount==0.0)continue;val same=revisions.map {it.name to it.unit}.distinct().size==1;val name=if(same)c.name else revisions.map {it.name}.distinct().joinToString(" / ");val unit=if(same)c.unit else "?";val r=get(id);val m=r.materials.find {it.name==name&&it.unit==unit}?:CommunityMaterial(name,unit).also {r.materials.add(it)};m.shortfall+=amount;m.conflict=m.conflict||revisions.size>1}
+ for(revisions in changes.filterIsInstance<ResponseChange.Material>().groupBy {it.requestId}.values){
+  val c=revisions.first();val id=if(c.target.kind==TargetKind.PERSON)personRegions[c.target.id]else reportRegions[c.target.id];if(id==null)continue
+  for(compatible in revisions.filterNot {it.cancelled}.groupBy {it.name to it.unit}.values){
+   val value=compatible.first();val amount=compatible.maxOf {it.shortfall};if(amount==0.0)continue
+   val r=get(id);val m=r.materials.find {it.name==value.name&&it.unit==value.unit}?:CommunityMaterial(value.name,value.unit).also {r.materials.add(it)}
+   m.shortfall+=amount;m.conflict=m.conflict||revisions.size>1
+  }
+ }
  return rows.values.toList()
 }
 fun communityLabel(key:String,en:Boolean):String {val labels=mapOf("title" to ("町内会の状況" to "Neighborhood overview"),"total" to ("人数" to "People"),"fictional" to ("架空住民" to "Fictional residents"),"safe" to ("無事" to "Safe"),"sos" to ("SOS" to "SOS"),"rescued" to ("救助済み" to "Rescued"),"unreported" to ("応答なし" to "No response"),"injured" to ("負傷者" to "Injured"),"injuryUnknown" to ("負傷状況不明" to "Injury unknown"),"reports" to ("通報" to "Reports"),"materials" to ("不足資材" to "Material shortfalls"),"none" to ("記録なし" to "None recorded"),"issue" to ("レポートを発行" to "Issue report"),"saved" to ("発行済みレポート" to "Issued reports"),"injury" to ("負傷情報" to "Injury information"),"UNKNOWN" to ("不明" to "Unknown"),"INJURED" to ("負傷あり" to "Injured"),"UNINJURED" to ("負傷なし" to "Not injured"),"demo" to ("デモ用の町内会" to "Demo neighborhoods"),"conflict" to ("同時更新あり・最大の不足数を表示" to "Concurrent updates — largest shortfall shown"));return labels[key]?.let {if(en)it.second else it.first}?:key}

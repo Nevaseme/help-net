@@ -132,7 +132,10 @@ export function validateResponse(r,input){
   case 'PRIORITY':check(c.target&&['ADMIN','LEADER'].includes(memberFor(r,e.actorDeviceId).role)&&['UNSET','LOW','MEDIUM','HIGH'].includes(c.urgency)&&typeof c.reason==='string'&&(c.urgency==='UNSET'||nonempty(c.reason)));break;
   case 'INJURY':check(c.target?.kind==='PERSON'&&['UNKNOWN','INJURED','UNINJURED'].includes(c.state));break;
   case 'AVAILABILITY':check(['UNSET','AVAILABLE','WORKING','UNAVAILABLE'].includes(c.state));break;
-  case 'MATERIAL':check(c.target&&uuid.test(c.requestId)&&nonempty(c.name)&&nonempty(c.unit)&&Number.isFinite(c.needed)&&c.needed>=0&&Number.isFinite(c.arranged)&&c.arranged>=0);break;
+  case 'MATERIAL':
+   check(c.target&&uuid.test(c.requestId)&&nonempty(c.name)&&nonempty(c.unit)&&Number.isFinite(c.needed)&&c.needed>=0&&Number.isFinite(c.arranged)&&c.arranged>=0);
+   check(typeof (c.cancelled??false)==='boolean'&&typeof (c.cancelReason??'')==='string'&&(!c.cancelled||nonempty(c.cancelReason)),'取消理由を入力してください');
+   check(c.cancelled!==null&&c.cancelReason!==null,'取消の形式を確認してください');break;
   default:throw Error('対応記録の種別が不正です');
  }return e;
 }
@@ -140,15 +143,47 @@ export function responseKey(r,e){
  const c=e.change,t=c.target;const value=c.type==='REPORT'?`report:${c.reportId}`:c.type==='MATERIAL'?`material:${c.requestId}`:c.type==='AVAILABILITY'?`availability:${memberFor(r,e.actorDeviceId).memberId}`:`${c.type.toLowerCase()}:${t.kind}:${t.id}${c.type==='ASSIGNMENT'?':'+c.memberId:''}`;
  return `${e.groupId}:${e.incidentId??''}:${value}`;
 }
+const permissionCheck=(ok,message)=>{if(!ok){const error=Error(message);error.code='response_forbidden';throw error;}};
+const isCoordinator=member=>['ADMIN','LEADER'].includes(member.role);
+function originalResponse(r,events,type,id,context){
+ return events.find(e=>e.eventId===id&&e.groupId===r.groupId&&e.groupId===context.groupId&&e.incidentId===context.incidentId&&e.change.type===type&&(type==='REPORT'?e.change.reportId:e.change.requestId)===id&&!e.replaces?.length);
+}
+const ownsResponse=(r,member,event)=>!!event&&memberFor(r,event.actorDeviceId).memberId===member.memberId;
+/** Use complete history with incident aliases already canonicalized, never heads alone. */
+export function responseTargetPermissions(r,events,actorDeviceId,target,context){
+ const member=memberFor(r,actorDeviceId),coordinator=isCoordinator(member);
+ const original=target?.kind==='REPORT'?originalResponse(r,events,'REPORT',target.id,context):null;
+ const canEdit=target?.kind==='REPORT'?!!original&&(coordinator||ownsResponse(r,member,original)):target?.kind==='PERSON';
+ return {canEdit:!!canEdit,canCancel:target?.kind==='REPORT'&&!!canEdit,canChangePriority:coordinator};
+}
+/** Record ownership is bound to the creation event, including after administrator corrections. */
+export function responsePermissions(r,events,actorDeviceId,event){
+ const member=memberFor(r,actorDeviceId),coordinator=isCoordinator(member),c=event.change;
+ if(c.type==='REPORT')return responseTargetPermissions(r,events,actorDeviceId,{kind:'REPORT',id:c.reportId},event);
+ if(c.type==='MATERIAL'){
+  const original=originalResponse(r,events,'MATERIAL',c.requestId,event),report=original?.change.target.kind==='REPORT'?originalResponse(r,events,'REPORT',original.change.target.id,event):null;
+  const canEdit=!!original&&(coordinator||ownsResponse(r,member,original)||ownsResponse(r,member,report));
+  return {canEdit,canCancel:canEdit,canChangePriority:coordinator};
+ }
+ return responseTargetPermissions(r,events,actorDeviceId,c.target,event);
+}
 function authorize(r,history,e){
  validateResponse(r,e);const member=memberFor(r,e.actorDeviceId),coordinator=['ADMIN','LEADER'].includes(member.role),c=e.change;
  const parents=e.replaces.map(id=>history.find(x=>x.eventId===id&&x.groupId===e.groupId));check(parents.every(p=>p&&responseKey(r,p)===responseKey(r,e)),'訂正元がありません');
  function creator(id){if(e.eventId===id){check(!e.replaces.length);return member;}const root=history.find(x=>x.eventId===id&&x.groupId===e.groupId&&x.incidentId===e.incidentId);check(root&&responseKey(r,root)===responseKey(r,e)&&e.replaces.length);return memberFor(r,root.actorDeviceId);}
- if(c.type==='REPORT')check(creator(c.reportId).memberId===member.memberId||coordinator,'通報を訂正する権限がありません');
- else if(c.type==='ASSIGNMENT')check(c.memberId===member.memberId||coordinator,'他の人の担当は班長・管理者が調整します');
- else if(c.type==='PRIORITY')check(coordinator,'緊急度は班長・管理者が変更します');
- else if(c.type==='MATERIAL'){check(creator(c.requestId).memberId===member.memberId||coordinator);const original=history.find(x=>x.eventId===c.requestId)?.change;if(original)check(original.unit===c.unit&&sameRecord(original.target,c.target));}
+ if(c.type==='REPORT')permissionCheck(creator(c.reportId).memberId===member.memberId||coordinator,'通報を訂正する権限がありません');
+ else if(c.type==='ASSIGNMENT')permissionCheck(c.memberId===member.memberId||coordinator,'他の人の担当は班長・管理者が調整します');
+ else if(c.type==='PRIORITY')permissionCheck(coordinator,'緊急度は班長・管理者が変更します');
+ else if(c.type==='MATERIAL'){
+  creator(c.requestId);
+  if(e.eventId!==c.requestId)permissionCheck(responsePermissions(r,history,e.actorDeviceId,e).canEdit,'資材を訂正する権限がありません');
+  const original=originalResponse(r,history,'MATERIAL',c.requestId,e)?.change;if(original)check(sameRecord(original.target,c.target),'資材の対象は変更できません');
+ }
  else if(c.type==='AVAILABILITY')check(parents.every(p=>memberFor(r,p.actorDeviceId).memberId===member.memberId));
+ if(c.target?.kind==='REPORT'&&(c.type!=='MATERIAL'||e.eventId===c.requestId)){
+  check(originalResponse(r,history,'REPORT',c.target.id,e),'対象の通報が見つかりません');
+  permissionCheck(responseTargetPermissions(r,history,e.actorDeviceId,c.target,e).canEdit,'この通報は閲覧のみです');
+ }
 }
 export function responseHeads(r,events){
  const waiting=events.filter(e=>e.groupId===r.groupId).sort((a,b)=>a.eventId<b.eventId?-1:1),accepted=[];let changed=true;
