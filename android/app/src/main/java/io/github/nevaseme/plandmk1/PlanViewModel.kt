@@ -95,10 +95,10 @@ class PlanViewModel(application: Application) : AndroidViewModel(application) {
             app.responses.startWork(g,checkNotNull(incident),localId,target,System.currentTimeMillis())
         },publish={app.recordsChanged()})}
     }
-    suspend fun responseCsv(language:String="ja"):String {
+    suspend fun responseCsv(language:String="ja",allowedResidentIds:Set<String>?=null):String {
         val g=group.value
         val incident=checkNotNull(incidentUi.value.takeIf {it.groupId==g}?.current?.start?.eventId)
-        return app.responses.exportCsv(g,incident,language=language)
+        return app.responses.exportCsv(g,incident,language=language,allowedResidentIds=allowedResidentIds)
     }
     fun cancelEarthquakeReport(reportId:String) {
         val g=group.value

@@ -36,10 +36,10 @@ import java.util.UUID
 data class ResponseCase(val target:ResponseTarget,val title:String,val description:String,val report:ResponseChange.Report?=null,val cancelled:Boolean=false,val person:MapPerson?=null)
 
 /** Keep concurrent report revisions visible in the detail; cancellation never silently wins a conflict. */
-fun responseCases(residents:List<Resident>,care:List<CareEvent>,heads:List<ResponseEvent>,memos:Map<String,String> = emptyMap(),incidentStartedAt:Long?=null,now:Long=System.currentTimeMillis()):List<ResponseCase> {
+fun responseCases(residents:List<Resident>,care:List<CareEvent>,heads:List<ResponseEvent>,memos:Map<String,String> = emptyMap(),incidentStartedAt:Long?=null,now:Long=System.currentTimeMillis(),demoIds:Set<String> = emptySet()):List<ResponseCase> {
     val recorded=heads.filter {it.change !is ResponseChange.Injury}.mapNotNull {it.change.target()?.takeIf {target->target.kind==TargetKind.PERSON}?.id}.toSet()
     val people=residents.filter {residentMapState(it,care)==MapSafety.SOS||it.originId in recorded}.map {
-        val person=projectPersonPrivacy(MapPerson(it.originId,it.displayName(),residentMapState(it,care)),incidentStartedAt,now)
+        val person=projectPersonPrivacy(MapPerson(it.originId,it.displayName(),residentMapState(it,care),demo=it.originId in demoIds),incidentStartedAt,now)
         ResponseCase(ResponseTarget(TargetKind.PERSON,it.originId),person.publicName,if(person.state==MapSafety.SOS)memos[it.originId].orEmpty()else "",person=person)
     }
     val reports=heads.filter {it.change is ResponseChange.Report}.groupBy {(it.change as ResponseChange.Report).reportId}.map {(id,events)->
@@ -67,6 +67,8 @@ fun responseResolved(events:List<ResponseEvent>,target:ResponseTarget):Boolean {
     val rosterValue by model.roster.collectAsStateWithLifecycle()
     val residents by model.residents.collectAsStateWithLifecycle()
     val care by model.careEvents.collectAsStateWithLifecycle()
+    val venue by model.activeVenue.collectAsStateWithLifecycle()
+    val places by model.places.collectAsStateWithLifecycle()
     val allHeads by model.responseEvents.collectAsStateWithLifecycle()
     val allHistory by model.responseHistory.collectAsStateWithLifecycle()
     val memos by model.memos.collectAsStateWithLifecycle()
@@ -79,7 +81,12 @@ fun responseResolved(events:List<ResponseEvent>,target:ResponseTarget):Boolean {
     LaunchedEffect(incident.current?.start?.createdAt){while(true){now=System.currentTimeMillis();val until=incident.current?.start?.createdAt?.plus(180_000)?.minus(now)?.takeIf {it>0}?:60_000;kotlinx.coroutines.delay(minOf(60_000L,until))}}
     val heads=allHeads.filter {it.groupId==group&&it.incidentId==incidentId}
     val history=allHistory.filter {it.groupId==group&&it.incidentId==incidentId}
-    val cases=responseCases(residents,care,heads,residents.associate {p->p.originId to memos.firstOrNull {m->m.answerId==incident.current?.answers?.get(p.originId)?.eventId&&m.authorId==p.originId&&m.incidentId==incidentId}?.text.orEmpty()},incident.current?.start?.createdAt,now)
+    val communityPeople=communityPeopleFor(residents,care,venue)
+    val ownCommunity=communityPeople.find {it.id==model.localId}?.communityId
+    val accessibleResidents=residents.filter {p->venue?.scenario==null||p.originId==model.localId||communityPeople.any {it.id==p.originId&&it.communityId==ownCommunity}}
+    val regions=communityNamesFor(venue,groupLabel)
+    val english=LocalUiLanguage.current=="en"
+    val cases=responseCases(accessibleResidents,care,heads,residents.associate {p->p.originId to (memos.firstOrNull {m->m.answerId==incident.current?.answers?.get(p.originId)?.eventId&&m.authorId==p.originId&&m.incidentId==incidentId}?.text?:venue?.scenario?.people?.find {it.deviceId==p.originId}?.note.orEmpty())},incident.current?.start?.createdAt,now,venue?.allPlacements()?.map {it.deviceId}?.toSet().orEmpty())
     var filter by rememberSaveable(group,incidentId){mutableStateOf("all")}
     var showCancelled by rememberSaveable(group,incidentId){mutableStateOf(false)}
     var selected by rememberSaveable(group,incidentId,stateSaver=Saver<ResponseTarget?,ArrayList<String>>(save={it?.let {arrayListOf(it.kind.name,it.id)}?:arrayListOf()},restore={if(it.isEmpty())null else ResponseTarget(TargetKind.valueOf(it[0]),it[1])})){mutableStateOf<ResponseTarget?>(null)}
@@ -141,14 +148,14 @@ fun responseResolved(events:List<ResponseEvent>,target:ResponseTarget):Boolean {
         }
         Surface(Modifier.align(Alignment.BottomCenter).fillMaxWidth(),color=MaterialTheme.colorScheme.surface){Column(Modifier.padding(horizontal=16.dp,vertical=10.dp),horizontalAlignment=Alignment.CenterHorizontally){
             Button(onClick={selected=null;point=null;editor="report"},enabled=editable,modifier=Modifier.fillMaxWidth().heightIn(min=50.dp),shape=RoundedCornerShape(8.dp)){Text(uiText("report_add"),fontSize=16.sp,fontWeight=FontWeight(750))}
-            TextButton(onClick={scope.launch {try {csv=model.responseCsv(language);export.launch("PlanD-${incidentId}.csv")}catch(e:Exception){model.message.value=exportFailed}}},enabled=member!=null&&incidentId!=null&&!busy){Text(uiText("csv_export"),fontSize=13.sp,fontWeight=FontWeight(750))}
+            TextButton(onClick={scope.launch {try {csv=model.responseCsv(language,cases.mapNotNull {it.person?.takeIf {p->p.identityVisible}?.id}.toSet());export.launch("PlanD-${incidentId}.csv")}catch(e:Exception){model.message.value=exportFailed}}},enabled=member!=null&&incidentId!=null&&!busy){Text(uiText("csv_export"),fontSize=13.sp,fontWeight=FontWeight(750))}
         }}
         val case=cases.find {it.target==selected}
         if(case!=null&&editor==null) {
             val events=heads.filter {it.change.target()==case.target}
             val assignments=responseAssignments(heads,case.target)
             val ownAssigned=member?.memberId in assignments
-            val creator=history.find {it.eventId==case.target.id}?.actorDeviceId
+            val creator=history.filter {(it.change as? ResponseChange.Report)?.reportId==case.target.id}.minByOrNull {it.operatedAt}?.actorDeviceId
             val mayEditReport=editable&&(coordinator||roster?.members?.find {creator in it.deviceIds}?.memberId==member?.memberId)
             ApprovedSheet(caseTitle(case),{selected=null},footer={if(!case.cancelled)Button(onClick={
                 if(ownAssigned&&member!=null)model.saveResponse(ResponseChange.Assignment(case.target,member.memberId,false),events.filter {(it.change as? ResponseChange.Assignment)?.memberId==member.memberId}.map {it.eventId})
@@ -156,6 +163,11 @@ fun responseResolved(events:List<ResponseEvent>,target:ResponseTarget):Boolean {
             },enabled=editable,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp),shape=RoundedCornerShape(13.dp)){Text(uiText(if(ownAssigned)"leave_assignment" else "start_work"))}}){
                 if(case.description.isNotBlank())Text(case.description,fontSize=16.sp,lineHeight=26.sp)
                 case.report?.let {report->
+                    val reporter=residents.find {it.originId==creator}
+                    val reporterCommunity=communityPeople.find {it.id==creator}?.communityId
+                    val reporterHome=creator?.let {validHome(places,it)}?.buildingId?.let {id->placeBuildings(places).find {it.buildingId==id}?.displayLabel()}
+                    Text((if(LocalUiLanguage.current=="en")"Reported by: " else "通報者：")+(if(coordinator&&reporterCommunity==ownCommunity)reporter?.displayName().orEmpty() else reporterHome?:uiText("unregistered")),fontSize=13.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    ResponseFact(if(LocalUiLanguage.current=="en")"Region" else "地域",report.regionIds.joinToString(" / "){id->regions.find {it.id==id}?.let {if(english)it.nameEn else it.nameJa}?:id}.ifBlank {uiText("region_unset")},mayEditReport&&!case.cancelled,mayEditReport){editor="report"}
                     if(report.cancelled)Text(report.cancelReason,color=MaterialTheme.colorScheme.error)
                 }
                 if(assignments.isNotEmpty()&&!ownAssigned)Surface(color=MaterialTheme.colorScheme.tertiaryContainer,shape=RoundedCornerShape(8.dp)) {Text(uiText("assignment_warning"),Modifier.padding(12.dp),fontSize=14.sp,color=MaterialTheme.colorScheme.onTertiaryContainer)}
@@ -171,7 +183,7 @@ fun responseResolved(events:List<ResponseEvent>,target:ResponseTarget):Boolean {
                 priorities.filter {it.reason.isNotBlank()}.forEach {Text(it.reason,fontSize=14.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)}
                 Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){Text(uiText("materials"),Modifier.weight(1f),fontWeight=FontWeight.Bold);TextButton(onClick={materialId=null;editor="material"},enabled=editable&&!case.cancelled){Text(uiText("material_add"))}}
                 val materials=events.mapNotNull {it.change as? ResponseChange.Material};if(materials.isEmpty())Text(uiText("no_materials"))
-                materials.forEach {m->val author=history.find {it.eventId==m.requestId}?.actorDeviceId;val allowed=coordinator||roster?.members?.find {author in it.deviceIds}?.memberId==member?.memberId
+                materials.forEach {m->val author=history.filter {(it.change as? ResponseChange.Material)?.requestId==m.requestId}.minByOrNull {it.operatedAt}?.actorDeviceId;val allowed=coordinator||roster?.members?.find {author in it.deviceIds}?.memberId==member?.memberId
                     OutlinedCard(onClick={materialId=m.requestId;editor="material"},enabled=editable&&allowed&&!case.cancelled){Column(Modifier.fillMaxWidth().padding(12.dp)){Text(m.name,fontWeight=FontWeight.Bold);Text("${uiText("needed")} ${m.needed} / ${uiText("arranged")} ${m.arranged} ${m.unit}");Text(uiText("shortfall",m.shortfall,m.unit))}}
                 }
                 if(case.report!=null&&mayEditReport){if(case.cancelled)OutlinedButton(onClick={editor="restore"}){Text(uiText("report_restore"))}else Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){OutlinedButton(onClick={editor="report"}){Text(uiText("report_edit"))};TextButton(onClick={editor="cancel"}){Text(uiText("report_cancel"))}}}
@@ -179,7 +191,7 @@ fun responseResolved(events:List<ResponseEvent>,target:ResponseTarget):Boolean {
                 HorizontalDivider()
                 TextButton(onClick={historyOpen=!historyOpen},modifier=Modifier.fillMaxWidth()) {Text(uiText("history"),Modifier.weight(1f));Text(if(historyOpen)"−" else "+")}
                 if(historyOpen) {
-                    case.report?.let {Text("${uiText("report_location")}: ${it.latitude}, ${it.longitude}",fontSize=13.sp);Text(uiText("region_unset"),fontSize=13.sp)}
+                    case.report?.let {Text("${uiText("report_location")}: ${it.latitude}, ${it.longitude}",fontSize=13.sp)}
                     history.filter {it.change.target()==case.target||it.eventId==case.target.id}.sortedByDescending {it.operatedAt}.forEach {e->Text("${formatTime(e.operatedAt)} · ${roster?.members?.find {e.actorDeviceId in it.deviceIds}?.activityName.orEmpty()}",fontSize=13.sp,color=MaterialTheme.colorScheme.onSurfaceVariant);ResponseEventText(e.change)}
                 }
                 ResponseFeedback(model)
@@ -189,7 +201,7 @@ fun responseResolved(events:List<ResponseEvent>,target:ResponseTarget):Boolean {
             val draftKey="$group:$incidentId:$mode:${selected?.kind}:${selected?.id}:$materialId"
             drafts.SaveableStateProvider(draftKey) { ResponseEditor(mode,case,point,materialId,heads,history,roster,member,coordinator,editable,model,onSaved={drafts.removeState(draftKey);editor=null}){editor=null} }
         }}
-        if(showSummary)CommunityScreen(model,groupLabel,onCloseSummary)
+        if(showSummary)CommunityScreen(model,groupLabel,onClose=onCloseSummary,onCase={target->onCloseSummary();selected=target})
     }
 }
 
@@ -220,16 +232,29 @@ fun responseResolved(events:List<ResponseEvent>,target:ResponseTarget):Boolean {
     val reviewedHeads=currentHeads.filter {it.eventId in reviewedIds}
     val editorUpdated=currentHeads.map {it.eventId}.toSet()!=reviewedIds.toSet()
     var reviewed by rememberSaveable(reviewedHeads.map {it.eventId}.joinToString()) {mutableStateOf(false)}
+    val venue by model.activeVenue.collectAsStateWithLifecycle()
+    val regionOptions=communityNamesFor(venue,uiText("group_label"))
+    var regionId by rememberSaveable {mutableStateOf(report?.regionIds?.firstOrNull()?:point?.takeIf {venue?.scenario!=null&&it.latitude in 35.0..35.04&&it.longitude in 135.75..135.78}?.longitude?.let(::demoCommunityFor).orEmpty())}
+    var choosingLocation by rememberSaveable {mutableStateOf(false)}
     var category by rememberSaveable {mutableStateOf(report?.category?:"道路閉塞")}
     var text by rememberSaveable {mutableStateOf(when(mode){"report"->report?.description.orEmpty();"progress"->targetHeads.mapNotNull {it.change as? ResponseChange.Progress}.singleOrNull()?.result.orEmpty();"priority"->targetHeads.mapNotNull {it.change as? ResponseChange.Priority}.singleOrNull()?.reason.orEmpty();else->""})}
     var lat by rememberSaveable {mutableStateOf((report?.latitude?:point?.latitude)?.toString().orEmpty())};var lon by rememberSaveable {mutableStateOf((report?.longitude?:point?.longitude)?.toString().orEmpty())}
     var progress by rememberSaveable {mutableStateOf(targetHeads.mapNotNull {it.change as? ResponseChange.Progress}.singleOrNull()?.status?:WorkStatus.UNASSIGNED)}
     var urgency by rememberSaveable {mutableStateOf(targetHeads.mapNotNull {it.change as? ResponseChange.Priority}.singleOrNull()?.urgency?:Urgency.UNSET)}
     var name by rememberSaveable {mutableStateOf(oldMaterial?.name.orEmpty())};var unit by rememberSaveable {mutableStateOf(oldMaterial?.unit.orEmpty())};var needed by rememberSaveable {mutableStateOf(oldMaterial?.needed?.toString().orEmpty())};var arranged by rememberSaveable {mutableStateOf(oldMaterial?.arranged?.toString()?:"0")}
-    val valid=!editorUpdated&&(reviewedHeads.size<2||reviewed)&&when(mode){"report"->text.isNotBlank()&&lat.toDoubleOrNull()?.let {it.isFinite()&&it in -85.0..85.0}==true&&lon.toDoubleOrNull()?.let {it.isFinite()&&it in -180.0..180.0}==true;"progress"->progress!=WorkStatus.DONE||text.isNotBlank();"priority"->urgency==Urgency.UNSET||text.isNotBlank();"material"->name.isNotBlank()&&unit.isNotBlank()&&listOf(needed,arranged).all {it.toDoubleOrNull()?.let {v->v.isFinite()&&v>=0}==true};"cancel"->text.isNotBlank();"restore"->true;else->false}
+    val valid=!editorUpdated&&(reviewedHeads.size<2||reviewed)&&when(mode){"report"->category.isNotBlank()&&text.isNotBlank()&&lat.toDoubleOrNull()?.let {it.isFinite()&&it in -85.0..85.0}==true&&lon.toDoubleOrNull()?.let {it.isFinite()&&it in -180.0..180.0}==true;"progress"->progress!=WorkStatus.DONE||text.isNotBlank();"priority"->urgency==Urgency.UNSET||text.isNotBlank();"material"->name.isNotBlank()&&unit.isNotBlank()&&listOf(needed,arranged).all {it.toDoubleOrNull()?.let {v->v.isFinite()&&v>=0}==true};"cancel"->text.isNotBlank();"restore"->true;else->false}
     val title=uiText(when(mode){"report"->if(report==null)"report_add" else "report_edit";"progress"->"progress_update";"material"->"material_add";"priority"->"urgency";"cancel"->"report_cancel";"restore"->"report_restore";else->"assignment_change"})
+    if(choosingLocation) {
+        ApprovedSheet(if(LocalUiLanguage.current=="en")"Choose report location" else "通報地点を選択",{choosingLocation=false},scrollContent=false) {
+            Text(if(LocalUiLanguage.current=="en")"Tap the report location on the map" else "地図上で通報地点をタップしてください",Modifier.padding(16.dp))
+            val camera=remember {SituationCamera()}
+            val center=if(lat.toDoubleOrNull()!=null&&lon.toDoubleOrNull()!=null)MapPoint(lat.toDouble(),lon.toDouble())else if(venue?.positionMode=="ACTUAL")MapPoint(35.6665,139.7495)else MapPoint(35.0145,135.7625)
+            SituationMap(emptyList(),emptyList(),center,true,System.currentTimeMillis(),false,camera,{},{},{},{},Modifier.fillMaxWidth().height(420.dp),onReportPoint={p->lat=p.latitude.toString();lon=p.longitude.toString();choosingLocation=false})
+        }
+        return
+    }
     ApprovedSheet(title,close,footer=if(mode=="assignment")null else {{Button(onClick={
-        val change:ResponseChange=when(mode){"report"->ResponseChange.Report(report?.reportId?:UUID.randomUUID().toString(),category,lat.toDouble(),lon.toDouble(),text,regionIds=if(model.activeVenue.value?.scenario!=null&&lat.toDouble() in 35.0..35.04&&lon.toDouble() in 135.75..135.78)listOfNotNull(demoCommunityFor(lon.toDouble()))else report?.regionIds.orEmpty());"progress"->ResponseChange.Progress(target!!,progress,text);"priority"->ResponseChange.Priority(target!!,urgency,text);"material"->ResponseChange.Material(target!!,materialId?:UUID.randomUUID().toString(),name,unit,needed.toDouble(),arranged.toDouble());"restore"->report!!.copy(cancelled=false,cancelReason="");else->report!!.copy(cancelled=true,cancelReason=text)}
+        val change:ResponseChange=when(mode){"report"->ResponseChange.Report(report?.reportId?:UUID.randomUUID().toString(),category,lat.toDouble(),lon.toDouble(),text,regionIds=regionId.takeIf {it.isNotBlank()}?.let {listOf(it)}?:emptyList());"progress"->ResponseChange.Progress(target!!,progress,text);"priority"->ResponseChange.Priority(target!!,urgency,text);"material"->ResponseChange.Material(target!!,materialId?:UUID.randomUUID().toString(),name,unit,needed.toDouble(),arranged.toDouble());"restore"->report!!.copy(cancelled=false,cancelReason="");else->report!!.copy(cancelled=true,cancelReason=text)}
         val replaced=reviewedHeads.map {it.eventId}
         model.saveResponse(change,replaced,onSaved)
     },enabled=editable&&valid,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp),shape=RoundedCornerShape(13.dp)){Text(uiText("save"))}}}) {
@@ -244,10 +269,10 @@ fun responseResolved(events:List<ResponseEvent>,target:ResponseTarget):Boolean {
             Row(verticalAlignment=Alignment.CenterVertically){Checkbox(reviewed,{reviewed=it},enabled=editable);Text(uiText("review_current_heads"),Modifier.weight(1f))}
         }
         if(mode=="report"){
-            ChoiceField(listOf("道路閉塞","建物倒壊","その他").map {it to categoryLabel(it)},category,uiText("report_category"),editable){category=it}
-            ApprovedField(lat,{lat=it},uiText("latitude"),modifier=Modifier.fillMaxWidth(),singleLine=true,enabled=editable)
-            ApprovedField(lon,{lon=it},uiText("longitude"),modifier=Modifier.fillMaxWidth(),singleLine=true,enabled=editable)
-            Text(uiText("region_unset"),style=MaterialTheme.typography.bodySmall)
+            ApprovedField(category,{category=it},uiText("report_category"),modifier=Modifier.fillMaxWidth(),singleLine=true,enabled=editable)
+            OutlinedButton(onClick={choosingLocation=true},enabled=editable,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){Text(if(lat.isBlank()||lon.isBlank())if(LocalUiLanguage.current=="en")"Choose report location on map" else "地図で通報地点を選ぶ" else if(LocalUiLanguage.current=="en")"Report location selected · Change" else "通報地点を選択済み・変更")}
+            ChoiceField(listOf("" to uiText("region_unset"))+regionOptions.map {it.id to if(LocalUiLanguage.current=="en")it.nameEn else it.nameJa},regionId,if(LocalUiLanguage.current=="en")"Region" else "地域",editable){regionId=it}
+
         }
         if(mode=="progress")ChoiceField(WorkStatus.entries.map {it to uiText(workLabel(it))},progress,uiText("progress"),editable){progress=it}
         if(mode=="priority")ChoiceField(Urgency.entries.map {it to uiText(urgencyLabel(it))},urgency,uiText("urgency"),editable){urgency=it}

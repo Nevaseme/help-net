@@ -73,7 +73,7 @@ import io.github.nevaseme.plandmk1.core.*
     }
 }
 
-@Composable fun MapScreen(model: PlanViewModel, residents: List<Resident>, own: Resident?, picking: Boolean, onPick: (MapPoint) -> Unit, onCancelPick: () -> Unit, onSelect: (Resident) -> Unit, onBuilding: (String) -> Unit, openList: Boolean = false, onListClosed: () -> Unit = {}, listOnly: Boolean = false, onAddReport:((MapPoint)->Unit)?=null,onReport:(String)->Unit={}) {
+@Composable fun MapScreen(model: PlanViewModel, residents: List<Resident>, own: Resident?, picking: Boolean, onPick: (MapPoint) -> Unit, onCancelPick: () -> Unit, onSelect: (Resident) -> Unit, onBuilding: (String) -> Unit, openList: Boolean = false, onListClosed: () -> Unit = {}, listOnly: Boolean = false, onAddReport:((MapPoint)->Unit)?=null,onReport:(String)->Unit={},onPersonResponse:((String)->Unit)?=null) {
     val care by model.careEvents.collectAsStateWithLifecycle()
     val places by model.places.collectAsStateWithLifecycle()
     val incident by model.incidentUi.collectAsStateWithLifecycle()
@@ -107,11 +107,22 @@ import io.github.nevaseme.plandmk1.core.*
             val base=residentMapPerson(person, places, care, locations[person.originId],
                 if (answer?.safety == Safety.SOS) notes[answer.eventId]?.takeIf {it.authorId==person.originId&&it.incidentId==answer.incidentId}?.text?:scenarioPerson?.note.orEmpty() else scenarioPerson?.note.orEmpty()).copy(impactAt=if(scenarioPerson!=null)simulated?.first else latestImpact(deviceRecords,group,person.originId,now),enclosedAt=simulated?.second)
             val placement=venue?.allPlacements()?.find {it.deviceId==person.originId}
-            projectPersonPrivacy(if(placement==null)base else if(venue?.positionMode=="ACTUAL"&&placement.source!="SCENARIO")base.copy(name=placement.name,home=null,demo=true) else base.copy(name=placement.name,point=MapPoint(checkNotNull(placement.latitude),checkNotNull(placement.longitude)),acquiredAt=incident.current?.start?.createdAt,accuracy=null,demo=true,fictional=placement.source=="SCENARIO"),incident.current?.start?.createdAt,now)
+            projectPersonPrivacy(if(placement==null)base else if(venue?.positionMode=="ACTUAL"&&placement.source!="SCENARIO")base.copy(name=placement.name,home=null,demo=true) else base.copy(name=placement.name,home=base.home.takeIf {placement.home!=null},bedroom=base.bedroom.takeIf {placement.home!=null}.orEmpty(),point=MapPoint(checkNotNull(placement.latitude),checkNotNull(placement.longitude)),acquiredAt=incident.current?.start?.createdAt,accuracy=null,demo=true,fictional=placement.source=="SCENARIO"),incident.current?.start?.createdAt,now)
         }
     }
     val homes = placeBuildings(places).map { MapHome(it.buildingId!!, it.displayLabel(), MapPoint(it.latitude!!, it.longitude!!)) }
-    val incidentResponses=responses.filter {it.incidentId==incident.current?.start?.eventId}
+    val incidentResponses=responses.filter {it.groupId==group&&it.incidentId==incident.current?.start?.eventId}
+    val groupName=cloud.takeIf {it.groupId==group}?.groupName?.takeIf {it.isNotBlank()}?:uiText("group_label")
+    val communityPeople=communityPeopleFor(residents,care,venue)
+    val ownNeighborhood=communityPeople.find {it.id==model.localId}?.communityId
+    val names=communityNamesFor(venue,groupName)
+    val communityRows=communityOverview(communityPeople,incidentResponses.map {it.change},names)
+    val activeRows=communityOverview(communityPeople,activeMaterialChanges(incidentResponses.map {it.change}),names)
+    val neighborhoods=communityRows.map {row->
+        val points=venue?.allPlacements().orEmpty().filter {p->communityPeople.any {it.id==p.deviceId&&it.communityId==row.id}}.mapNotNull {it.home?.let {h->MapPoint(h.latitude,h.longitude)}}
+        MapNeighborhood(row.copy(materials=activeRows.find {it.id==row.id}?.materials?:mutableListOf()),points.takeIf {it.isNotEmpty()}?.let {MapPoint(it.map {p->p.latitude}.average(),it.map {p->p.longitude}.average())},activeHighReports(incidentResponses.map {it.change},row.id),incidentResponses.mapNotNull {it.change as? ResponseChange.Report}.filter {!it.cancelled&&row.id in it.regionIds}.distinctBy {it.reportId}.map {it.reportId to it.category})
+    }
+    val visiblePeople=people.filter {p->venue?.scenario==null||p.id==model.localId||communityPeople.any {it.id==p.id&&it.communityId==ownNeighborhood}}
     val reports=incidentResponses.mapNotNull {it.change as? ResponseChange.Report}.filterNot {it.cancelled}.distinctBy {it.reportId}.map {report->MapReport(report.reportId,MapPoint(report.latitude,report.longitude),responseUrgency(incidentResponses,ResponseTarget(TargetKind.REPORT,report.reportId)))}
     val center = if(!picking&&venue?.positionMode=="KYOTO") MapPoint(35.0145,135.7625)
         else positions.find { it.originId == model.localId&&(venue?.positionMode!="ACTUAL"||it.acquiredAt>=venue!!.startedAt) }?.let { MapPoint(it.latitude, it.longitude) }
@@ -120,7 +131,7 @@ import io.github.nevaseme.plandmk1.core.*
         val app=LocalContext.current.applicationContext as PlanDApplication
         val source=remember(app){app.positionSourceFactory()}
         HomeLocationPicker(center,onPick,onCancelPick) {source().let {MapPoint(it.latitude,it.longitude)}}
-    } else SituationScreen(people, homes, center, now, initialZoom=if(venue!=null)14.5 else 16.8, canRescue = own != null && incident.canEdit && !saving,
+    } else SituationScreen(visiblePeople, homes.filter {home->visiblePeople.any {it.home?.id==home.id&&it.registeredPlaceVisible}}, center, now, neighborhoods=neighborhoods,ownNeighborhoodId=ownNeighborhood,onPersonResponse=onPersonResponse, initialZoom=if(venue!=null)14.5 else 16.8, canRescue = own != null && incident.canEdit && !saving,
         canUndo = { p -> currentCareEvents(care.filter { it.subjectId == p.id }).any { it.action == CareAction.RESCUED && it.authorId == model.localId } },
         onRescue = { model.saveCare(it.id, CareAction.RESCUED, "本人の救助完了を確認") },
         onUndo = { p -> currentCareEvents(care.filter { it.subjectId == p.id }).find { it.action == CareAction.RESCUED && it.authorId == model.localId }?.let { model.saveCare(p.id, CareAction.REVOKED, "救助完了の記録を訂正", it.eventId) } },

@@ -13,7 +13,7 @@ data class OperationExportRow(
 /** Regions are supplied explicitly; geographic assignment and aggregation are separate operations. */
 fun operationRows(
     roster:MemberRoster,incidentId:String,residents:List<Resident>,journal:List<IncidentEvent>,
-    quakes:List<QuakeEvent>,responses:List<ResponseEvent>,regions:Map<ResponseTarget,List<String>>,language:String="ja",
+    quakes:List<QuakeEvent>,responses:List<ResponseEvent>,regions:Map<ResponseTarget,List<String>>,language:String="ja",allowedResidentIds:Set<String>?=null,
 ):List<OperationExportRow> {
     require(language in listOf("ja","en")) {"Unsupported CSV language"}
     val en=language=="en";val unset=if(en)"Unset" else "未設定";val unassigned=if(en)"Unassigned" else "未対応"
@@ -36,7 +36,7 @@ fun operationRows(
             listOf(safety,statuses.joinToString(" / ")).filter {it.isNotEmpty()}.joinToString(if(en)" / " else "・"),priorities.joinToString(" / "),assignees.joinToString(" / "),
             progress.map {it.result}.filter {it.isNotBlank()}.distinct().sorted().joinToString(" / "),materials.joinToString(" / "),maxOf(updatedAt,records.maxOfOrNull {it.operatedAt}?:0))
     }
-    val people=residents.filter {it.groupId==roster.groupId}.groupBy {it.originId}.values.map {it.maxBy {r->r.revision}}.map {person->
+    val people=residents.filter {it.groupId==roster.groupId&&(allowedResidentIds==null||it.originId in allowedResidentIds)}.groupBy {it.originId}.values.map {it.maxBy {r->r.revision}}.map {person->
         val answer=view.answers[person.originId]
         val care=currentCareEvents(view.care.filter {it.subjectId==person.originId})
         val rescued=care.any {it.action==CareAction.RESCUED&&it.createdAt>=(answer?.createdAt?:0)}

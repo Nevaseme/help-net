@@ -6,6 +6,13 @@ import org.junit.Test
 import java.util.TimeZone
 
 class OperationsExportTest {
+    @Test fun scopedExportNeverReintroducesHiddenPeopleButKeepsGeneralReports() {
+        val report=event(30,ResponseChange.Report(id(30),"道路閉塞",35.0,139.0,"倒木"))
+        val rows=operationRows(roster,incident,people,journal,emptyList(),listOf(report),emptyMap(),allowedResidentIds=setOf(id(1)))
+        assertEquals(setOf(id(1),id(30)),rows.map {it.targetId}.toSet())
+        val reportOnly=operationRows(roster,incident,people,journal,emptyList(),listOf(report),emptyMap(),allowedResidentIds=emptySet())
+        assertEquals(id(30),reportOnly.single().targetId)
+    }
     @Test fun cancellationRemovesNormalExportAndRestoreReturnsSameReport() {
         val report=event(30,ResponseChange.Report(id(30),"道路",35.0,139.0,"倒木",regionIds=listOf("north")))
         val cancel=event(31,(report.change as ResponseChange.Report).copy(cancelled=true,cancelReason="重複"),listOf(report.eventId))

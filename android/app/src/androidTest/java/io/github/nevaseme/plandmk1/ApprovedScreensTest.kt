@@ -5,7 +5,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.*
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.lifecycle.ViewModelStore
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
@@ -30,15 +30,21 @@ import androidx.test.runner.lifecycle.Stage
 import org.maplibre.android.maps.MapView
 
 class ApprovedScreensTest {
-    @get:Rule val compose=createComposeRule()
+    @get:Rule val compose=createEmptyComposeRule()
+    @org.junit.After fun closeFixture() {
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(Stage.RESUMED).toList().forEach {it.finish()}
+        }
+    }
     private fun capture(name:String) {
         compose.waitForIdle()
+        SystemClock.sleep(300)
         val app=ApplicationProvider.getApplicationContext<PlanDApplication>()
         val folder=File(app.filesDir,"approved-screens").apply {mkdirs()}
         InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot().let {bitmap->File(folder,"$name.png").outputStream().use {bitmap.compress(Bitmap.CompressFormat.PNG,100,it)};bitmap.recycle()}
     }
     @Test fun largeTextKeepsSafetyAndNavigationUsable() {
-        compose.setContent {
+        shellComposeContent {
             val density=androidx.compose.ui.platform.LocalDensity.current
             CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(density.density,2f)) {
                 PlanDMk1Theme {PlanLocalization {
@@ -62,9 +68,13 @@ class ApprovedScreensTest {
     private fun tapVisibleMapCenter() {
         fun maps(view:View):List<MapView> = when(view){is MapView->listOf(view);is ViewGroup->(0 until view.childCount).flatMap {maps(view.getChildAt(it))};else->emptyList()}
         val inst=InstrumentationRegistry.getInstrumentation();val bounds=Rect()
-        inst.runOnMainSync {
-            val root=ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(Stage.RESUMED).first().window.decorView
-            assertTrue(maps(root).any {it.getGlobalVisibleRect(bounds)&&bounds.width()>100&&bounds.height()>100})
+        compose.waitUntil(15_000) {
+            var visible=false
+            inst.runOnMainSync {
+                val root=ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(Stage.RESUMED).first().window.decorView
+                visible=maps(root).any {it.getGlobalVisibleRect(bounds)&&bounds.width()>100&&bounds.height()>100}
+            }
+            visible
         }
         val time=SystemClock.uptimeMillis()
         listOf(MotionEvent.ACTION_DOWN,MotionEvent.ACTION_UP).forEach {action->
@@ -80,7 +90,7 @@ class ApprovedScreensTest {
         var tab by mutableIntStateOf(10)
         var settings by mutableStateOf(false)
         try {
-            compose.setContent {PlanDMk1Theme {PlanLocalization {
+            shellComposeContent {PlanDMk1Theme {PlanLocalization {
                 Scaffold(bottomBar={ApprovedTabs(tab){tab=it;settings=false}}){padding->Box(Modifier.fillMaxSize().padding(padding)){
                     if(tab==10)ApprovedSheet("通報の詳細",{}){Text("試験の通報")}
                     else if(settings)LanguageSettings {settings=false}
@@ -91,7 +101,7 @@ class ApprovedScreensTest {
             compose.onNodeWithText("通報の詳細").assertDoesNotExist()
             compose.onNodeWithText("設定",substring=false).performClick()
             compose.onNodeWithText("English",substring=false).performClick()
-            compose.onNodeWithText("Resident list",substring=false).assertIsDisplayed()
+            compose.onNodeWithText("English",substring=false).assertIsDisplayed()
             assertEquals("en",prefs.getString("language",null))
             compose.onNodeWithText("Map",substring=false).performClick()
             compose.onNodeWithText("English",substring=false).assertDoesNotExist()
@@ -121,11 +131,12 @@ class ApprovedScreensTest {
         try {
             compose.runOnUiThread {org.maplibre.android.MapLibre.getInstance(app);app.installation.setGroup(group);app.installation.selectIncident(group,incident);model=PlanViewModel(app);models.put("response",model)}
             compose.waitUntil(15_000){model.incidentUi.value.current?.start?.eventId==incident&&model.roster.value?.groupId==group}
-            compose.setContent {PlanDMk1Theme {PlanApp(model)}}
+            shellComposeContent {PlanDMk1Theme {PlanApp(model)}}
             compose.onNodeWithText("対応",substring=false).performClick()
             compose.onNodeWithText("通報を追加",substring=true).performClick()
-            compose.onNodeWithContentDescription("緯度",substring=false).performTextInput("35.0")
-            compose.onNodeWithContentDescription("経度",substring=false).performTextInput("135.0")
+            compose.onNodeWithText("地図で通報地点を選ぶ").performClick()
+            tapVisibleMapCenter()
+            compose.waitUntil(15_000){compose.onAllNodesWithText("通報地点を選択済み・変更").fetchSemanticsNodes().isNotEmpty()}
             compose.onNodeWithContentDescription("状況・内容",substring=false).performTextInput("試験用の倒木")
             androidx.test.espresso.Espresso.closeSoftKeyboard()
             compose.onNodeWithText("保存する",substring=false).assertIsEnabled()
@@ -147,19 +158,20 @@ class ApprovedScreensTest {
             compose.onNodeWithText("対応を始める",substring=false).performClick()
             compose.waitUntil(15_000){!model.saving.value && runBlocking {app.responses.heads(group).any {(it.change as? ResponseChange.Assignment)?.let {a->a.memberId==me&&a.active}==true}}}
             // Exercise the approved operational forms against the real persistence path.
-            compose.onAllNodesWithText("変更",substring=false)[1].performScrollTo().performClick()
+            compose.onNodeWithContentDescription("対応状況 変更").performScrollTo().performClick()
             val priorProgress=app.responses.heads(group).single {it.change is ResponseChange.Progress}
             app.responses.append(priorProgress.copy(eventId=UUID.randomUUID().toString(),operatedAt=System.currentTimeMillis(),change=ResponseChange.Progress((priorProgress.change as ResponseChange.Progress).target,WorkStatus.PLANNED,"別の更新を受信"),replaces=listOf(priorProgress.eventId)))
             compose.waitUntil(15_000){compose.onAllNodesWithText("内容が更新されました。閉じて開き直してください。",substring=false).fetchSemanticsNodes().isNotEmpty()}
             compose.onNodeWithText("保存する",substring=false).assertIsNotEnabled()
-            compose.onNodeWithContentDescription("閉じる").performClick()
-            compose.onAllNodesWithText("変更",substring=false)[1].performScrollTo().performClick()
-            compose.onNodeWithText("対応状況: 対応予定",substring=false).performClick()
+            compose.onNodeWithText("同時に記録された内容をすべて確認し、今回の内容にまとめます").performScrollTo().performClick()
+            compose.onNodeWithText("対応状況:",substring=true).performClick()
             compose.onNodeWithText("対応済み",substring=false).performClick()
             compose.onNodeWithContentDescription("対応済みにするには結果を入力してください",substring=false).performTextReplacement("試験の撤去を完了")
+            androidx.test.espresso.Espresso.closeSoftKeyboard()
+            capture("12-progress-ja")
             compose.onNodeWithText("保存する",substring=false).assertIsEnabled().performClick()
             compose.waitUntil(15_000){!model.saving.value && runBlocking {app.responses.heads(group).any {(it.change as? ResponseChange.Progress)?.let {p->p.status==WorkStatus.DONE&&p.result=="試験の撤去を完了"}==true}}}
-            compose.onAllNodesWithText("変更",substring=false)[2].performScrollTo().performClick()
+            compose.onNodeWithContentDescription("緊急度 変更").performScrollTo().performClick()
             compose.onNodeWithText("緊急度: 未設定",substring=false).performClick()
             compose.onNodeWithText("高",substring=false).performClick()
             compose.onNodeWithContentDescription("理由",substring=false).performTextInput("試験の緊急度変更")
@@ -197,19 +209,18 @@ class ApprovedScreensTest {
             compose.onNodeWithText("通報を追加",substring=false).performClick()
             compose.onNodeWithText("通報する場所を地図でタップしてください",substring=false).assertIsDisplayed()
             tapVisibleMapCenter()
-            compose.waitUntil(15_000){compose.onAllNodesWithText("緯度",substring=false).fetchSemanticsNodes().isNotEmpty()}
-            val pickedLatitude=compose.onNodeWithContentDescription("緯度",substring=false).fetchSemanticsNode().config[SemanticsProperties.EditableText].text.toDouble()
-            val pickedLongitude=compose.onNodeWithContentDescription("経度",substring=false).fetchSemanticsNode().config[SemanticsProperties.EditableText].text.toDouble()
-            assertTrue(pickedLatitude in -85.0..85.0&&pickedLongitude in -180.0..180.0)
+            compose.waitUntil(15_000){compose.onAllNodesWithText("通報地点を選択済み・変更").fetchSemanticsNodes().isNotEmpty()}
+            compose.onNodeWithContentDescription("緯度").assertDoesNotExist()
+            compose.onNodeWithContentDescription("経度").assertDoesNotExist()
             capture("02-map-report-point-ja")
             compose.onNodeWithContentDescription("閉じる").performClick()
             assertEquals(1,app.responses.heads(group).count {it.change is ResponseChange.Report})
             compose.onNodeWithContentDescription("メニューを開く").performClick()
-            compose.onNodeWithText("設定",substring=false).performClick()
+            compose.onNodeWithText("アプリ設定",substring=false).performClick()
             capture("03-settings-ja")
             compose.onNodeWithText("English",substring=false).performClick()
             capture("04-settings-en")
-            compose.onNodeWithText("Response",substring=false).performClick()
+            compose.onNodeWithText("Tasks",substring=false).performClick()
             capture("19-response-en")
         } catch(failure:Throwable) {
             runCatching {capture("failure");File(app.filesDir,"approved-screen-failure.txt").writeText(compose.onRoot(useUnmergedTree=true).printToString())}

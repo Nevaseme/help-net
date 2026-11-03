@@ -43,7 +43,8 @@ export function injuryFor(heads,id){const values=[...new Set(heads.filter(e=>e.c
 /** Map summaries contain counts only; other neighborhoods never become person links. */
 export function communityMapOverview(input,ownId){
  const own=input.people.find(p=>p.id===ownId)?.communityId;
- return communityOverview(input).filter(r=>r.id!==own).flatMap(r=>{
+ const activeHeads=input.heads.filter(e=>{if(e.change.type!=='MATERIAL')return true;const progress=input.heads.filter(p=>p.change.type==='PROGRESS'&&p.change.target?.kind===e.change.target?.kind&&p.change.target?.id===e.change.target?.id);return !progress.length||progress.some(p=>p.change.status!=='DONE');});
+ return communityOverview({...input,heads:activeHeads}).filter(r=>r.id!==own).flatMap(r=>{
   const points=input.people.filter(p=>p.communityId===r.id&&Number.isFinite(p.latitude)&&Number.isFinite(p.longitude));
   return points.length?[{...r,latitude:points.reduce((n,p)=>n+p.latitude,0)/points.length,longitude:points.reduce((n,p)=>n+p.longitude,0)/points.length}]:[];
  });

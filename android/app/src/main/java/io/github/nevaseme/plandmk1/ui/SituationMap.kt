@@ -64,6 +64,7 @@ fun SituationMap(
     onCoverage: (Boolean) -> Unit = {},
     onReportPoint: ((MapPoint) -> Unit)? = null,
     reports:List<MapReport> = emptyList(),onReport: (String)->Unit = {}, initialZoom:Double=16.8,
+    neighborhoods:List<MapNeighborhood> = emptyList(),onNeighborhood:(String)->Unit={},
 ) {
     val context = LocalContext.current
     val supports = remember { (context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager).deviceConfigurationInfo.reqGlEsVersion >= 0x30000 }
@@ -94,6 +95,10 @@ fun SituationMap(
     val latestReportPoint by rememberUpdatedState(onReportPoint)
     val latestReport by rememberUpdatedState(onReport)
     val latestTsunami by rememberUpdatedState(tsunamiResult)
+    val neighborhoodMarkers=remember {mutableMapOf<Long,String>()}
+    val neighborhoodRendered=remember {mutableListOf<Marker>()}
+    val latestNeighborhood by rememberUpdatedState(onNeighborhood)
+    val neighborhoodEnglish=LocalUiLanguage.current=="en"
     val reportMarkers=remember {mutableMapOf<Long,String>()}
     val reportRendered=remember {mutableListOf<Marker>()}
     var riskModel by remember { mutableStateOf<BuildingMapModel?>(null) }
@@ -150,6 +155,7 @@ fun SituationMap(
                     pick(MapPoint(marker.position.latitude, marker.position.longitude))
                     return@setOnMarkerClickListener true
                 }
+                neighborhoodMarkers[marker.id]?.let {latestNeighborhood(it);return@setOnMarkerClickListener true}
                 reportMarkers[marker.id]?.let {latestReport(it);return@setOnMarkerClickListener true}
                 markers[marker.id]?.let { cluster ->
                     if (cluster.people.size == 1) {
@@ -275,6 +281,25 @@ fun SituationMap(
             val marker=map.addMarker(MarkerOptions().position(LatLng(report.point.latitude,report.point.longitude)).icon(icon))
             reportRendered.add(marker);reportMarkers[marker.id]=report.id
         }
+    }
+    LaunchedEffect(ready,neighborhoods,neighborhoodEnglish) {
+        val map=controller?:return@LaunchedEffect
+        if(!ready)return@LaunchedEffect
+        neighborhoodRendered.forEach {map.removeMarker(it)};neighborhoodRendered.clear();neighborhoodMarkers.clear()
+        neighborhoods.forEach {n->n.point?.let {point->
+            val d=context.resources.displayMetrics.density
+            val bitmap=Bitmap.createBitmap((148*d).roundToInt(),(100*d).roundToInt(),Bitmap.Config.ARGB_8888)
+            val canvas=Canvas(bitmap);canvas.scale(d,d);val paint=Paint(Paint.ANTI_ALIAS_FLAG)
+            paint.color=Color.WHITE;canvas.drawRoundRect(1f,1f,147f,99f,10f,10f,paint)
+            paint.color=0xFF183447.toInt();paint.textSize=12f;paint.typeface=Typeface.create("sans-serif",Typeface.BOLD)
+            canvas.drawText(if(neighborhoodEnglish)n.row.nameEn else n.row.nameJa,8f,21f,paint)
+            paint.textSize=11f;paint.typeface=Typeface.create("sans-serif",Typeface.NORMAL)
+            canvas.drawText("SOS ${n.row.sos} · ${if(neighborhoodEnglish)"No response" else "応答なし"} ${n.row.unreported}",8f,44f,paint)
+            canvas.drawText("${if(neighborhoodEnglish)"Safe" else "無事"} ${n.row.safe} · ${if(neighborhoodEnglish)"Rescued" else "救助済み"} ${n.row.rescued}",8f,65f,paint)
+            canvas.drawText("${if(neighborhoodEnglish)"High urgency" else "高緊急度"} ${n.activeHigh}",8f,86f,paint)
+            val marker=map.addMarker(MarkerOptions().position(LatLng(point.latitude,point.longitude)).icon(IconFactory.getInstance(context).fromBitmap(bitmap)))
+            neighborhoodRendered.add(marker);neighborhoodMarkers[marker.id]=n.row.id
+        }}
     }
     LaunchedEffect(ready, people, showSafe, zoom, now) {
         val map = controller ?: return@LaunchedEffect

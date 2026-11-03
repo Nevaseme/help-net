@@ -5,7 +5,7 @@ const compare=(a,b)=>a<b?-1:a>b?1:0;
 const targetKey=t=>`${t.kind}:${t.id}`;
 
 /** Same approved columns and visibility rules as the Android exporter. */
-export function operationRows(roster,incidentId,residents,journal,quakes,responses,regions={}, {language='ja'}={}){
+export function operationRows(roster,incidentId,residents,journal,quakes,responses,regions={}, {language='ja',allowedResidentIds=null}={}){
  if(!['ja','en'].includes(language))throw Error('Unsupported CSV language');
  const en=language==='en',unset=en?'Unset':'未設定',unassigned=en?'Unassigned':'未対応';
  validateRoster(roster);
@@ -29,7 +29,8 @@ export function operationRows(roster,incidentId,residents,journal,quakes,respons
  }
  const latest=new Map();
  for(const p of residents.filter(p=>p.groupId===roster.groupId))if(!latest.has(p.originId)||latest.get(p.originId).revision<p.revision)latest.set(p.originId,p);
- const people=[...latest.values()].map(person=>{
+ const allowed=allowedResidentIds==null?null:new Set(allowedResidentIds);
+ const people=[...latest.values()].filter(p=>!allowed||allowed.has(p.originId)).map(person=>{
   const answer=view.answers[person.originId],care=view.care.filter(e=>e.subjectId===person.originId);
   const byId=new Map(care.map(e=>[e.eventId,e]));
   const replaced=new Set(care.filter(e=>{const old=byId.get(e.supersedes);return old&&old.groupId===e.groupId&&old.authorId===e.authorId&&old.subjectId===e.subjectId;}).map(e=>e.supersedes));

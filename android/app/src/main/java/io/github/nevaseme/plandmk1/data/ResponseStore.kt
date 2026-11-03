@@ -23,9 +23,9 @@ class ResponseStore(private val db:PlanDatabase,private val knownDemoPerson:(Str
         val reports=heads(group).filter {it.incidentId==selected}.mapNotNull {(it.change as? ResponseChange.Report)?.takeUnless {report->report.cancelled}}.groupBy {it.reportId}
         regionalSummary(catalog,reports.map {(id,values)->RegionCase(ResponseTarget(TargetKind.REPORT,id),assignments[id]?:values.flatMap {it.regionIds}.distinct())})
     }
-    suspend fun exportCsv(group:String,incidentId:String,regions:Map<ResponseTarget,List<String>> = emptyMap(),language:String="ja"):String=db.withTransaction {
+    suspend fun exportCsv(group:String,incidentId:String,regions:Map<ResponseTarget,List<String>> = emptyMap(),language:String="ja",allowedResidentIds:Set<String>?=null):String=db.withTransaction {
         val roster=requireNotNull(quakes.roster(group)) {"参加者設定を読み込んでください"};val records=RoomRecordStore(db)
-        operationCsv(operationRows(roster,incidentId,records.all(group),records.incidents(group),quakes.events(group),events(group),regions,language),language=language)
+        operationCsv(operationRows(roster,incidentId,records.all(group),records.incidents(group),quakes.events(group),events(group),regions,language,allowedResidentIds),language=language)
     }
     suspend fun startWork(group:String,incidentId:String,actorDeviceId:String,target:ResponseTarget,at:Long):List<ResponseEvent> = db.withTransaction {
         val roster=requireNotNull(quakes.roster(group)) {"参加者設定を読み込んでください"}

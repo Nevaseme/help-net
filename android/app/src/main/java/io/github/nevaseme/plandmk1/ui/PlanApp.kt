@@ -209,7 +209,7 @@ private fun PlanAppContent(model: PlanViewModel) {
                 key(group,activeVenue?.sessionId) { RetainedMapContent(mapVisible) {
                     MapScreen(model, residents, own, false,
                         onPick={}, onCancelPick={}, onSelect={detailId=it.originId},onBuilding={buildingId=it},
-                        openList=showPeople,onListClosed={showPeople=false},onAddReport={point->reportPoint=point;tab=10;lastMain=10},onReport={id->reportTarget=ResponseTarget(TargetKind.REPORT,id);tab=10;lastMain=10})
+                        openList=showPeople,onListClosed={showPeople=false},onAddReport={point->reportPoint=point;tab=10;lastMain=10},onReport={id->reportTarget=ResponseTarget(TargetKind.REPORT,id);tab=10;lastMain=10},onPersonResponse={id->reportTarget=ResponseTarget(TargetKind.PERSON,id);tab=10;lastMain=10})
                 } }
                 if (!mapVisible) screenState.SaveableStateProvider("$group:$tab") {
                     when {
@@ -217,7 +217,7 @@ private fun PlanAppContent(model: PlanViewModel) {
                         0 -> SafetyScreen(model, own, saving, onProfile={navigate(3)}, onIncident={navigate(6)})
                         1, 8 -> MapScreen(model, residents, own, picking,
                             onPick={model.pickedPoint.value=it;picking=false;tab=3},
-                            onCancelPick={picking=false;tab=3},onSelect={detailId=it.originId},onBuilding={buildingId=it},openList=showPeople,onListClosed={showPeople=false},listOnly=tab==8)
+                            onCancelPick={picking=false;tab=3},onSelect={detailId=it.originId},onBuilding={buildingId=it},openList=showPeople,onListClosed={showPeople=false},listOnly=tab==8,onPersonResponse={id->reportTarget=ResponseTarget(TargetKind.PERSON,id);tab=10;lastMain=10})
                         2 -> BuildingsScreen(model, onProfile={navigate(3)}) {buildingId=it}
                         10 -> ResponseScreen(model,responseSummary,{responseSummary=false},reportPoint,{reportPoint=null},reportTarget,{reportTarget=null},onOpenSummary={responseSummary=true})
                         11 -> PeaceHome(model, own != null, onProfile={navigate(3)}, onIncident={navigate(6)}, onPreview={preview=true})

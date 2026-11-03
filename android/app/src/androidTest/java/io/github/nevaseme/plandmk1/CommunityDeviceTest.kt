@@ -35,7 +35,7 @@ class CommunityDeviceTest {
    compose.onNodeWithText("町内会の状況").assertExists();compose.onNodeWithText("レポートを発行").performScrollTo().performClick()
    val directory=File(app.filesDir,"community-reports/$group/${venue.incidentId}");compose.waitUntil(15000){directory.listFiles()?.any{it.extension=="json"}==true}
    val file=directory.listFiles()!!.single{it.extension=="json"};val frozen=file.readText();val report=codec.decodeFromString<CommunityReport>(frozen)
-   assertEquals(13,report.rows.sumOf{it.total});assertEquals(2,report.rows.sumOf{it.injured});assertEquals(2,report.rows.sumOf{it.rescued});assertEquals(3,report.rows.sumOf{it.reports});assertTrue(report.people.all{it.buildingId!=null})
+   assertEquals(13,report.rows.sumOf{it.total});assertEquals(2,report.rows.sumOf{it.injured});assertEquals(2,report.rows.sumOf{it.rescued});assertEquals(3,report.rows.sumOf{it.reports});assertTrue(report.people.filter {it.name.isNotBlank()}.all{it.buildingId!=null});assertTrue(report.people.any {it.name.isBlank()&&it.buildingId==null})
    inst.runOnMainSync{model.saveResponse(ResponseChange.Injury(ResponseTarget(TargetKind.PERSON,app.installation.localId),InjuryState.INJURED))}
    compose.waitUntil(15000){model.responseEvents.value.any{(it.change as? ResponseChange.Injury)?.let{c->c.target.id==app.installation.localId&&c.state==InjuryState.INJURED}==true}}
    assertEquals(frozen,file.readText());inst.runOnMainSync{language="en"};compose.onNodeWithText("Neighborhood overview").assertExists();compose.onNodeWithText("Issue report").performScrollTo().assertExists()

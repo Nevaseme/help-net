@@ -33,7 +33,7 @@ class SituationPresentationTest {
 
     @Test fun zoomSplitsClustersAndSafeFilterDoesNotRemoveSOS() {
         val people = listOf(person("a"), person("b", MapSafety.SAFE).copy(point = MapPoint(32.7903, 130.8193)))
-        assertEquals(1, mapClusters(people, 14.0, true, now).size)
+        assertEquals(1, mapClusters(people, 13.9, true, now).size)
         assertEquals(2, mapClusters(people, 16.0, true, now).size)
         assertEquals(listOf("a"), mapClusters(people, 14.0, false, now).flatMap { it.people }.map { it.id })
         assertEquals("old", mapClusters(listOf(person("old", age = 4 * DAY)), 14.0, true, now).single().people.single().id)
@@ -71,10 +71,10 @@ class SituationPresentationTest {
         val people = MapSafety.entries.map { person(it.name, it).copy(point = MapPoint(0.0, 0.0)) } +
             person("near").copy(point = MapPoint(.00386, 0.0)) +
             person("far").copy(point = MapPoint(.1, 0.0))
-        val clusters = mapClusters(people, 14.0, true, now)
+        val clusters = mapClusters(people, 13.9, true, now)
         assertEquals(listOf(1, 5), clusters.map { it.people.size }.sorted())
         assertEquals(people.map { it.id }.sorted(), clusters.flatMap { it.people }.map { it.id }.sorted())
-        assertEquals(6, mapClusters(people, 16.0, true, now).size)
+        assertEquals(6, mapClusters(people, 14.0, true, now).size)
     }
 
     @Test fun rescueRemainsEffectiveWithAnOlderCheckingRecordAndRevocationHistory() {

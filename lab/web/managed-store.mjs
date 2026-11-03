@@ -9,9 +9,9 @@ export class ManagedStore {
  roster(group){return this.read('rosters',group);}
  async quakeEvents(group){return (await this.read('quakes')).filter(e=>e.groupId===group);}
  async responseEvents(group){return (await this.read('responses')).filter(e=>e.groupId===group);}
- exportCsv(group,incidentId,regions={}, {language='ja'}={}){return this.managedTransaction(tables=>{
+ exportCsv(group,incidentId,regions={}, {language='ja',allowedResidentIds=null}={}){return this.managedTransaction(tables=>{
   const roster=tables.rosters.find(r=>r.groupId===group);if(!roster)throw Error('参加者設定を読み込んでください');
-  return operationCsv(operationRows(roster,incidentId,tables.residents,tables.incidents,tables.quakes,tables.responses,regions,{language}),{language});
+  return operationCsv(operationRows(roster,incidentId,tables.residents,tables.incidents,tables.quakes,tables.responses,regions,{language,allowedResidentIds}),{language});
  });}
  reportRegionSummary(group,incidentId,catalog,assignments={}){return this.managedTransaction(tables=>{
   const roster=tables.rosters.find(r=>r.groupId===group);if(!roster)throw Error('参加者設定を読み込んでください');

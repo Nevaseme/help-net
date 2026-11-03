@@ -7,6 +7,14 @@ const reportCase=(id,...reports)=>({target:{kind:'REPORT',id},reports});
 const personCase=(id,statusIcon='SOS')=>({target:{kind:'PERSON',id},statusIcon,person:{originId:id,safety:statusIcon}});
 const communities=[{id:'west',nameJa:'西',nameEn:'West'},{id:'east',nameJa:'東',nameEn:'East'}];
 
+test('town map shortfalls exclude completed work while the issued overview keeps the full report',()=>{
+ const target={kind:'REPORT',id:'r'},input={communities,people:[{id:'me',communityId:'west',latitude:35,longitude:135},{id:'east-person',communityId:'east',latitude:35.1,longitude:135.1}],heads:[report('r','Road obstruction',['east']),{change:{type:'MATERIAL',target,requestId:'m',name:'Water',unit:'L',needed:5,arranged:0}},{change:{type:'PROGRESS',target,status:'DONE'}}]};
+ assert.equal(overview.communityMapOverview(input,'me')[0].materials.length,0);
+ assert.equal(overview.communityOverview(input).find(r=>r.id==='east').materials[0].shortfall,5);
+ input.heads.push({change:{type:'PROGRESS',target,status:'IN_PROGRESS'}});
+ assert.equal(overview.communityMapOverview(input,'me')[0].materials[0].shortfall,5);
+});
+
 test('issued reports preserve town totals without exporting undisclosed personal locations',()=>{
  const input={heads:[],communities,people:[{id:'own',name:'Own name',communityId:'west',status:'SAFE',buildingId:'a'},{id:'other',name:'Hidden name',communityId:'east',status:'SOS',buildingId:'b',latitude:35,longitude:135}],visiblePersonIds:['own']};
  const report=overview.issueCommunityReport(input,'en',100,'report');
