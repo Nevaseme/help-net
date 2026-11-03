@@ -115,3 +115,10 @@
 - 続けて、vivoのBluetooth/Wi-Fi両方OFF中の蓄積と復帰後再送、その後の実OS再起動を試験する。これらはまだ合格扱いにしない。
 
 証拠：`.implementation/safety-radio-1793696872/` 内の各端末 `-phases.jsonl` / `-network.jsonl` / `-medium-logs.txt`。SDKログは当該サービスIDと時刻で照合した。Google Play開発者サービスはvivo 26.43.30、Mi 9T 25.50.34。
+
+- 完全切断段階では、実測でvivoがBluetooth OFF / Wi-Fi ON、Mi 9Tが両方OFFだった。Mi 9Tの両無線OFFにより代替経路もない状態を確認し、その条件で試験を継続した。両端末で接続数0、新しいSAFEと通報が未送信で保存された（queued）。両無線OFFの端末をvivoとして記録しない。
+- vivoのWi-Fiの最終変更要求元はSystem UI、toggleState=trueだった。今回Google Play開発者サービスが勝手にONへ戻したとは断定しない。詳細はローカルのvivo-wifi-toggle-inspection.txtへ保存した。
+
+- 両端末のBluetooth/Wi-Fi ON・ネット未接続・消灯を確認後、接続ボタン操作なしで自動復帰。切断中に生成したSAFEと通報が双方向に届き、別のRoom接続から永続化も照合した（両方all-pass、画面OFF）。実OS再起動は次の段階。
+
+- 再起動段階では両端末のBluetooth/Wi-Fi OFF、接続0、ネット未接続を確認し、新しいSOSと通報を未送信で保存した（両方reboot-queued）。再起動前の別読み取りでも相手の最新回答SAFE・段階4通報未受信を確認。両端末へ実OS再起動を実行済み。通常アプリや試験を起動せず、利用者の初回ロック解除と無線ON後に共有サービス・データを照合する。
