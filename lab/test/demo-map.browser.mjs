@@ -14,9 +14,9 @@ try{
  await p.waitForFunction(()=>document.querySelectorAll('.community-map-marker').length===2);
  await p.screenshot({path:out+'/map-ja.png'});
  const label=await p.locator('.community-map-marker').first().getAttribute('title');await p.locator('.community-map-marker').first().click();
- await p.locator('#area-sheet').waitFor({state:'visible'});assert.equal(await p.locator('#area-sheet .community-card').count(),1);assert.ok((await p.locator('#area-sheet').innerText()).includes(label));
- assert.equal(await p.locator('#area-sheet [data-injury]').count(),0);assert.equal(await p.locator('#area-sheet [data-person]').count(),0);await p.screenshot({path:out+'/other-neighborhood.png'});
- await p.locator('#area-sheet .sheet-close').click();
+ await p.locator('#town-summary-sheet').waitFor({state:'visible'});assert.equal(await p.locator('#town-summary-sheet .town-counts > div').count(),4);assert.ok((await p.locator('#town-summary-sheet').innerText()).includes(label));
+ assert.equal(await p.locator('#town-summary-sheet [data-injury]').count(),0);assert.equal(await p.locator('#town-summary-sheet [data-person]').count(),0);await p.screenshot({path:out+'/other-neighborhood.png'});
+ await p.locator('#town-summary-sheet .sheet-close').click();
  assert.ok(await p.locator('.person-impact').count()>0);assert.ok(await p.locator('.person-enclosed').count()>0);
  const observed=p.locator('.person-enclosed').first();await observed.click();
  await p.locator('#person-sheet').waitFor({state:'visible'});assert.match(await p.locator('#detail-info').innerText(),/閉所を検知/);assert.match(await p.locator('#detail-info').innerText(),/デモの模擬検知/);await p.screenshot({path:out+'/observations-ja.png'});

@@ -1,9 +1,10 @@
+import {mapBuildingFeatures} from './building-details.mjs';
 import {tsunamiDepthColor} from './tsunami-map-model.mjs';
 
 /** One map for normal browsing and exact, previously checked height results. */
 export function createTsunamiMap(){
  const $=id=>document.getElementById(id);let map,home=null,initialFocus=null,result=null,layers=[],generation=0,controller=null;
- let tsunamiEnabled=false,heightTimer;
+ let tsunamiEnabled=false,heightTimer,vectorMap,selectBuilding=()=>{},buildingRequest=0;
  let communities=[],selectCommunity=()=>{},people=[],reports=[],caseLayers=[],selectPerson=()=>{},selectReport=()=>{},pick=null,showSafe=true,caseSignature=null;
  const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const en=()=>document.documentElement.lang==='en';
@@ -19,19 +20,19 @@ export function createTsunamiMap(){
   }
   for(const person of people.filter(p=>validPosition(p.position)&&(showSafe||!['SAFE','RESCUED'].includes(p.status)))){
    const symbol=person.status==='SOS'?'SOS':person.status==='UNREPORTED'?'?':`<img src="/web1617-${person.status==='RESCUED'?'rescued':'safe'}.svg" alt="">`;
-   const marker=L.marker([person.position.latitude,person.position.longitude],{icon:L.divIcon({className:'person-map-marker',html:`<span class="person-symbol ${escape(person.status)}">${symbol}</span>${person.impactAt?`<span class="person-impact" aria-label="${local('衝撃を検知','Impact detected')}">!</span>`:''}${person.enclosedAt?`<span class="person-enclosed" aria-label="${local('閉所を検知','Enclosed space detected')}">▣</span>`:''}`,iconSize:[44,44],iconAnchor:[22,22]}),title:person.label,keyboard:true});
+   const marker=L.marker([person.position.latitude,person.position.longitude],{icon:L.divIcon({className:'person-map-marker',html:`<span class="person-symbol ${escape(person.status)}">${symbol}</span>${person.impactAt?`<span class="person-impact" aria-label="${local('衝撃を検知','Impact detected')}"><img src="/web1617-impact-collision.svg" alt=""></span>`:''}${person.enclosedAt?`<span class="person-enclosed" aria-label="${local('閉所を検知','Enclosed space detected')}"><img src="/web1617-enclosed.png" alt=""></span>`:''}`,iconSize:[44,44],iconAnchor:[22,22]}),title:person.label,keyboard:true});
    marker.on('click',()=>selectEntry({kind:'person',id:person.id,...person.position}));marker.addTo(map);caseLayers.push(marker);
   }
   const occupied=entries.map(p=>{const c=map.latLngToContainerPoint([p.latitude,p.longitude]);return {x:c.x-26,y:c.y-26,w:52,h:52};});
   for(const region of communities.filter(validPosition)){
    const label=en()?region.nameEn:region.nameJa;
-   const html=`<span class="community-map-label"><strong>${escape(label)}</strong><span>SOS ${region.sos} · ${local('応答なし','No response')} ${region.unreported}</span></span>`;
+   const html=`<span class="community-map-label"><strong>${escape(label)}</strong>${[['sos','SOS','SOS'],['unreported','応答なし','No response'],['safe','無事','Safe'],['rescued','救助済み','Rescued']].map(([key,ja,en])=>`<span>${local(ja,en)} ${region[key]}${local('人','')}</span>`).join('')}</span>`;
    const point=map.latLngToContainerPoint([region.latitude,region.longitude]),size=map.getSize();
-   const options=[[0,0],[0,-90],[0,90],[-100,0],[100,0],[-100,-90],[100,-90],[-100,90],[100,90],[0,-155],[0,155]];
-   const score=([x,y])=>{const r={x:point.x+x-86,y:point.y+y-29,w:172,h:58};return occupied.reduce((n,o)=>n+Math.max(0,Math.min(r.x+r.w,o.x+o.w)-Math.max(r.x,o.x))*Math.max(0,Math.min(r.y+r.h,o.y+o.h)-Math.max(r.y,o.y)),0)+(r.x<5||r.x+r.w>size.x-5||r.y<10||r.y+r.h>size.y-50?100000:0)+Math.hypot(x,y);};
-   const [dx,dy]=options.sort((a,b)=>score(a)-score(b))[0];occupied.push({x:point.x+dx-86,y:point.y+dy-29,w:172,h:58});
+   const options=[[0,0],[0,-125],[0,125],[-100,0],[100,0],[-100,-125],[100,-125],[-100,125],[100,125],[0,-180],[0,180]];
+   const score=([x,y])=>{const r={x:point.x+x-68,y:point.y+y-53,w:136,h:106};return occupied.reduce((n,o)=>n+Math.max(0,Math.min(r.x+r.w,o.x+o.w)-Math.max(r.x,o.x))*Math.max(0,Math.min(r.y+r.h,o.y+o.h)-Math.max(r.y,o.y)),0)+(r.x<5||r.x+r.w>size.x-5||r.y<10||r.y+r.h>size.y-50?100000:0)+Math.hypot(x,y);};
+   const [dx,dy]=options.sort((a,b)=>score(a)-score(b))[0];occupied.push({x:point.x+dx-68,y:point.y+dy-53,w:136,h:106});
    if(dx||dy){const line=L.polyline([[region.latitude,region.longitude],map.containerPointToLatLng([point.x+dx,point.y+dy])],{color:'#52616a',weight:1,interactive:false});line.addTo(map);caseLayers.push(line);}
-   const marker=L.marker([region.latitude,region.longitude],{icon:L.divIcon({className:'community-map-marker',html,iconSize:[172,58],iconAnchor:[86-dx,29-dy]}),title:label,keyboard:true,zIndexOffset:500});
+   const marker=L.marker([region.latitude,region.longitude],{icon:L.divIcon({className:'community-map-marker',html,iconSize:[136,106],iconAnchor:[68-dx,53-dy]}),title:label,keyboard:true,zIndexOffset:500});
    marker.on('click',()=>{if(!consumePick(region))selectCommunity(region.id);});marker.addTo(map);caseLayers.push(marker);
   }
   for(const report of reports.filter(r=>!r.cancelled&&validPosition(r))){
@@ -56,9 +57,17 @@ export function createTsunamiMap(){
   if(!globalThis.L)throw Error('地図を読み込めませんでした。通信があるときに開き直してください');
   map=L.map('tsunami-map',{preferCanvas:true,zoomSnap:.25,zoomAnimation:false,fadeAnimation:false,markerZoomAnimation:false,minZoom:4,maxZoom:19,scrollWheelZoom:false,zoomControl:false});
   L.control.zoom({position:'topright'}).addTo(map);
-  map.on('click',event=>consumePick({latitude:event.latlng.lat,longitude:event.latlng.lng}));
-  map.on('moveend zoomend',drawCases);
-  import('./vector-basemap.mjs').then(async({addVectorBasemap})=>{const layer=await addVectorBasemap(map);import('./building-risk.mjs').then(({installBuildingRisk})=>installBuildingRisk(layer.getMaplibreMap())).catch(()=>{$('tsunami-map').dataset.buildingRisk='unavailable';});layer.getMaplibreMap().on('error',()=>{$('tsunami-basemap-state').textContent='背景地図を取得できません。圏外で使うには市全域の地図を保存してください。';});layer.getMaplibreMap().on('idle',()=>{$('tsunami-basemap-state').textContent='';});}).catch(()=>{$('tsunami-basemap-state').textContent='背景地図を読み込めませんでした';});
+  map.on('click',async event=>{
+   const point={latitude:event.latlng.lat,longitude:event.latlng.lng};if(consumePick(point))return;
+   const request=++buildingRequest;if(map.getZoom()<14)return;
+   let buildings=[];
+   if(vectorMap){const layers=['kyoto-risk-buildings','toranomon-risk-buildings'].filter(id=>vectorMap.getLayer(id));if(layers.length)buildings=mapBuildingFeatures(vectorMap.queryRenderedFeatures(vectorMap.project([point.longitude,point.latitude]),{layers}));}
+   try{if(!buildings.length){const {buildingsAt}=await import('./building-picker.mjs');buildings=await buildingsAt(point.latitude,point.longitude,point.longitude>139?'13103':'26100');}
+    if(request===buildingRequest&&!$('buildings').hidden&&!pick&&buildings.length)selectBuilding(buildings);
+   }catch{if(request===buildingRequest)$('tsunami-basemap-state').textContent=local('建物情報を取得できません。通信を確認してもう一度タップしてください。','Building information unavailable. Check your connection and tap again.');}
+  });
+  map.on('moveend zoomend',()=>{buildingRequest++;drawCases();});
+  import('./vector-basemap.mjs').then(async({addVectorBasemap})=>{const layer=await addVectorBasemap(map);vectorMap=layer.getMaplibreMap();import('./building-risk.mjs').then(({installBuildingRisk})=>installBuildingRisk(layer.getMaplibreMap())).catch(()=>{$('tsunami-map').dataset.buildingRisk='unavailable';});layer.getMaplibreMap().on('error',()=>{$('tsunami-basemap-state').textContent='背景地図を取得できません。圏外で使うには市全域の地図を保存してください。';});layer.getMaplibreMap().on('idle',()=>{$('tsunami-basemap-state').textContent='';});}).catch(()=>{$('tsunami-basemap-state').textContent='背景地図を読み込めませんでした';});
   if(initialFocus)map.setView(initialFocus,15,{animate:false});else center();drawCases();$('tsunami-fit').onclick=()=>{if(home)map.setView([home.latitude,home.longitude],15,{animate:false});else if(initialFocus)map.setView(initialFocus,15,{animate:false});else map.setView([35.5,138],6,{animate:false});};
   for(const [cls,label] of [['.leaflet-control-zoom-in','拡大'],['.leaflet-control-zoom-out','縮小']]){const el=$('tsunami-map').querySelector(cls);el?.setAttribute('aria-label',label);el?.setAttribute('title',label);}
  }
@@ -97,5 +106,5 @@ export function createTsunamiMap(){
   }catch(error){if(epoch!==generation)return;clearResult();result=null;$('tsunami-status').textContent=error.message||'計算を完了できませんでした。';$('tsunami-status').dataset.status='error';}
   finally{clearInterval(ticker);if(epoch===generation){$('tsunami-height-form').setAttribute('aria-busy','false');}}
  };
- return {focusHome(){if(home){initialFocus=[home.latitude,home.longitude];if(map)map.setView(initialFocus,16,{animate:false});}},focusVenue(actual=false){initialFocus=actual?[35.6665,139.7495]:[35.0145,135.7625];if(map)map.setView(initialFocus,15,{animate:false});},setHome(value){home=value;},setCommunities(value,onSelect){communities=value;selectCommunity=onSelect||selectCommunity;drawCases();},setPeople(value,onSelect){people=value;selectPerson=onSelect||selectPerson;drawCases();},setReports(value,onSelect){reports=value;selectReport=onSelect||selectReport;drawCases();},setShowSafe(value){showSafe=value;drawCases();},pickLocation(callback,{language='ja'}={}){if(!map)initialize();pick=callback;picker.querySelector('p').textContent=language==='en'?'Select the incident location on the map':'通報する場所を地図上で選んでください';picker.querySelector('button').textContent=language==='en'?'Cancel':'中止';picker.hidden=false;$('tsunami-map').classList.add('selecting-location');},cancelPick:endPick,async show(){try{if(!map)initialize();requestAnimationFrame(()=>{if(!$('buildings').hidden){const center=map.getCenter(),zoom=map.getZoom();map.invalidateSize({pan:false});map.setView(center,zoom,{animate:false});}});}catch(error){$('tsunami-basemap-state').textContent=error.message;}}};
+ return {setBuildingSelect(callback){selectBuilding=callback;},focusRegion(region){if(map)map.setView([region.latitude,region.longitude],16,{animate:false});},focusHome(){if(home){initialFocus=[home.latitude,home.longitude];if(map)map.setView(initialFocus,16,{animate:false});}},focusVenue(actual=false){initialFocus=actual?[35.6665,139.7495]:[35.0145,135.7625];if(map)map.setView(initialFocus,15,{animate:false});},setHome(value){home=value;},setCommunities(value,onSelect){communities=value;selectCommunity=onSelect||selectCommunity;drawCases();},setPeople(value,onSelect){people=value;selectPerson=onSelect||selectPerson;drawCases();},setReports(value,onSelect){reports=value;selectReport=onSelect||selectReport;drawCases();},setShowSafe(value){showSafe=value;drawCases();},pickLocation(callback,{language='ja'}={}){if(!map)initialize();pick=callback;picker.querySelector('p').textContent=language==='en'?'Select the incident location on the map':'通報する場所を地図上で選んでください';picker.querySelector('button').textContent=language==='en'?'Cancel':'中止';picker.hidden=false;$('tsunami-map').classList.add('selecting-location');},cancelPick:endPick,async show(){try{if(!map)initialize();requestAnimationFrame(()=>{if(!$('buildings').hidden){const center=map.getCenter(),zoom=map.getZoom();map.invalidateSize({pan:false});map.setView(center,zoom,{animate:false});}});}catch(error){$('tsunami-basemap-state').textContent=error.message;}}};
 }
