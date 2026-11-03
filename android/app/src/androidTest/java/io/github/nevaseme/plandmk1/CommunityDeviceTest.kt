@@ -1,7 +1,7 @@
 package io.github.nevaseme.plandmk1
 import androidx.compose.runtime.*
 import androidx.compose.ui.test.*
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.lifecycle.ViewModelStore
 import androidx.test.platform.app.InstrumentationRegistry
 import io.github.nevaseme.plandmk1.cloud.*
@@ -18,7 +18,7 @@ import java.util.UUID
 
 /** Offline fixture and separate group; existing memberships, homes and settings are restored. */
 class CommunityDeviceTest {
- @get:Rule val compose=createComposeRule()
+ @get:Rule val compose=createEmptyComposeRule()
  @Test fun scenarioOverviewInjuryReportRestartAndLanguage(){
   val inst=InstrumentationRegistry.getInstrumentation();val app=inst.targetContext.applicationContext as PlanDApplication;val old=app.installation.group.value;val codec=Json{ignoreUnknownKeys=true};val vmStore=ViewModelStore();var language by mutableStateOf("ja")
   val raw=inst.context.assets.open("community-fixture.json").bufferedReader().use{it.readText()};val source=codec.parseToJsonElement(raw).jsonObject;val original=source.getValue("envelope").jsonObject;val originalDevice=original.getValue("roster").jsonObject.getValue("members").jsonArray.first().jsonObject.getValue("deviceIds").jsonArray.first().jsonPrimitive.content
@@ -31,7 +31,7 @@ class CommunityDeviceTest {
    inst.runOnMainSync{org.maplibre.android.MapLibre.getInstance(app);app.installation.setGroup(group);app.installation.selectIncident(group,venue.incidentId);model=PlanViewModel(app);vmStore.put("community-test",model)}
    compose.waitUntil(20000){model.residents.value.size==13&&model.responseEvents.value.size>=12}
    assertEquals(2,model.residents.value.count{residentMapState(it,model.careEvents.value)==MapSafety.RESCUED});assertEquals(12,model.activeVenue.value?.scenario?.people?.size)
-   compose.setContent{CompositionLocalProvider(LocalUiLanguage provides language){PlanDMk1Theme{CommunityScreen(model,"Fictional device verification") {}}}}
+   shellComposeContent{CompositionLocalProvider(LocalUiLanguage provides language){PlanDMk1Theme{CommunityScreen(model,"Fictional device verification") {}}}}
    compose.onNodeWithText("町内会の状況").assertExists();compose.onNodeWithText("レポートを発行").performScrollTo().performClick()
    val directory=File(app.filesDir,"community-reports/$group/${venue.incidentId}");compose.waitUntil(15000){directory.listFiles()?.any{it.extension=="json"}==true}
    val file=directory.listFiles()!!.single{it.extension=="json"};val frozen=file.readText();val report=codec.decodeFromString<CommunityReport>(frozen)

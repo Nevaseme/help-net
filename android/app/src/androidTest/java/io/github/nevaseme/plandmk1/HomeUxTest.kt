@@ -1,6 +1,6 @@
 package io.github.nevaseme.plandmk1
 import androidx.compose.ui.test.*
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.text.input.ImeAction
 import androidx.test.platform.app.InstrumentationRegistry
@@ -19,11 +19,11 @@ class HomeUxTest {
   };return result
  }
  private fun latitude():Double {val controller=map();var value=Double.NaN;InstrumentationRegistry.getInstrumentation().runOnMainSync {value=controller?.cameraPosition?.target?.latitude?:Double.NaN};return value}
- @get:Rule val compose=createComposeRule()
+ @get:Rule val compose=createEmptyComposeRule()
  @Before fun init(){val i=InstrumentationRegistry.getInstrumentation();i.runOnMainSync{MapLibre.getInstance(i.targetContext)}}
  @Test fun searchClearCurrentLocationAndCancelDoNotSave(){
   var located=0;var saved=0;var canceled=0
-  compose.setContent {PlanDMk1Theme {BuildingLocationPicker(MapPoint(35.0145,135.7625),{_,_->saved++},{canceled++},locate={located++;MapPoint(35.0112,135.7748)})}}
+  shellComposeContent {PlanDMk1Theme {BuildingLocationPicker(MapPoint(35.0145,135.7625),{_,_->saved++},{canceled++},locate={located++;MapPoint(35.0112,135.7748)})}}
   val query=compose.onNodeWithText("住所・建物名を検索")
   query.assert(SemanticsMatcher.expectValue(SemanticsProperties.ImeAction,ImeAction.Search)).performTextInput("左京区讃州寺町203")
   query.performImeAction()
@@ -37,11 +37,11 @@ class HomeUxTest {
   compose.onNodeWithText("戻る").performClick();assertEquals(0,saved);assertEquals(1,canceled)
  }
  @Test fun currentLocationFailureKeepsAddress(){
-  compose.setContent {PlanDMk1Theme {BuildingLocationPicker(MapPoint(35.0145,135.7625),{_,_->},{},initialReference=io.github.nevaseme.plandmk1.core.BuildingLocationReference("確認済み住居"),locate={error("現在地を取得できません")})}}
+  shellComposeContent {PlanDMk1Theme {BuildingLocationPicker(MapPoint(35.0145,135.7625),{_,_->},{},initialReference=io.github.nevaseme.plandmk1.core.BuildingLocationReference("確認済み住居"),locate={error("現在地を取得できません")})}}
   compose.onNodeWithText("現在地").performClick();compose.onNodeWithText("現在地を取得できません").assertExists();compose.onNodeWithText("確認済み住居").assertExists()
  }
  @Test fun firstSearchAndRepeatedCurrentLocationMoveActualMap(){
-  compose.setContent {PlanDMk1Theme {BuildingLocationPicker(MapPoint(35.6812,139.7671),{_,_->},{},initialQuery="左京区讃州寺町203",autoSearch=true,locate={MapPoint(35.0145,135.7625)})}}
+  shellComposeContent {PlanDMk1Theme {BuildingLocationPicker(MapPoint(35.6812,139.7671),{_,_->},{},initialQuery="左京区讃州寺町203",autoSearch=true,locate={MapPoint(35.0145,135.7625)})}}
   compose.waitUntil(60000){compose.onAllNodesWithText("京都府京都市左京区讃州寺町203 付近").fetchSemanticsNodes().isNotEmpty()}
   compose.waitUntil(60000){kotlin.math.abs(latitude()-35.011046)<.0001}
   compose.onNodeWithText("現在地").performClick()

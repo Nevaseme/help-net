@@ -44,3 +44,12 @@ User instruction, 2026-11-03: finish search/picker performance and UX; then issu
 - No new iPhone or Mi9T interactions possible while user sleeps. Multi-device radio safety/report/screen-off/reconnect remains separate unfinished verification, not claimed by simulated/browser tests.
 - Completion steps follow finishing-a-development-branch skill with user's explicit backup/no-questions choice: keep named worktree/branch, push checkpoints, no merge or comparison-site changes. User-owned working tree and prior unrelated WIP retained.
 - Operation guide and limitations saved in docs/community-demo-2026-11-03.md. No paid service operations.
+
+## Vivo verification after user unlocked device
+- Updated normal vivo app successfully to 1.5.50/code63; existing app data retained. Test APK also updated.
+- ActivityScenario's automatic activity launch stalled on this OEM. Replaced it in two UI test classes with an explicit instrumentation-shell launch and an empty Compose rule. Select the exact test ComponentActivity, not its MainActivity subclass; the latter caused transient wrong-host failures during the first harness attempt. Product source unchanged.
+- Final combined CommunityDeviceTest + HomeUxTest: 4/4 passed in 12.672 seconds (`.implementation/vivo-final-ui.log`). Independent camera test also passed (5.463s), edit/IME test (6.602s), and location-error preservation test (2.016s).
+- CommunityCloudDeviceTest against published endpoint: 1/1 passed in 2.131 seconds (`.implementation/vivo-community-cloud.log`). Uses an isolated test database/preferences and fictional server group; not the user's group.
+- Verified saved report totals/building links, immutable issued snapshot after injury correction, Japanese/English UI, and actual MapLibre camera movements for search and injected current-location coordinates. GPS accuracy itself was not tested. Screenshot saved privately under `.implementation/community-overview-vivo-en.png`.
+- Community test restores original group in finally; home tests do not save residence changes. Normal MainActivity reopened after tests. No reboot or radio-setting changes.
+- Mi9T two-device radio tests and iPhone-specific community UI validation remain separate pending checks.
