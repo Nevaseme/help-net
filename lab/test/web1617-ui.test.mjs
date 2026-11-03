@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {personPresentation,responseCases,isResolvedCase,reportEditSources} from '../web/web1617-ui.mjs';
+import {personPresentation,responseCases,isResolvedCase,reportEditSources,visiblePeople} from '../web/web1617-ui.mjs';
 import {indexedDB} from 'fake-indexeddb';
 import {Store} from '../web/sync.mjs';
 import {managedIncidentOptions} from '../web/managed-records.mjs';
@@ -51,4 +51,27 @@ test('editing a visible report never chooses a canceled concurrent revision',()=
  assert.deepEqual(reportEditSources({reports:[canceled,active]}),[active]);
  assert.deepEqual(reportEditSources({reports:[canceled,active,other]}),[active,other]);
  assert.deepEqual(reportEditSources({reports:[canceled]}),[canceled]);
+});
+
+test('anonymous pre-disclosure phone observations remain visible without home disclosure',()=>{
+ const result=personPresentation({...person,impactAt:100,enclosedAt:110},[],{start:{createdAt:100}},'me',200,{latitude:35,longitude:135});
+ assert.equal(result.disclosed,false);assert.equal(result.showHome,false);assert.equal(result.showObservations,true);assert.equal(result.name,'応答なし');
+});
+
+test('venue mutual recognition does not expose homes for SOS with a known phone position',()=>{
+ const p={...person,venueSessionId:'demo',homeAddress:'Private home',safety:'SOS'};
+ const v={start:{eventId:'demo',createdAt:1}};
+ const result=personPresentation(p,[],v,'me',200,{latitude:35,longitude:135});
+ assert.equal(result.name,p.name);assert.equal(result.disclosed,true);assert.equal(result.showHome,false);
+ assert.equal(personPresentation(p,[],v,'me',200).showHome,true);
+});
+
+test('map, people and task scopes use the same home community; outside reports remain available',()=>{
+ const records=[{originId:'me',homeLongitude:135.759,safety:'SAFE'},{originId:'west',homeLongitude:135.7595,safety:'SOS'},{originId:'east',homeLongitude:135.763,safety:'SOS'}];
+ const snapshot={id:'me',records,events:[],venue:{scenario:{people:[]},positionMode:'KYOTO'}};
+ assert.deepEqual(visiblePeople(snapshot).map(p=>p.originId),['me','west']);
+ const rows=responseCases(snapshot,[{change:{type:'REPORT',reportId:'outside',category:'道路閉塞',description:'Road in another town'},operatedAt:1}]);
+ assert.deepEqual(rows.map(r=>r.target.id),['west','outside']);
+ assert.deepEqual(visiblePeople({...snapshot,id:'absent'}),[]);
+ assert.equal(visiblePeople({...snapshot,venue:null}).length,3);
 });

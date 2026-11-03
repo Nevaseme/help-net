@@ -1,3 +1,4 @@
+import {translateUI as t,bindStaticUiLanguage} from './web1617-english.mjs';
 import {scenarioAnswers} from './venue-demo.mjs';
 import {attachProfileHome} from './profile-home.mjs';
 import './ui-accessibility.mjs';
@@ -69,7 +70,7 @@ propertyBack.onclick=()=>openSettings('profile');
 $('profile-building').onclick=()=>{tab('property');$('building-registry').open=true;};
 $('training-group').onclick=()=>openSettings('group');
 async function afterJoining(){const own=await store.get(group,id);if(venue||own){if(own&&!venue)tsunamiMap.focusHome?.();tab(canAnswer()&&!view?.answers[id]?'safety':'buildings');}else openSettings('profile');}
-function openSettings(name){tab('settings');document.body.dataset.settingsView=name;$('settings').querySelector('h2').textContent=({profile:'自分の登録情報',group:'グループ',incidents:'訓練・地震'})[name]||'自分の登録情報';if(name==='profile')$('profile-section').open=true;}
+function openSettings(name){tab('settings');document.body.dataset.settingsView=name;$('settings').querySelector('h2').textContent=t(({profile:'自分の登録情報',group:'グループ',incidents:'訓練・地震'})[name]||'自分の登録情報');if(name==='profile')$('profile-section').open=true;}
 
 // Registration credentials and a resident profile are distinct records.
 // Explain the next step beside the disabled controls, including after offline reopen.
@@ -80,6 +81,7 @@ for(const section of ['safety','residents','buildings']){
  button.textContent='自分の登録情報を開く';button.onclick=()=>{openSettings('profile');$('profile-section').open=true;$('profile-section').scrollIntoView({block:'start'});$('name').focus({preventScroll:true});};
  panel.append(text,button);host.insertBefore(panel,host.querySelector('h2').nextSibling);
 }
+bindStaticUiLanguage(settingsBack);bindStaticUiLanguage(propertyBack);
 const startGuide=document.createElement('button');startGuide.id='safety-start-guide';startGuide.type='button';startGuide.className='secondary';startGuide.textContent='災害を選ぶ／地震・訓練を報告';startGuide.hidden=true;
 startGuide.textContent='訓練・地震を開く';startGuide.onclick=()=>openSettings('incidents');
 $('own').after(startGuide);
@@ -89,7 +91,7 @@ const careKey=()=>`care:${group}:${incidentId}:${selected}`;
 const incidentScope=()=>({groupId:group,incidentId,authorId:id});
 const saves=new SaveFeedback(renderFeedback);
 const link=new ConnectionFeedback(renderFeedback,()=>closeTransport());
-const placeUI=createPlaceUi({$,esc,time,store:()=>store,identity:()=>id,snapshot:()=>({group,incidentId,view,residents:records,rows:placeRows,venue}),saves,changed,selectResident:person=>{selected=person;tab('residents');renderDetail();renderFeedback();}});
+const placeUI=createPlaceUi({$,esc,time,store:()=>store,identity:()=>id,snapshot:()=>({group,incidentId,view,residents:records,rows:placeRows,venue}),saves,changed,visibleResidents:()=>designUi?.buildingResidents()||[],selectResident:person=>{selected=person;tab('residents');renderDetail();renderFeedback();}});
 function renderFeedback(){
  const s=link.state,own=records.some(r=>r.originId===id),busy=saves.busy;
  for(const key of ['profile','safety','care','incident']){const f=saves.get(key==='care'?careKey():key);const el=$(key+'-feedback');el.textContent=f.text;el.dataset.status=f.status;el.setAttribute('aria-busy',String(f.status==='pending'));}
@@ -125,7 +127,7 @@ function renderFeedback(){
 }
 const message=text=>{$('message').textContent=text;};
 function task(fn){return Promise.resolve().then(fn).catch(e=>message(e.message||'操作できませんでした'));}
-function tab(name){if(name==='settings'){document.body.dataset.settingsView='profile';$('settings').querySelector('h2').textContent='自分の登録情報';}designUi?.closeSheets();tsunamiMap.cancelPick?.();activePage=name;document.body.dataset.page=name;for(const x of ['safety','residents','buildings','response','settings','property'])$(x).hidden=x!==name;document.querySelectorAll('[data-tab]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tab===name)));$('app-menu').close();$('menu-open').setAttribute('aria-expanded','false');window.scrollTo({top:0,behavior:'instant'});if(name==='buildings')tsunamiMap.show();if(name==='response')renderResponse();}
+function tab(name){if(name==='settings'){document.body.dataset.settingsView='profile';$('settings').querySelector('h2').textContent=t('自分の登録情報');}designUi?.closeSheets();tsunamiMap.cancelPick?.();activePage=name;document.body.dataset.page=name;for(const x of ['safety','residents','buildings','response','settings','property'])$(x).hidden=x!==name;document.querySelectorAll('[data-tab]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tab===name)));$('app-menu').close();$('menu-open').setAttribute('aria-expanded','false');window.scrollTo({top:0,behavior:'instant'});if(name==='buildings')tsunamiMap.show();if(name==='response')renderResponse();}
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{startupNavigationChosen=true;tab(b.dataset.tab);});
 wireSheetHandle($('app-menu'));
 $('menu-open').onclick=()=>{if($('app-menu').open){$('app-menu').close();return;}designUi?.closeSheets();$('app-menu').show();$('menu-close').focus({preventScroll:true});$('menu-open').setAttribute('aria-expanded','true');};
@@ -252,6 +254,7 @@ $('connect').onsubmit=e=>{e.preventDefault();task(connect);};for(const b of docu
 for(const phase of ['AB','BC'])$('phase-'+phase.toLowerCase()).onclick=()=>task(()=>{if(!link.requestPhase($('role').value,phase))return;try{socket.send(JSON.stringify({kind:'phase',phase}));}catch{stop('接続が終了しました。再接続して経路を確認してください。');}});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&socket)stop('画面を閉じたため停止');});
 window.addEventListener('pagehide',()=>stop());
+bindStaticUiLanguage(document.querySelector('.app-notes'));
 designUi=createWeb1617Ui({map:tsunamiMap,selectBuilding:value=>{tab('property');$('building-registry').open=true;[...$('building-list').querySelectorAll('[data-building]')].find(b=>b.dataset.building===value)?.click();},snapshot:()=>({records,events,view,id,roster,group,incidentId,placeRows,venue}),getStore:()=>store,changed,tab,selectPerson:value=>{selected=value;}});
 await task(async()=>{
  cloudMode=!!document.querySelector('meta[name="tasukeai-cloud"]');
@@ -266,7 +269,7 @@ await task(async()=>{
  attachCityOffline({store,getGroup:()=>group,host:document.querySelector('.appearance-settings').parentElement});
  if($('cloud-map-preview'))$('cloud-map-preview').onclick=()=>tab('buildings');$('tsunami-back').onclick=()=>tab('settings');
  if($('cloud-map-preview'))$('cloud-map-preview').textContent='地図を見る';
- document.querySelector('footer').textContent='Tasukeai · PWA 1.6.31 · この端末に記録を保存';
+ document.querySelector('footer').textContent='Tasukeai · PWA 1.6.32 · この端末に記録を保存';
  await refresh();
  if(document.body.classList.contains('registration-needed'))openSettings('group');else if(!startupNavigationChosen)await afterJoining();
  if('serviceWorker'in navigator){await setupAppUpdates();$('offline').textContent=cloudMode?'オフライン起動の準備ができました。接続できるときに記録を共有します。':'オフライン起動の準備ができました。通信には同じWi-Fiと実験サーバーが必要です。';}
