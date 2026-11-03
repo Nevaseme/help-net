@@ -122,3 +122,13 @@
 - 両端末のBluetooth/Wi-Fi ON・ネット未接続・消灯を確認後、接続ボタン操作なしで自動復帰。切断中に生成したSAFEと通報が双方向に届き、別のRoom接続から永続化も照合した（両方all-pass、画面OFF）。実OS再起動は次の段階。
 
 - 再起動段階では両端末のBluetooth/Wi-Fi OFF、接続0、ネット未接続を確認し、新しいSOSと通報を未送信で保存した（両方reboot-queued）。再起動前の別読み取りでも相手の最新回答SAFE・段階4通報未受信を確認。両端末へ実OS再起動を実行済み。通常アプリや試験を起動せず、利用者の初回ロック解除と無線ON後に共有サービス・データを照合する。
+
+
+### 実OS再起動の初回結果
+
+- 利用者が初回ロック解除・Bluetooth/Wi-Fi ON・消灯を実施。通常アプリもinstrumentationも起動せず、端末起動時間（vivo約80秒、Mi約92秒）とRoomを読み取った。
+- vivoは通常SharingServiceがForegroundで起動し、Nearbyの広告・探索も自動再開した。BOOT_COMPLETEDからの復帰に成功。
+- Mi 9Tはアプリプロセス自体が未起動。OSログ18:27:58.877に `BroadcastQueueInjector: Unable to launch app io.github.nevaseme.plandmk1/10029 for broadcast ... BOOT_COMPLETED ... process is not permitted to auto start` が2件記録された。
+- MiもRECEIVE_BOOT_COMPLETEDはgranted=true、stopped=false、自動共有対象の保存設定は保持。アプリ内例外ではなくMIUIの自動起動制限が起動通知を阻止している。
+- 両端末とも相手の段階4通報は未受信、最新安否はSAFEのまま。再起動後の双方向共有はまだ未合格。利用者にMiの自動起動許可を依頼し、許可後にMiのみ再起動して再試験する。
+- 証拠：`.implementation/radio-boot-evidence/` 内の再起動前後snapshot結果と各端末`-boot-log.txt`。
