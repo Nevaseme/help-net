@@ -29,6 +29,8 @@ class DecisionCorrectionsDeviceTest {
   val ja=context.createConfigurationContext(android.content.res.Configuration(context.resources.configuration).apply {setLocale(java.util.Locale.JAPANESE)})
   shellComposeContent {CompositionLocalProvider(LocalUiLanguage provides "ja",androidx.compose.ui.platform.LocalContext provides ja){PlanDMk1Theme {SituationScreen(listOf(unreported,safe),listOf(home),point,now,listOnly=true)}}}
   compose.onNodeWithText("PRIVATE SAFE NAME").assertDoesNotExist();compose.onNodeWithText("PRIVATE BEDROOM").assertDoesNotExist();compose.onNodeWithText("PRIVATE MEMO").assertDoesNotExist()
+  compose.onNode(hasText("無事の人") and hasClickAction()).assertIsNotEnabled().performTouchInput { click() }
+  compose.onNodeWithContentDescription("詳細を閉じる").assertDoesNotExist()
   compose.onNodeWithText("確認対象").performClick()
   compose.onNodeWithText("RC造").performScrollTo().assertIsDisplayed()
   compose.onNodeWithText("3階建").assertIsDisplayed()

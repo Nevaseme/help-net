@@ -97,6 +97,10 @@ fun SituationScreen(
     val unknown = people.filterNot { it.hasPosition(now) }
     LaunchedEffect(openList) { if (openList) { sheet = "all"; listFilter = null; areaIds = null } }
     val close = { sheet = null; onListClosed() }
+    val selectedPerson = people.find { it.id == selectedId }?.takeIf { it.canOpenDetails() }
+    LaunchedEffect(sheet, selectedPerson?.id) {
+        if (sheet == "person" && selectedPerson == null) close()
+    }
     val visible=LocalMapVisible.current
     LaunchedEffect(visible){if(!visible){sheet=null;choosingReport=false}}
     Box(Modifier.fillMaxSize()) {
@@ -135,7 +139,7 @@ fun SituationScreen(
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             SituationMap(people, homes, center, showSafe, now, preview, camera, initialZoom=initialZoom, tsunamiResult=tsunamiResult,neighborhoods=neighborhoods.filter {it.row.id!=ownNeighborhoodId},onNeighborhood={neighborhoodId=it;sheet="neighborhood"},
-                onPerson = { selectedId = it.id; sheet = "person" },
+                onPerson = { if (it.canOpenDetails()) { selectedId = it.id; sheet = "person" } },
                 onHome = { extraHome = it; homePersonId = null; homeId = it.id; sheet = "home" },
                 onOverlapping = { areaIds = it.map(MapPerson::id); listFilter = null; sheet = "overlap" }, onError = { failed = true }, modifier = Modifier.fillMaxSize(),
                 assessmentIntensity=assessmentIntensity,onReportPoint=if(choosingReport){{point->choosingReport=false;onAddReport?.invoke(point)}}else null,reports=reports,onReport=onReport)
@@ -160,9 +164,9 @@ fun SituationScreen(
             }
         }
     }
-    if (sheet != null && LocalMapVisible.current) {
+    if (sheet != null && LocalMapVisible.current && (sheet != "person" || selectedPerson != null)) {
         key(sheet) {
-        ApprovedSheet("",close,scrollContent=false,footer=if(sheet=="person") {{people.find {it.id==selectedId}?.let {PersonDetailActions(it,canRescue,canUndo(it),onRescue,onUndo)}}} else null) {
+        ApprovedSheet("",close,scrollContent=false,footer=if(sheet=="person") {{selectedPerson?.let {PersonDetailActions(it,canRescue,canUndo(it),onRescue,onUndo)}}} else null) {
             when (sheet) {
                 "statistics" -> Column(Modifier.fillMaxWidth().padding(22.dp),verticalArrangement=Arrangement.spacedBy(16.dp)){
                     DetailHeading(uiText("safety_statistics"),null,close)
@@ -174,7 +178,7 @@ fun SituationScreen(
                         NeighborhoodDetail(n,sheet=="neighborhood-details",{n.point?.let {camera.move(it)};close()},{sheet="neighborhood-details"},onReport=onReport)
                     }
                 }
-                "person" -> people.find { it.id == selectedId }?.let { person ->
+                "person" -> selectedPerson?.let { person ->
                     PersonMapDetail(person, now, canRescue, canUndo(person), onRescue, onUndo, onHome = { home -> extraHome = home; homePersonId = person.id; homeId = home.id; sheet = "home" }, onClose = close, history = { history(person) }, feedback = { feedback(person) },showActions=false,onResponse=onPersonResponse?.let {action->{action(person.id)}})
                 }
                 "home" -> visibleHomeDetail(homeId,homePersonId,people,homes,extraHome)?.let { home ->
@@ -252,8 +256,10 @@ fun filteredPeople(people:List<MapPerson>,filter:String?,now:Long)=when(filter){
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) { Image(painterResource(resource), null, Modifier.size(24.dp)); Text(text, style = MaterialTheme.typography.bodyMedium) }
 }
 
+private fun MapPerson.canOpenDetails() = state != MapSafety.SAFE && state != MapSafety.RESCUED
+
 @Composable private fun PersonRow(person: MapPerson, now: Long, unknown: Boolean, click: () -> Unit) {
-    Row(Modifier.fillMaxWidth().clickable(onClick = click).padding(vertical = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Row(Modifier.fillMaxWidth().clickable(enabled = person.canOpenDetails(), onClick = click).padding(vertical = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         if (!unknown) StateSymbol(person.state) else PlanIcon("person", null)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(personText(person),fontSize=15.sp,lineHeight=22.sp,fontWeight=FontWeight.Bold)
@@ -261,7 +267,7 @@ fun filteredPeople(people:List<MapPerson>,filter:String?,now:Long)=when(filter){
             if(!person.hasPosition(now)&&person.registeredPlaceVisible&&person.bedroom.isNotBlank())Text(person.bedroom,fontSize=13.sp,lineHeight=21.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
 
         }
-        PlanIcon("chevron",null,Modifier.size(16.dp))
+        if (person.canOpenDetails()) PlanIcon("chevron",null,Modifier.size(16.dp))
     }
     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 }
