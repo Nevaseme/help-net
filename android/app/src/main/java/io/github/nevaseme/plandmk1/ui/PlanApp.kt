@@ -35,6 +35,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nevaseme.plandmk1.*
+import io.github.nevaseme.plandmk1.cloud.mapMunicipalityOrNull
 import io.github.nevaseme.plandmk1.core.*
 import io.github.nevaseme.plandmk1.nearby.NearbyTransport
 import java.text.DateFormat
@@ -331,7 +332,7 @@ private fun SettingsScreen(model: PlanViewModel, own: Resident?, group: String, 
         if(!search){homeCandidate=null;searchHome=false;pickingHome=true;return}
         val requested=query.trim()
         homeScope.launch {searchingHome=true;try {
-            val candidates=homeLookup.candidates(requested,model.cloud.state.value.municipality?.code)
+            val candidates=homeLookup.candidates(requested,model.cloud.state.value.mapMunicipalityOrNull()?.code)
             when(candidates.size){0->homeSearchError="場所が見つかりません。住所を詳しく入力してください";1->selectHomeCandidate(candidates.single());else->homeCandidates=candidates}
         }catch(e:kotlinx.coroutines.CancellationException){throw e}catch(_:Exception){homeSearchError="検索できませんでした。もう一度お試しください"}finally{searchingHome=false}}
     }
@@ -377,7 +378,7 @@ private fun OfflineMapScreen(model:PlanViewModel,own:Resident?) {
     val offline by model.maps.state.collectAsStateWithLifecycle()
     val cloud by model.cloud.state.collectAsStateWithLifecycle()
     val group by model.group.collectAsStateWithLifecycle()
-    val city=cloud.takeIf {it.groupId==group}?.municipality
+    val city=cloud.takeIf {it.groupId==group}?.mapMunicipalityOrNull()
     var deleteConfirm by remember {mutableStateOf(false)}
     LaunchedEffect(city?.code){model.maps.selectCity(city?.code)}
     LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {

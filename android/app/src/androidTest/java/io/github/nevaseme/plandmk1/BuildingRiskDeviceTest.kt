@@ -60,6 +60,22 @@ class BuildingRiskDeviceTest {
                 main {result=map.queryRenderedFeatures(if(layer==BuildingRiskOverlay.OVERVIEW)RectF(view.width*.45f,view.height*.45f,view.width*.55f,view.height*.55f) else RectF(0f,0f,view.width.toFloat(),view.height.toFloat()),layer)}
                 return result
             }
+            if(InstrumentationRegistry.getArguments().getString("region")=="toranomon") {
+                main {map.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(35.6665,139.7495),16.0))}
+                await(90_000){features("toranomon-risk-buildings").isNotEmpty()}
+                val buildings=features("toranomon-risk-buildings")
+                assertTrue(buildings.all {it.hasProperty("bid")&&it.hasProperty("p")})
+                main {map.moveCamera(CameraUpdateFactory.zoomTo(12.0))}
+                await(30_000){features("toranomon-risk-overview").isNotEmpty()}
+                main {map.moveCamera(CameraUpdateFactory.zoomTo(16.0))}
+                await(30_000){features("toranomon-risk-buildings").isNotEmpty()}
+                var bitmap:Bitmap?=null
+                main {map.snapshot {bitmap=it}}
+                await {bitmap!=null}
+                File(context.filesDir,"toranomon-map.png").outputStream().use {bitmap!!.compress(Bitmap.CompressFormat.PNG,100,it)}
+                File(context.filesDir,"toranomon-map-test.json").writeText(JSONObject().put("buildings",buildings.size).put("overview",true).put("zoomBack",true).toString())
+                return
+            }
             await(90_000){features(BuildingRiskOverlay.BUILDINGS).isNotEmpty()}
             val initialMs=SystemClock.elapsedRealtime()-activity.createdAt
             val first=features(BuildingRiskOverlay.BUILDINGS)

@@ -1,6 +1,8 @@
 // Approved terminology: docs/superpowers/plans/2026-10-30-english-ui-glossary.csv
 // Context-specific labels and composed messages are handled by language.mjs.
 export const englishUI = {
+  "京都モードは京都、現在地モードは虎ノ門ヒルズ周辺の地図・住所を自動で準備します。": "Maps and addresses are prepared automatically: Kyoto for assigned locations, Toranomon Hills for actual locations.",
+  "活動地域は通常の地図保存と住所検索に使います。会場デモの地図は位置モードから自動で準備します。": "The group area is used for everyday maps and address search. Demo maps are prepared automatically for the selected location mode.",
   "地震発生": "Earthquake",
   "地図": "Map",
   "一覧": "Resident list",

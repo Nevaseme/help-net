@@ -62,7 +62,7 @@ fun CloudSharingPanel(model:PlanViewModel,ownName:String,onCommunication:()->Uni
                 SectionTitle("グループの設定")
                 Text("地図保存・住所検索の地域",style=MaterialTheme.typography.titleMedium)
                 Text(state.municipality?.let{"${it.prefecture} ${it.name}"}?:"未設定")
-                Text("市全域の地図保存と住所検索に使います。デモで参加者を表示する位置とは別の設定です。",style=MaterialTheme.typography.bodySmall)
+                Text("通常の地図保存と住所検索に使います。会場デモの地図は位置モードから自動で準備します。",style=MaterialTheme.typography.bodySmall)
                 if(state.admin) {
                     TextButton(onClick={choosingCity=!choosingCity},enabled=!state.busy){Text(if(choosingCity)"選択を閉じる" else "市を変更")}
                     if(choosingCity)io.github.nevaseme.plandmk1.cloud.GroupMunicipality.available.forEach {city->
@@ -203,7 +203,7 @@ fun CloudSyncButton(busy: Boolean, onSync: () -> Unit) {
         listOf(false to tr("京都の架空位置","Assigned locations in Kyoto"),true to tr("参加者の現在地","Participants’ actual locations")).forEach {(actual,label)->
             Row(Modifier.fillMaxWidth().heightIn(min=48.dp).selectable(selected=actualPosition==actual,enabled=!busy,role=Role.RadioButton,onClick={onPositionMode(if(actual)"ACTUAL" else "KYOTO")}),verticalAlignment=Alignment.CenterVertically){RadioButton(selected=actualPosition==actual,onClick=null,enabled=!busy);Spacer(Modifier.width(8.dp));Text(label)}
         }
-        Text(if(actualPosition)tr("位置情報の許可が必要です。","Location permission is required.") else tr("京都の建物に分散して割り当てます。","Assign participants to buildings across Kyoto."),style=MaterialTheme.typography.bodySmall)
+        Text(if(actualPosition)tr("虎ノ門ヒルズ周辺の地図・住所を自動で準備します。位置情報の許可が必要です。","Maps and addresses around Toranomon Hills are prepared automatically. Location permission is required.") else tr("京都の建物に分散して割り当て、京都の地図を自動で準備します。","Assign participants to buildings across Kyoto and prepare the map automatically."),style=MaterialTheme.typography.bodySmall)
         OutlinedTextField(password,onPassword,label={Text(tr("参加パスワード","Participation password"))},
             visualTransformation=if(visible)VisualTransformation.None else PasswordVisualTransformation(),singleLine=true,enabled=!busy,
             isError=attempted&&invalid,supportingText={Text(if(attempted&&invalid)tr("8〜128文字で入力してください（現在${password.length}文字）","Enter 8–128 characters (${password.length} entered).") else tr("8〜128文字。参加者に伝えるパスワードです。","8–128 characters. Share this with participants."))},

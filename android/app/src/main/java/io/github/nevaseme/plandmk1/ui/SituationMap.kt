@@ -181,7 +181,7 @@ fun SituationMap(
                 }
                 val model=latestRiskModel
                 val wide=map.cameraPosition.zoom<14
-                val risk=if(model!=null && !wide) map.queryRenderedFeatures(map.projection.toScreenLocation(point),BuildingRiskOverlay.BUILDINGS,BuildingRiskOverlay.OVERVIEW).firstOrNull() else null
+                val risk=if(model!=null && !wide) map.queryRenderedFeatures(map.projection.toScreenLocation(point),BuildingRiskOverlay.BUILDINGS,BuildingRiskOverlay.OVERVIEW,"toranomon-risk-buildings","toranomon-risk-overview").firstOrNull() else null
                 if(model!=null && wide) {
                     camera.move(MapPoint(point.latitude,point.longitude),16.8)
                     true

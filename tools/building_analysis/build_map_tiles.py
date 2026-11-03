@@ -46,16 +46,16 @@ def tile_geometry(rows, z, x, y, layer='buildings'):
         'extents':EXTENT, 'y_coord_down':True,
     })
 
-def build():
-    source = ASSETS/'kyoto-building-assessment'
-    dest = ASSETS/'kyoto-risk-tiles'
+def build(source=None,dest=None,staging=None,attribution=None):
+    source = source or ASSETS/'kyoto-building-assessment'
+    dest = dest or ASSETS/'kyoto-risk-tiles'
     dest.mkdir(exist_ok=True)
     index = json.loads((source/'index.json').read_text(encoding='utf-8'))
     model_bytes=(source/'model.json').read_bytes()
     assert hashlib.sha256(model_bytes).hexdigest()==index['modelSha256']
     model=json.loads(model_bytes)
     curves={p:c['full'] for p,c in model['curves'].items()}
-    dbpath=Path('.implementation/map-staging.sqlite');dbpath.parent.mkdir(exist_ok=True)
+    dbpath=staging or Path('.implementation/map-staging.sqlite');dbpath.parent.mkdir(exist_ok=True)
     db=sqlite3.connect(dbpath)
     db.executescript('DROP TABLE IF EXISTS buildings; DROP TABLE IF EXISTS bounds; CREATE TABLE buildings(id INTEGER PRIMARY KEY,bid TEXT,geom BLOB,props TEXT); CREATE VIRTUAL TABLE bounds USING rtree(id,minx,maxx,miny,maxy);')
     tiles={z:set() for z in range(14,17)}
@@ -102,11 +102,14 @@ def build():
             for y in range(min(y for x,y in existing),max(y for x,y in existing)+1):
                 if (x,y) not in existing:save(z,x,y,tile_geometry([],z,x,y,'overview' if z<14 else 'buildings'))
     bounds=[min(c['bbox'][i] for c in index['chunks']) if i<2 else max(c['bbox'][i] for c in index['chunks']) for i in range(4)]
-    tilejson={'tilejson':'2.2.0','tiles':['asset://kyoto-risk-tiles/{z}/{x}/{y}.pbf'],'minzoom':8,'maxzoom':16,'bounds':bounds,'attribution':'京都市・国土交通省 PLATEAU / 内閣府 / PlanD独自試算'}
+    tilejson={'tilejson':'2.2.0','tiles':['asset://'+dest.name+'/{z}/{x}/{y}.pbf'],'minzoom':8,'maxzoom':16,'bounds':bounds,'attribution':attribution or '京都市・国土交通省 PLATEAU / 内閣府 / PlanD独自試算'}
     (dest/'tiles.json').write_text(json.dumps(tilejson,ensure_ascii=False),encoding='utf-8')
     metadata={'buildings':count,'geometryBuildings':count-no_geometry,'withoutGeometry':no_geometry,'repairedGeometry':repaired,'profileCounts':profiles,'modelSha256':index['modelSha256'],'sourceIndexSha256':hashlib.sha256((source/'index.json').read_bytes()).hexdigest(),'tiles':outputs,'bytes':sum(t['bytes'] for t in outputs),'overview':'simplified individual footprints grouped by assessment profile; no area average; sub-0.01-pixel-squared shapes omitted','overviewStats':overview_stats,'overviewExtent':OVERVIEW_EXTENT,'extent':EXTENT}
     (dest/'manifest.json').write_text(json.dumps(metadata,ensure_ascii=False,indent=2),encoding='utf-8')
     db.close()
     print({k:v for k,v in metadata.items() if k not in ('tiles','profileCounts')},flush=True)
 
-if __name__=='__main__':build()
+if __name__=='__main__':
+    import argparse
+    parser=argparse.ArgumentParser();parser.add_argument('--source',type=Path);parser.add_argument('--dest',type=Path);parser.add_argument('--staging',type=Path);parser.add_argument('--attribution')
+    args=parser.parse_args();build(args.source,args.dest,args.staging,args.attribution)

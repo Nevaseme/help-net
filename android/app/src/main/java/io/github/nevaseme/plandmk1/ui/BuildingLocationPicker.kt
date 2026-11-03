@@ -1,4 +1,6 @@
 package io.github.nevaseme.plandmk1.ui
+
+import io.github.nevaseme.plandmk1.cloud.mapMunicipalityOrNull
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -57,7 +59,7 @@ import kotlinx.coroutines.launch
  val permission=rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()){grants->if(grants.values.any{it})currentLocation()else message=tr("現在地を使うには位置情報を許可してください。住所検索でも選べます","Allow location access, or search by address.")}
  fun requestLocation(){dismissKeyboard();if(locate!=null||listOf(Manifest.permission.ACCESS_FINE_LOCATION,Manifest.permission.ACCESS_COARSE_LOCATION).any{ContextCompat.checkSelfPermission(app,it)==PackageManager.PERMISSION_GRANTED})currentLocation()else permission.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION,Manifest.permission.ACCESS_COARSE_LOCATION))}
  var busy by remember {mutableStateOf(false)}
- fun search(){if(searching)return;dismissKeyboard();scope.launch {searching=true;message="";try{val found=repo.candidates(query,app.cloud.state.value.municipality?.code);if(found.isEmpty())message=tr("場所が見つかりません。住所を詳しく入力してください","Location not found. Enter a more detailed address.") else if(found.size==1)useCandidate(found.single())else matches=found}catch(e:CancellationException){throw e}catch(_:Exception){message=tr("検索できませんでした。もう一度お試しください","Search failed. Please try again.")}finally{searching=false}}}
+ fun search(){if(searching)return;dismissKeyboard();scope.launch {searching=true;message="";try{val found=repo.candidates(query,app.cloud.state.value.mapMunicipalityOrNull()?.code);if(found.isEmpty())message=tr("場所が見つかりません。住所を詳しく入力してください","Location not found. Enter a more detailed address.") else if(found.size==1)useCandidate(found.single())else matches=found}catch(e:CancellationException){throw e}catch(_:Exception){message=tr("検索できませんでした。もう一度お試しください","Search failed. Please try again.")}finally{searching=false}}}
  LaunchedEffect(Unit){if(autoSearch&&query.isNotBlank())search()}
  LaunchedEffect(point) {if(kotlin.math.hypot((point.latitude-addressPoint.latitude)*111000,(point.longitude-addressPoint.longitude)*91000)>2){address="";addressPoint=point};busy=true;selected=null;choices=emptyList();try {choices=app.buildingAssessments.atPoint(point.latitude,point.longitude,6.2).map{it.building};if(choices.size==1)selected=choices.single()}catch(e:CancellationException){throw e}catch(_:Exception){message=tr("建物の輪郭を読み込めません。ピンの位置で登録できます","Building outlines are unavailable. You can register the pin location.")}finally{busy=false}}
  Dialog(onDismissRequest=onCancel,properties=DialogProperties(usePlatformDefaultWidth=false,decorFitsSystemWindows=false)) {Surface(Modifier.fillMaxSize()) {Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars).imePadding()) {
@@ -74,7 +76,7 @@ import kotlinx.coroutines.launch
    if(choices.size>1)choices.forEachIndexed {i,b->FilterChip(selected=b==selected,onClick={selected=b},label={Text("${tr("建物候補","Building option")} ${i+1}")})}
    if(editingAddress)OutlinedTextField(address,{address=it.take(240)},label={Text(tr("登録する住所・建物名","Address or building name"))},modifier=Modifier.fillMaxWidth(),singleLine=true,keyboardOptions=KeyboardOptions(imeAction=ImeAction.Done),keyboardActions=KeyboardActions(onDone={dismissKeyboard();editingAddress=false}),trailingIcon={if(address.isNotEmpty())IconButton(onClick={address=""}){PlanIcon("close",tr("住所を消す","Clear address"))}})
    else Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){Text(address.ifBlank {tr("住所・建物名を入力（任意）","Add an address or building name (optional)")},Modifier.weight(1f),maxLines=2,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis);TextButton(onClick={editingAddress=true}){Text(tr("編集","Edit"))}}
-   Button(enabled=!busy&&!searching&&(choices.size<=1||selected!=null),onClick={dismissKeyboard();val ref=BuildingLocationReference(address.trim().ifBlank{tr("地図で選択した住居","Home selected on map")},selected?.id,if(selected!=null)"plateau-26100-kyoto-shi-2025" else null,searchSource);if(onHomeConfirm!=null)onHomeConfirm(point,ref)else onConfirm(point,selected?.id)},modifier=Modifier.fillMaxWidth()){Text(tr("この位置にする","Use this location"))}
+   Button(enabled=!busy&&!searching&&(choices.size<=1||selected!=null),onClick={dismissKeyboard();val ref=BuildingLocationReference(address.trim().ifBlank{tr("地図で選択した住居","Home selected on map")},selected?.id,if(selected!=null)if(point.latitude>35.5)"plateau-tokyo-2025-toranomon" else "plateau-26100-kyoto-shi-2025" else null,searchSource);if(onHomeConfirm!=null)onHomeConfirm(point,ref)else onConfirm(point,selected?.id)},modifier=Modifier.fillMaxWidth()){Text(tr("この位置にする","Use this location"))}
   }
  }}}
 }

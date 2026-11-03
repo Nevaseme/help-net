@@ -26,7 +26,7 @@ class PlanDApplication : Application() {
     val quakes by lazy { io.github.nevaseme.plandmk1.data.QuakeStore(database) }
     val responses by lazy { io.github.nevaseme.plandmk1.data.ResponseStore(database){group,incident,id->cloud.venue(group)?.takeIf{it.active(group,incident)}?.allPlacements()?.any{it.deviceId==id}==true} }
     val offlineMaps by lazy { OfflineMapRepository(this) }
-    val buildingAssessments by lazy { io.github.nevaseme.plandmk1.buildings.BuildingAssessmentRepository { assets.open(it) } }
+    val buildingAssessments by lazy { io.github.nevaseme.plandmk1.buildings.BuildingAssessmentRepository(additionalPackages=listOf("toranomon-building-assessment/")) { assets.open(it) } }
     val installation by lazy { InstallationSettings(this) }
     val sharing by lazy { SharingController(this) }
     val position by lazy { io.github.nevaseme.plandmk1.location.PositionController(this) }

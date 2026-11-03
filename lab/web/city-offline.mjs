@@ -1,3 +1,4 @@
+import {mapMunicipality,demoMapMunicipality} from './municipalities.mjs';
 import {CITY_DATA,verifiedBytes,refreshAddressPackage} from './city-addresses.mjs';
 import {CITY_MAP_PATHS} from './city-map-resources.mjs';
 export const CITY_CACHE_PREFIX='tasukeai-city-v2-';
@@ -7,16 +8,17 @@ export async function cityDownloadPlan(code){
  const read=async path=>{const r=await fetch(CITY_DATA+path,{cache:'reload'});if(!r.ok)throw Error('地域データを取得できません');return r.json();};
  const [city,map]=await Promise.all([read(code+'/city.json'),read(code+'/map-manifest.json')]);
  if(map.tileCount>3000||map.bytes>50_000_000)throw Error('この地域は地図配信の保存上限を超えています');
- let riskBytes=0;
+ let riskBytes=0,buildingBytes=0;
  const files=[{url:CITY_DATA+'map-style.json'},{url:CITY_DATA+code+'/city.json'},{url:CITY_DATA+code+'/map-manifest.json'},{url:CITY_DATA+city.addresses.path,...city.addresses},...map.resources.map(r=>({...r,url:mapResourceUrl(r.url)}))];
  if(city.places)files.push({url:CITY_DATA+city.places.path,...city.places});
- if(code==='26100'){
+ if(['26100','13103'].includes(code)){
   const risk=await read(code+'/risk/index.json');riskBytes=risk.bytes;files.push({url:CITY_DATA+code+'/risk/index.json'},...risk.tiles.map(t=>({url:CITY_DATA+code+'/risk/'+t.file,sha256:t.sha256,bytes:t.bytes})));
   const index=await read(code+'/buildings/index.json');
   files.push({url:CITY_DATA+code+'/buildings/index.json'},{url:CITY_DATA+code+'/buildings/model.json',sha256:index.modelSha256});
+  buildingBytes=index.chunks.reduce((n,c)=>n+c.bytes,0);
   files.push(...index.chunks.map(c=>({url:CITY_DATA+code+'/buildings/'+c.file,sha256:c.sha256,bytes:c.bytes})));
  }
- return {code,name:city.name,files,bytes:map.bytes+city.addresses.bytes+(city.places?.bytes||0)+riskBytes+(code==='26100'?88_000_000:0)};
+ return {code,name:city.name,files,bytes:map.bytes+city.addresses.bytes+(city.places?.bytes||0)+riskBytes+buildingBytes};
 }
 export class CityDownload {
  constructor(onProgress=()=>{}){this.onProgress=onProgress;this.controller=null;}
@@ -48,12 +50,28 @@ export class CityDownload {
  }
 }
 export function attachCityOffline({store,getGroup,host}){
- const panel=document.createElement('section');panel.className='city-offline';panel.innerHTML='<h3>市全域の地図を保存</h3><p data-city-state role="status"></p><button type="button" data-city-download>市全域をダウンロード</button><button type="button" class="secondary" data-city-pause hidden>一時停止</button>';
- host.append(panel);const state=panel.querySelector('[data-city-state]'),button=panel.querySelector('[data-city-download]'),pause=panel.querySelector('[data-city-pause]');let busy=false,code=null,plan=null,pendingRefresh=false;
+ const panel=document.createElement('section');panel.className='city-offline';panel.innerHTML='<h3>地図を端末に保存</h3><p data-city-state role="status"></p><button type="button" data-city-download>地図を保存</button><button type="button" class="secondary" data-city-pause hidden>一時停止</button>';
+ host.append(panel);const state=panel.querySelector('[data-city-state]'),button=panel.querySelector('[data-city-download]'),pause=panel.querySelector('[data-city-pause]');let busy=false,code=null,plan=null,pendingRefresh=false,attempted=null;
  const downloader=new CityDownload(p=>{state.textContent=`保存中 ${p.count} / ${p.total} · ${(p.bytes/1048576).toFixed(1)} MB`;});
- async function refresh(){if(busy){pendingRefresh=true;return;}pendingRefresh=false;const city=await store.read('meta','municipality:'+getGroup());if(code!==city?.code){code=city?.code;plan=null;}button.disabled=!code;if(!code){state.textContent='グループの活動地域を管理者が設定してください';return;}
-  const saved=await downloader.status(code);state.textContent=saved?`${city.name}全域 · 保存済み・圏外で利用可能（${(saved.bytes/1048576).toFixed(1)} MB）`:`${city.name}全域 · ${code==='26100'?'約219':code==='13103'?'約16':'約8'} MB`;button.textContent=saved?'地図を保存し直す':'市全域をダウンロード';
+ async function refresh(){
+  if(busy){pendingRefresh=true;return;}pendingRefresh=false;
+  const group=getGroup(),city=await mapMunicipality(store,group),venue=await store.read('meta','venue:'+group);
+  if(group!==getGroup())return;
+  if(code!==city?.code){code=city?.code;plan=null;attempted=null;}
+  button.disabled=!code;if(!code){state.textContent='グループの活動地域を管理者が設定してください';return;}
+  const current=code,existing=await downloader.status(current),saved=current==='13103'&&existing&&!existing.urls.includes(CITY_DATA+'13103/risk/index.json')?null:existing;if(current!==code||group!==getGroup())return;
+  state.textContent=saved?`${city.name}全域 · 保存済み・圏外で利用可能（${(saved.bytes/1048576).toFixed(1)} MB）`:`${city.name}全域 · ${code==='26100'?'約219':code==='13103'?'約18':'約8'} MB`;
+  button.textContent=saved?'地図を保存し直す':'地図を保存';
+  if(!saved&&demoMapMunicipality(venue)&&attempted!==code){attempted=code;await download();}
  }
- button.onclick=async()=>{if(busy||!code)return;busy=true;button.disabled=true;pause.hidden=false;pause.disabled=true;try {state.textContent='保存の準備中…';plan=await cityDownloadPlan(code);pause.disabled=false;const saved=await downloader.download(plan);state.textContent=`${plan.name}全域 · 保存済み・圏外で利用可能（${(saved.bytes/1048576).toFixed(1)} MB）`;button.textContent='地図を保存し直す';}catch(e){state.textContent=e.name==='AbortError'?'保存を一時停止しました。再開できます。':e.name==='QuotaExceededError'?'端末の空き容量が不足しています。保存は未完了です。':e.message;button.textContent='保存を再開';}finally{busy=false;button.disabled=false;pause.hidden=true;if(pendingRefresh)await refresh();}};
- pause.onclick=()=>downloader.pause();for(const event of ['municipality-change','group-change'])window.addEventListener(event,()=>refresh().catch(e=>{state.textContent=e.message;}));refresh().catch(e=>{state.textContent=e.message;});return {refresh};
+ async function download(){
+  if(busy||!code)return;const target=code;busy=true;button.disabled=true;pause.hidden=false;pause.disabled=true;
+  try {state.textContent='保存の準備中…';plan=await cityDownloadPlan(target);if(target!==code||pendingRefresh)return;pause.disabled=false;const saved=await downloader.download(plan);state.textContent=`${plan.name}全域 · 保存済み・圏外で利用可能（${(saved.bytes/1048576).toFixed(1)} MB）`;button.textContent='地図を保存し直す';}
+  catch(e){state.textContent=e.name==='AbortError'?'保存を一時停止しました。再開できます。':e.name==='QuotaExceededError'?'端末の空き容量が不足しています。保存は未完了です。':e.message;button.textContent='保存を再開';}
+  finally{busy=false;button.disabled=false;pause.hidden=true;if(pendingRefresh)await refresh();}
+ }
+ button.onclick=download;pause.onclick=()=>downloader.pause();
+ for(const event of ['municipality-change','group-change','venue-map-change'])window.addEventListener(event,()=>{(async()=>{const target=await mapMunicipality(store,getGroup());if(busy&&target?.code===code)return;if(busy){attempted=null;downloader.pause();}await refresh();})().catch(e=>{state.textContent=e.message;});});
+ window.addEventListener('online',()=>{attempted=null;refresh().catch(e=>{state.textContent=e.message;});});
+ refresh().catch(e=>{state.textContent=e.message;});return {refresh};
 }

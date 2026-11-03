@@ -1,5 +1,7 @@
 package io.github.nevaseme.plandmk1.ui
 
+import io.github.nevaseme.plandmk1.cloud.mapMunicipalityOrNull
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -84,14 +86,14 @@ fun homeLabel(rows: List<PlaceEvent>,person: String): String {
     AlertDialog(onDismissRequest={if(!saving)close()},title={Text(if(building==null)"建物を登録" else "建物情報を訂正")},text={Column(Modifier.verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(8.dp)) {
         OutlinedTextField(label,{label=it.take(80)},label={Text("建物名")},enabled=!saving,singleLine=true)
         AddressSearchField(address,{address=it.take(240);candidates=emptyList();message=""},{picking=true},label="登録する住所・建物名",enabled=!saving)
-        TextButton(enabled=!saving&&!searching&&address.isNotBlank(),onClick={scope.launch {searching=true;message="";try {val found=repo.candidates(address,cloud.municipality?.code);if(found.isEmpty())message="場所が見つかりません。住所を詳しく入力してください" else if(found.size==1){val c=found.single();lat=c.latitude;lon=c.longitude;confirmed=false;plateauId=null;searchRef=c.reference(address);selectedCandidate=c;picking=true}else candidates=found}catch(e:Exception){message=e.message.orEmpty()}finally{searching=false}}}){Text(if(searching)"検索中…" else "住所を検索")}
+        TextButton(enabled=!saving&&!searching&&address.isNotBlank(),onClick={scope.launch {searching=true;message="";try {val found=repo.candidates(address,cloud.mapMunicipalityOrNull()?.code);if(found.isEmpty())message="場所が見つかりません。住所を詳しく入力してください" else if(found.size==1){val c=found.single();lat=c.latitude;lon=c.longitude;confirmed=false;plateauId=null;searchRef=c.reference(address);selectedCandidate=c;picking=true}else candidates=found}catch(e:Exception){message=e.message.orEmpty()}finally{searching=false}}}){Text(if(searching)"検索中…" else "住所を検索")}
 
         candidates.forEach {c->TextButton(onClick={searchRef=c.reference(address);selectedCandidate=c;address=c.address;lat=c.latitude;lon=c.longitude;confirmed=false;plateauId=null;candidates=emptyList();picking=true}){Text(c.address+if(c.precision=="town")" 付近" else "")}}
         if(message.isNotEmpty())Text(message)
         OutlinedButton(enabled=!saving,onClick={picking=true}){Text(if(confirmed)"建物の位置を選び直す" else "地図で建物を選ぶ")}
         if(confirmed)Text("建物の位置を選択済み",style=MaterialTheme.typography.bodyMedium)
         OperationFeedback(model,model.placeSaveKey(PlaceKind.BUILDING,building?.buildingId.orEmpty()))
-    }},confirmButton={TextButton(enabled=!saving&&confirmed&&label.isNotBlank()&&address.isNotBlank(),onClick={model.registerBuilding(building?.buildingId,label,lat.toString(),lon.toString(),BuildingLocationReference(address.trim(),plateauId,if(plateauId!=null)"plateau-26100-kyoto-shi-2025" else null,searchRef)){close()}}){Text("建物情報を保存")}},dismissButton={TextButton(enabled=!saving,onClick=close){Text("閉じる")}})
+    }},confirmButton={TextButton(enabled=!saving&&confirmed&&label.isNotBlank()&&address.isNotBlank(),onClick={model.registerBuilding(building?.buildingId,label,lat.toString(),lon.toString(),BuildingLocationReference(address.trim(),plateauId,if(plateauId!=null)if(lat>35.5)"plateau-tokyo-2025-toranomon" else "plateau-26100-kyoto-shi-2025" else null,searchRef)){close()}}){Text("建物情報を保存")}},dismissButton={TextButton(enabled=!saving,onClick=close){Text("閉じる")}})
     if(picking)BuildingLocationPicker(MapPoint(lat,lon),{point,id->lat=point.latitude;lon=point.longitude;plateauId=id;confirmed=true;picking=false},{picking=false},initialQuery=address.ifBlank{label},initialCandidate=selectedCandidate,onHomeConfirm={point,ref->lat=point.latitude;lon=point.longitude;plateauId=ref.plateauId;address=ref.address;searchRef=ref.searchReference;confirmed=true;picking=false})
 }
 @Composable fun BuildingDetail(model: PlanViewModel,buildingId: String,onResident: (Resident)->Unit,onClose: ()->Unit,registration: Boolean = false) {

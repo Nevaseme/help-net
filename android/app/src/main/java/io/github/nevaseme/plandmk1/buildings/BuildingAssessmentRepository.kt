@@ -45,7 +45,7 @@ data class BuildingAssessment(
 /** Read-only public reference data. Never writes or joins residents' records by inferred IDs.
  * All file work runs on IO; at most two meshes are cached. No network is used.
  */
-class BuildingAssessmentRepository(private val openAsset: (String) -> InputStream) {
+class BuildingAssessmentRepository(private val additionalPackages:List<String> = emptyList(), private val openAsset: (String) -> InputStream) {
     private val json=Json { ignoreUnknownKeys=true }
     private val lock=Mutex()
     private var index: JsonObject?=null
@@ -61,8 +61,14 @@ class BuildingAssessmentRepository(private val openAsset: (String) -> InputStrea
     }
     private fun indexLocked(): JsonObject = index ?: json.parseToJsonElement(read("index.json").decodeToString()).jsonObject.also {
         require(it.getValue("schemaVersion").jsonPrimitive.int==1) { "Unsupported building dataset schema" }
-        index=it
-    }
+        val chunks=it.getValue("chunks").jsonArray.toMutableList()
+        for(packagePrefix in additionalPackages) {
+            val extra=json.parseToJsonElement(openAsset(packagePrefix+"index.json").use { stream->stream.readBytes().decodeToString() }).jsonObject
+            require(extra["schemaVersion"]==it["schemaVersion"] && extra["modelId"]==it["modelId"] && extra["modelSha256"]==it["modelSha256"])
+            chunks+=extra.getValue("chunks").jsonArray.map { c->JsonObject(c.jsonObject+ ("assetPrefix" to JsonPrimitive(packagePrefix))) }
+        }
+        index=JsonObject(it+("chunks" to JsonArray(chunks)))
+    }.let { index!! }
     private fun modelLocked(): JsonObject = model ?: run {
         val idx=indexLocked()
         json.parseToJsonElement(verified(read("model.json"),idx.getValue("modelSha256").jsonPrimitive.content).decodeToString()).jsonObject.also {
@@ -74,7 +80,7 @@ class BuildingAssessmentRepository(private val openAsset: (String) -> InputStrea
         cache.remove(mesh)?.let { cache[mesh]=it; return it }
         val item=indexLocked().getValue("chunks").jsonArray.map { it.jsonObject }
             .firstOrNull { it.getValue("mesh").jsonPrimitive.content==mesh } ?: return emptyList()
-        val bytes=verified(read(item.getValue("file").jsonPrimitive.content),item.getValue("sha256").jsonPrimitive.content)
+        val bytes=verified(openAsset((item["assetPrefix"]?.jsonPrimitive?.content?:prefix)+item.getValue("file").jsonPrimitive.content).use {it.readBytes()},item.getValue("sha256").jsonPrimitive.content)
         val text=GZIPInputStream(bytes.inputStream()).bufferedReader().use { it.readText() }
         val chunk=json.parseToJsonElement(text).jsonObject
         require(chunk.getValue("mesh").jsonPrimitive.content==mesh)

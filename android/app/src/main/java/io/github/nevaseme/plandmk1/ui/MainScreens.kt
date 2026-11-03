@@ -114,7 +114,7 @@ import io.github.nevaseme.plandmk1.core.*
     val reports=incidentResponses.mapNotNull {it.change as? ResponseChange.Report}.filterNot {it.cancelled}.distinctBy {it.reportId}.map {report->MapReport(report.reportId,MapPoint(report.latitude,report.longitude),responseUrgency(incidentResponses,ResponseTarget(TargetKind.REPORT,report.reportId)))}
     val center = if(!picking&&venue?.positionMode=="KYOTO") MapPoint(35.0145,135.7625)
         else positions.find { it.originId == model.localId&&(venue?.positionMode!="ACTUAL"||it.acquiredAt>=venue!!.startedAt) }?.let { MapPoint(it.latitude, it.longitude) }
-            ?: if(venue?.positionMode=="ACTUAL")MapPoint(35.66,139.73) else own?.takeIf {it.latitude.isFinite()&&it.longitude.isFinite()}?.let { MapPoint(it.latitude, it.longitude) } ?: MapPoint(35.003, 135.759)
+            ?: if(venue?.positionMode=="ACTUAL")MapPoint(35.6665,139.7495) else own?.takeIf {it.latitude.isFinite()&&it.longitude.isFinite()}?.let { MapPoint(it.latitude, it.longitude) } ?: MapPoint(35.003, 135.759)
     if (picking) {
         val app=LocalContext.current.applicationContext as PlanDApplication
         val source=remember(app){app.positionSourceFactory()}

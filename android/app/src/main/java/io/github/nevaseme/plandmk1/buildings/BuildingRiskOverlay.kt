@@ -14,7 +14,9 @@ object BuildingRiskOverlay {
     const val OVERVIEW="kyoto-risk-overview"
     private fun color(rate:String)=raw("""["case",["<",$rate,0],"#D4D7DC",["<",$rate,10],"#FBE8C5",["<",$rate,40],"#F2AE5D","#C5672E"]""")
     fun install(style:Style,model:BuildingMapModel,intensity:Double) {
-        if(style.getSource(SOURCE)==null)style.addSource(VectorSource(SOURCE,"asset://kyoto-risk-tiles/tiles.json"))
+        for ((SOURCE,asset) in listOf("kyoto-risk" to "kyoto-risk-tiles", "toranomon-risk" to "toranomon-risk-tiles")) {
+        val BUILDINGS="$SOURCE-buildings"; val OVERVIEW="$SOURCE-overview"
+        if(style.getSource(SOURCE)==null)style.addSource(VectorSource(SOURCE,"asset://$asset/tiles.json"))
         val before=style.layers.firstOrNull {it is SymbolLayer}?.id
         fun add(layer:FillLayer) { if(before!=null)style.addLayerBelow(layer,before) else style.addLayer(layer) }
         if(style.getLayer(BUILDINGS)==null) {
@@ -23,5 +25,6 @@ object BuildingRiskOverlay {
         }
         (style.getLayer(BUILDINGS) as FillLayer).setProperties(fillColor(color(model.buildingExpression(intensity))),fillOpacity(.72f),fillOutlineColor("#B5A696"))
         (style.getLayer(OVERVIEW) as FillLayer).setProperties(fillColor(color(model.buildingExpression(intensity))),fillOpacity(.72f))
+        }
     }
 }

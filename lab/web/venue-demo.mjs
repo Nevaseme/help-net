@@ -34,5 +34,7 @@ export async function saveVenue(store,body){
   for(const p of venue.placements)if(p.sessionId!==venue.sessionId||!body.roster.members.some(m=>m.memberId===p.memberId&&m.deviceIds.includes(p.deviceId))||(venue.positionMode==='ACTUAL'?(p.source!=='DEVICE_LOCATION'||p.latitude!==null||p.longitude!==null):(p.source!=='DEMO_ASSIGNED'||!Number.isFinite(p.latitude)||Math.abs(p.latitude)>85||!Number.isFinite(p.longitude)||Math.abs(p.longitude)>180)))throw Error('会場デモの配置を確認できません');
  }
  if(venue&&!venue.closed&&(await store.read?.('meta','venue:'+body.groupId))?.sessionId!==venue.sessionId)await store.update('meta','venue-onboarding:'+body.groupId,()=>venue.sessionId);
+ const previous=await store.read('meta','venue:'+body.groupId);
  await store.update('meta','venue:'+body.groupId,()=>venue);
+ if(typeof window!=='undefined'&&JSON.stringify([previous?.sessionId,previous?.positionMode,previous?.closed])!==JSON.stringify([venue?.sessionId,venue?.positionMode,venue?.closed]))window.dispatchEvent(new CustomEvent('venue-map-change'));
 }

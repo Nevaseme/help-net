@@ -16,11 +16,24 @@ import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
+import io.github.nevaseme.plandmk1.cloud.GroupMunicipality
 import org.maplibre.android.MapLibre
 
 class MainActivity : ComponentActivity() {
     private val model by lazy { ViewModelProvider(this)[PlanViewModel::class.java] }
     private lateinit var positionAccess: PositionAccess
+    private val networkCallback=object:android.net.ConnectivityManager.NetworkCallback(){
+        override fun onCapabilitiesChanged(network:android.net.Network, capabilities:android.net.NetworkCapabilities){
+            if(capabilities.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED))runOnUiThread {
+                if(lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)){
+                    val app=application as PlanDApplication
+                    app.cloud.state.value.venue?.let {GroupMunicipality.forDemo(it.positionMode,it.closed)?.code}?.let(app.offlineMaps::prepareCity)
+                }
+            }
+        }
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         MapLibre.getInstance(this)
@@ -30,6 +43,12 @@ class MainActivity : ComponentActivity() {
             .addInterceptor { chain->chain.proceed(chain.request().newBuilder().header("User-Agent","Tasukeai-Android/${BuildConfig.VERSION_NAME} (io.github.nevaseme.plandmk1)").build()) }.build())
         val app = application as PlanDApplication
         positionAccess = PositionAccess(this, app)
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                app.cloud.state.map {state->state.venue?.let {GroupMunicipality.forDemo(it.positionMode,it.closed)?.code}}
+                    .distinctUntilChanged().collect {code->if(code!=null)app.offlineMaps.prepareCity(code)}
+            }
+        }
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.RESUMED) {
                 app.installation.group.collectLatest { group ->
@@ -45,7 +64,10 @@ class MainActivity : ComponentActivity() {
         setContent { PlanDMk1Theme { PlanApp(model) } }
         handleOpen(intent)
     }
-    override fun onStart() { super.onStart(); positionAccess.newVisit() }
+    override fun onStart() {
+        super.onStart(); positionAccess.newVisit()
+        getSystemService(android.net.ConnectivityManager::class.java).registerDefaultNetworkCallback(networkCallback)
+    }
     fun requestPositionAccess() = positionAccess.requestAgain()
     override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); handleOpen(intent) }
     private fun handleOpen(intent: Intent) {
@@ -53,5 +75,8 @@ class MainActivity : ComponentActivity() {
             model.openSafety.value = true; intent.removeExtra(SharingService.OPEN_SAFETY)
         }
     }
-    override fun onStop() { model.maps.pause(); super.onStop() }
+    override fun onStop() {
+        getSystemService(android.net.ConnectivityManager::class.java).unregisterNetworkCallback(networkCallback)
+        model.maps.pause(); super.onStop()
+    }
 }

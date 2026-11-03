@@ -1,6 +1,7 @@
 from pathlib import Path
-import json,gzip,hashlib
-src=Path('android/app/src/main/assets/kyoto-risk-tiles');dest=Path('demo/data/cities/26100/risk');dest.mkdir(parents=True,exist_ok=True)
+import json,gzip,hashlib,argparse
+p=argparse.ArgumentParser();p.add_argument("--source",default="android/app/src/main/assets/kyoto-risk-tiles");p.add_argument("--dest",default="demo/data/cities/26100/risk");args=p.parse_args()
+src=Path(args.source);dest=Path(args.dest);dest.mkdir(parents=True,exist_ok=True)
 manifest=json.loads((src/'manifest.json').read_text());tiles=[]
 for e in manifest['tiles']:
  raw=(src/e['file']).read_bytes();assert hashlib.sha256(raw).hexdigest()==e['sha256'];data=gzip.compress(raw,mtime=0);out=dest/(e['file']+'.gz');out.parent.mkdir(parents=True,exist_ok=True);out.write_bytes(data);tiles.append({'file':e['file']+'.gz','bytes':len(data),'sha256':hashlib.sha256(data).hexdigest()})

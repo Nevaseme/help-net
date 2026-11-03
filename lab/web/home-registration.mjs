@@ -15,7 +15,7 @@ export function homeEvents(profile,home,rows){
  if(home.buildingId&&!match)throw Error('建物が未受信です');
  const unitId=Object.hasOwn(home,'unitId')?home.unitId:(old?.buildingId===buildingId?old.unitId:null);
  if(unitId&&!placeUnits(rows,buildingId).some(u=>u.unitId===unitId))throw Error('選んだ建物の住戸を指定してください');
- const reference={address:home.address?.trim()||'地図で選択した住居',plateauId,dataset:plateauId?'plateau-26100-kyoto-shi-2025':null,...(home.searchReference?{searchReference:validateSearchReference(home.searchReference)}:{})};
+ const reference={address:home.address?.trim()||'地図で選択した住居',plateauId,dataset:plateauId?(profile.longitude>139?'plateau-tokyo-2025-toranomon':'plateau-26100-kyoto-shi-2025'):null,...(home.searchReference?{searchReference:validateSearchReference(home.searchReference)}:{})};
  let sequence=rows.filter(r=>r.authorId===profile.originId).reduce((n,r)=>Math.max(n,r.sequence),0);
  const base={groupId:profile.groupId,authorId:profile.originId,authorName:profile.name,createdAt:Date.now()};const out=[];
  if(!match||match.authorId===profile.originId)out.push(validatePlace(normalizePlace({...base,eventId:match?crypto.randomUUID():buildingId,buildingId,sequence:++sequence,kind:'BUILDING',label:reference.address.slice(0,80),latitude:profile.latitude,longitude:profile.longitude,locationReference:reference})));

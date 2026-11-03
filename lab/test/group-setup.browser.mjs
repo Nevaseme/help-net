@@ -20,7 +20,7 @@ try{
  assert.match(await page.locator('#venue-feedback').innerText(),/現在6文字/);assert.equal(starts,0);
  await page.locator('#venue-position-mode').selectOption('ACTUAL');
  await page.locator('#group-settings-open').click();assert.equal(await page.locator('#venue-admin').isVisible(),false);
- assert.match(await page.locator('#group-details').innerText(),/市全域の地図保存と住所検索/);
+ assert.match(await page.locator('#group-details').innerText(),/通常の地図保存と住所検索/);
  await page.waitForTimeout(16000);assert.equal(await page.locator('#venue-admin').isVisible(),false);
  await page.locator('#group-details').getByRole('button',{name:'通信の詳細',exact:true}).click();assert.equal(await page.locator('#cloud-communication').isVisible(),true);assert.equal(await page.locator('#group-details').isVisible(),false);
  await page.locator('#group-page-back').click();assert.equal(await page.locator('#venue-admin-password').inputValue(),'123456');assert.equal(await page.locator('#venue-position-mode').inputValue(),'ACTUAL');

@@ -6,13 +6,14 @@ import {addVectorBasemap} from './vector-basemap.mjs';
 export function inRing(ring,x,y){let inside=false;for(let i=0;i<ring.length-1;i++){const [a,b]=ring[i],[c,d]=ring[i+1];if(Math.abs((x-a)*(d-b)-(y-b)*(c-a))<=1e-14&&x>=Math.min(a,c)&&x<=Math.max(a,c)&&y>=Math.min(b,d)&&y<=Math.max(b,d))return true;if((b>y)!==(d>y)&&x<(c-a)*(y-b)/(d-b)+a)inside=!inside;}return inside;}
 const contains=(b,x,y)=>b&&x>=b[0]&&x<=b[2]&&y>=b[1]&&y<=b[3];
 export const containsBuilding=(b,x,y)=>contains(b.bbox,x,y)&&b.geometry?.coordinates.some(p=>p.length&&inRing(p[0],x,y)&&!p.slice(1).some(r=>inRing(r,x,y)));
-let index;const chunks=new Map();
+const indexes=new Map(),chunks=new Map();
 export async function buildingsAt(latitude,longitude,code){
- if(code!=='26100')return [];
- if(!index){const r=await fetch(CITY_DATA+'26100/buildings/index.json');if(!r.ok)throw Error('建物データを取得できません。市全域の地図を保存すると圏外でも使えます。');index=await r.json();}
+ if(!['26100','13103'].includes(code))return [];
+ let index=indexes.get(code);
+ if(!index){const r=await fetch(CITY_DATA+code+'/buildings/index.json');if(!r.ok)throw Error('建物データを取得できません。市全域の地図を保存すると圏外でも使えます。');index=await r.json();indexes.set(code,index);}
  const result=[];
  for(const chunk of index.chunks.filter(c=>contains(c.bbox,longitude,latitude))){
-  let rows=chunks.get(chunk.mesh);if(!rows){const body=await gunzipJson(await verifiedBytes(await fetch(CITY_DATA+'26100/buildings/'+chunk.file),chunk.sha256));rows=body.buildings;if(chunks.size>=2)chunks.delete(chunks.keys().next().value);chunks.set(chunk.mesh,rows);}
+  let rows=chunks.get(code+chunk.mesh);if(!rows){const body=await gunzipJson(await verifiedBytes(await fetch(CITY_DATA+code+'/buildings/'+chunk.file),chunk.sha256));rows=body.buildings;if(chunks.size>=2)chunks.delete(chunks.keys().next().value);chunks.set(code+chunk.mesh,rows);}
   result.push(...rows.filter(b=>containsBuilding(b,longitude,latitude)));
  }
  return result;

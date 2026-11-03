@@ -8,6 +8,7 @@ import org.maplibre.android.geometry.LatLngBounds
 import org.maplibre.android.offline.*
 import kotlin.math.cos
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.*
 import org.maplibre.geojson.MultiPolygon
 
@@ -33,10 +34,23 @@ class OfflineMapRepository(private val context: Context) {
     private val scope=CoroutineScope(SupervisorJob()+Dispatchers.Main.immediate)
     private var selectedCity:String?=null
     private var selectionGeneration=0
+    private var preparation:Job?=null
     private val mutable = MutableStateFlow(OfflineMapState())
     val state = mutable.asStateFlow()
 
     init { restore() }
+
+    /** Starts/resumes the event map once; completion and manual pause remain idempotent. */
+    fun prepareCity(code:String) {
+        if(preparation?.isActive==true&&selectedCity==code)return
+        selectCity(code)
+        preparation?.cancel()
+        preparation=scope.launch {
+            val ready=withTimeoutOrNull(30_000){state.first{!it.busy&&it.cityCode==code}}?:return@launch
+            if(ready.complete||ready.downloading)return@launch
+            if(ready.exists)resume() else downloadCity(code)
+        }
+    }
 
     fun selectCity(code:String?) {
         if(code==selectedCity)return
@@ -52,7 +66,7 @@ class OfflineMapRepository(private val context: Context) {
                 region = owned.maxByOrNull { it.id }
                 region?.let { bind(it); refresh(it) } ?: run { mutable.value = OfflineMapState(busy = false,cityCode=selectedCity,cityName=cityName(selectedCity)) }
             }
-            override fun onError(error: String) { mutable.value = OfflineMapState(busy = false, error = "地図の保存状態を確認できません：$error") }
+            override fun onError(error: String) { mutable.value = OfflineMapState(busy = false, cityCode=selectedCity,cityName=cityName(selectedCity), error = "地図の保存状態を確認できません：$error") }
         })
     }
 
@@ -113,6 +127,7 @@ class OfflineMapRepository(private val context: Context) {
                 if (status.isComplete && status.downloadState == OfflineRegion.STATE_ACTIVE) value.setDownloadState(OfflineRegion.STATE_INACTIVE)
             }
             override fun onError(error: OfflineRegionError) {
+                if(value!=region)return
                 value.setDownloadState(OfflineRegion.STATE_INACTIVE)
                 mutable.value = mutable.value.copy(busy = false, downloading = false, error = "地図保存を中断しました：${error.message}。通信・空き容量を確認して再開してください")
             }
@@ -125,6 +140,7 @@ class OfflineMapRepository(private val context: Context) {
     private fun refresh(value: OfflineRegion) {
         value.getStatus(object : OfflineRegion.OfflineRegionStatusCallback {
             override fun onStatus(status: OfflineRegionStatus?) {
+                if(value!=region)return
                 if (status == null) { mutable.value = mutable.value.copy(busy = false, error = "地図の状態を取得できません"); return }
                 mutable.value = mutable.value.copy(busy = false, complete = status.isComplete, downloading = !status.isComplete && status.downloadState == OfflineRegion.STATE_ACTIVE,
                     resources = status.completedResourceCount, expected = status.requiredResourceCount, bytes = status.completedResourceSize)
@@ -139,6 +155,7 @@ class OfflineMapRepository(private val context: Context) {
         region?.setDownloadState(OfflineRegion.STATE_ACTIVE)
     }
     fun pause() {
+        preparation?.cancel();preparation=null
         downloadRequested = false
         region?.setDownloadState(OfflineRegion.STATE_INACTIVE)
         mutable.value = mutable.value.copy(downloading = false)

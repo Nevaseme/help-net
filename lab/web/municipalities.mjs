@@ -5,6 +5,8 @@ export const MUNICIPALITIES=Object.freeze([
  Object.freeze({code:'13103',name:'港区',prefecture:'東京都'}),
 ]);
 export const municipalityByCode=code=>MUNICIPALITIES.find(city=>city.code===code)??null;
+export const demoMapMunicipality=venue=>venue&&!venue.closed?municipalityByCode(venue.positionMode==='ACTUAL'?'13103':venue.positionMode==='KYOTO'||venue.positionMode===undefined?'26100':null):null;
+export async function mapMunicipality(store,group){return demoMapMunicipality(await store.read('meta','venue:'+group))??await store.read('meta','municipality:'+group);}
 export async function saveMunicipality(store,envelope){
  const value=envelope.municipality??null;
  if(value&&!municipalityByCode(value.code))throw Error('対応していない活動地域です。アプリを更新してください。');

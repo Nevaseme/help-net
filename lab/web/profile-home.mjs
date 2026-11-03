@@ -1,3 +1,4 @@
+import {mapMunicipality} from './municipalities.mjs';
 import {clearableSearch,dismissKeyboard} from './search-controls.mjs';
 import {pickBuilding} from './building-picker.mjs';
 import {selectAddressCandidate} from './address-selection.mjs';
@@ -17,8 +18,8 @@ export function attachProfileHome({store,getGroup,onChange}){
  async function choose(mode){
   if(working)return;dismissKeyboard();working=true;for(const b of host.querySelectorAll('button'))b.disabled=true;
   try{
-   const city=await store.read('meta','municipality:'+getGroup());
-   let point=selected()?{latitude:Number($('lat').value),longitude:Number($('lon').value)}:city?.code==='13103'?{latitude:35.658,longitude:139.751}:city?.code==='22205'?{latitude:35.095,longitude:139.07}:{latitude:35.0145,longitude:135.7625};
+   const city=await mapMunicipality(store,getGroup());
+   let point=selected()?{latitude:Number($('lat').value),longitude:Number($('lon').value)}:city?.code==='13103'?{latitude:35.6665,longitude:139.7495}:city?.code==='22205'?{latitude:35.095,longitude:139.07}:{latitude:35.0145,longitude:135.7625};
    if(mode==='search'){
     const query=$('home-address').value.trim();if(!query)throw Error('住所や建物名を入力してください。');setText($('home-state'),'住所を探しています…');
     const found=await selectAddressCandidate(query,city?.code);if(!found)throw Error('場所が見つかりませんでした。住所を詳しく入力するか、地図で選んでください。');point=found;
@@ -33,6 +34,6 @@ export function attachProfileHome({store,getGroup,onChange}){
  }
  $('home-search').onclick=()=>choose('search');$('home-pick').onclick=()=>choose('map');$('home-use-current').onclick=()=>choose('current');
  $('home-address').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();choose('search');}};
- async function warm(){const city=await store.read('meta','municipality:'+getGroup());if(city?.code)await geocodeCandidates(' ',city.code);}for(const event of ['municipality-change','group-change'])window.addEventListener(event,()=>warm().catch(()=>{}));warm().catch(()=>{});
+ async function warm(){const city=await mapMunicipality(store,getGroup());if(city?.code)await geocodeCandidates(' ',city.code);}for(const event of ['municipality-change','group-change','venue-map-change'])window.addEventListener(event,()=>warm().catch(()=>{}));warm().catch(()=>{});
  render();return {render,selected,metadata:()=>pickedMetadata,address:()=>confirmedAddress,setHome(home){pickedMetadata=home?{plateauId:home.plateauId,...(home.searchReference?{searchReference:home.searchReference}:{})}:{};confirmedAddress=home?.address||'';$('home-address').value=confirmedAddress;refreshSearch();render();}};
 }
