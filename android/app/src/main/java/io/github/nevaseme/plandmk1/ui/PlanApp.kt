@@ -219,11 +219,9 @@ private fun PlanAppContent(model: PlanViewModel) {
                         3 -> SettingsScreen(model, storedOwn, group, saving, onBuildings={navigate(2)}, onPick={picking=true;tab=1})
                         9 -> PositionSettings(model, own != null)
                         4 -> LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
-                        item { CloudSharingPanel(model,own?.name.orEmpty()) }
-                        item { TextButton(onClick={communicationDetails=!communicationDetails}) {
-                            Text(if(communicationDetails) "通信の詳細を閉じる" else "通信の詳細")
-                        } }
+                        if(!communicationDetails)item { CloudSharingPanel(model,own?.name.orEmpty(),onCommunication={communicationDetails=true}) }
                         if(communicationDetails) {
+                        item { TextButton(onClick={communicationDetails=false}) {Text("グループに戻る")} }
                         item { CloudCommunicationDetails(model) }
                         item { SectionTitle("近くの端末と共有") }
                         item { StatusFeedback(when {

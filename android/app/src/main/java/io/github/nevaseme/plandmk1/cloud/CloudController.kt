@@ -27,6 +27,7 @@ class CloudController(private val app:PlanDApplication) {
     // Transient form state survives LazyColumn disposal / keyboard resize; never persisted.
     val venuePasswordDraft=MutableStateFlow("")
     val venueAdminPasswordDraft=MutableStateFlow("")
+    val venuePositionModeDraft=MutableStateFlow("KYOTO")
     val venueNameStep=MutableStateFlow(false)
     val venueEntryPositionMode=MutableStateFlow("KYOTO")
     val venueChanges=MutableStateFlow(0L)
