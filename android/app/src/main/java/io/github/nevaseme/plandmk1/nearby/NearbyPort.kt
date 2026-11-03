@@ -9,6 +9,8 @@ interface NearbyPort {
     var onBytes: (String, ByteArray) -> Unit
     fun start(name: String)
     fun configureAutomatic(link: GroupLink) { }
+    /** Retry discovery after a radio change without closing authenticated links. */
+    fun refreshDiscovery() { }
     fun setVisible(visible: Boolean)
     fun stop()
     fun connect(peer: Peer)

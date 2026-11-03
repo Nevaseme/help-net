@@ -24,9 +24,11 @@ class OfflineSafetyRadioDeviceTest {
  private val status get()=File(app.filesDir,"qa-safety-status.json")
  private val control get()=File(app.filesDir,"qa-safety-control.txt")
  private val backup get()=File(app.filesDir,"qa-safety-backup.json")
+ private fun bluetooth()=app.getSystemService(android.bluetooth.BluetoothManager::class.java)?.adapter?.isEnabled==true
+ private fun wifi()=(app.applicationContext.getSystemService(android.content.Context.WIFI_SERVICE) as android.net.wifi.WifiManager).isWifiEnabled
  private fun now()=System.currentTimeMillis()
  private fun phase(name:String,extra:String="") {
-  val body=JSONObject().put("phase",name).put("group",InstrumentationRegistry.getArguments().getString("qaGroup")).put("at",now()).put("screenOn",app.getSystemService(PowerManager::class.java).isInteractive).put("connected",app.sharing.state.value.connected.size).put("extra",extra)
+  val body=JSONObject().put("phase",name).put("group",InstrumentationRegistry.getArguments().getString("qaGroup")).put("at",now()).put("screenOn",app.getSystemService(PowerManager::class.java).isInteractive).put("connected",app.sharing.state.value.connected.size).put("bluetooth",bluetooth()).put("wifi",wifi()).put("sharingActive",app.sharing.state.value.active).put("error",app.sharing.state.value.error).put("extra",extra)
   status.writeText(body.toString());android.util.Log.i("PlanD-SafetyRadio",body.toString())
  }
  private suspend fun restore() {
@@ -45,13 +47,16 @@ class OfflineSafetyRadioDeviceTest {
   check(!backup.exists()){ "Previous test requires cleanup before starting" }
   val original=app.installation.group.value
   val originalPositionFactory=app.positionSourceFactory
-  backup.writeText(JSONObject().put("group",original).put("automaticGroup",app.getSharedPreferences("nearby-auto",0).getString("group",null)?:JSONObject.NULL).toString())
+  backup.writeText(JSONObject().put("group",original).put("testGroup",group).put("peer",peer).put("side",side).put("automaticGroup",app.getSharedPreferences("nearby-auto",0).getString("group",null)?:JSONObject.NULL).toString())
   control.writeText("");val own=app.installation.localId;val admin=if(side=="A")own else peer
   val incident=UUID.nameUUIDFromBytes("$group-incident".toByteArray()).toString()
   val roster=MemberRoster(groupId=group,members=listOf(GroupMember(admin,"通信確認A",MemberRole.ADMIN,listOf(admin)),GroupMember(if(side=="B")own else peer,"通信確認B",MemberRole.MEMBER,listOf(if(side=="B")own else peer))))
   val quakes=QuakeStore(app.database);val responses=ResponseStore(app.database);val name="通信確認$side"
   suspend fun await(label:String,timeout:Long=180_000,condition:suspend()->Boolean){withTimeout(timeout){while(!condition()){check(control.readText().trim()!="abort"){"Trial aborted by controller"};delay(250)}};phase(label)}
-  suspend fun command(value:String)=await("command-$value",600_000){control.readText().trim()==value}
+  suspend fun command(value:String) {
+   while(control.readText().trim()!=value) {check(control.readText().trim()!="abort"){"Trial aborted by controller"};delay(250)}
+   phase("command-$value")
+  }
   suspend fun publish(stage:Int,safety:Safety){
    app.store.answerWithMemo(IncidentEvent(group,UUID.randomUUID().toString(),incident,own,name,1,now(),IncidentKind.ANSWER,safety=safety),if(safety==Safety.SOS)"架空の通信試験SOS" else "")
    val id=UUID.randomUUID().toString()
@@ -76,6 +81,16 @@ class OfflineSafetyRadioDeviceTest {
    withContext(Dispatchers.Main){app.sharing.start(group,name)}
    await("connected"){app.sharing.state.value.connected.isNotEmpty()}
    await("initial-pass"){received(1,Safety.SAFE)}
+   if(args.getString("qaWifi")=="true") {
+    command("wifi")
+    await("wifi-only-ready"){!bluetooth()&&wifi()}
+    publish(10,Safety.SOS)
+    while(control.readText().trim()!="wifi-end") {
+     check(control.readText().trim()!="abort"){"Trial aborted by controller"}
+     phase("wifi-observation", "received="+received(10,Safety.SOS));delay(2_000)
+    }
+    phase("wifi-result", "received="+received(10,Safety.SOS))
+   }
    command("screen");await("screen-off"){screenOff()};delay(15_000)
    publish(2,Safety.SOS);await("screen-received"){received(2,Safety.SOS)}
    assertTrue("Reception must occur with screen off",screenOff())
@@ -87,7 +102,17 @@ class OfflineSafetyRadioDeviceTest {
    await("reconnect-received"){received(3,Safety.SAFE)}
    val reader=Room.databaseBuilder(app,PlanDatabase::class.java,"pland.db").build()
    try{assertEquals(Safety.SAFE,incidentView(RoomRecordStore(reader).incidents(group),incident)?.answers?.get(peer)?.safety);assertTrue(ResponseStore(reader).events(group).any{it.actorDeviceId==peer&&(it.change as? ResponseChange.Report)?.description?.endsWith("/3")==true})}finally{reader.close()}
-   phase("all-pass");command("finish")
+   phase("all-pass")
+   if(args.getString("qaBoot")=="true") {
+    command("reboot-disconnect")
+    await("reboot-disconnected"){!bluetooth()&&!wifi()&&app.sharing.state.value.connected.isEmpty()}
+    publish(4,Safety.SOS);delay(5_000)
+    assertFalse("Pre-reboot report must still be queued", received(4,Safety.SOS))
+    // The PC reads Room and foreground-service evidence after an actual OS reboot,
+    // before running any further instrumentation or opening the app.
+    phase("reboot-queued")
+   }
+   command("finish")
   }catch(e:Exception){phase("failed",e.toString());throw e}
   finally{withContext(NonCancellable){restore();app.positionSourceFactory=originalPositionFactory}}
  }

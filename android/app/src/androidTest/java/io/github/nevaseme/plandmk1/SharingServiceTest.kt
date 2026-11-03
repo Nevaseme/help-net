@@ -180,6 +180,44 @@ class SharingServiceTest {
         main { app.installation.setGroup(group) }; start()
     }
 
+    @Test fun automaticKeepsWifiConnectionWhenBluetoothTurnsOff() {
+        io.github.nevaseme.plandmk1.cloud.CloudSettings(app).saveNearbyKey(group,"ab".repeat(32))
+        val p = start(); connect(p, "peer"); background()
+        shell("svc bluetooth disable")
+        waitFor("Radio change refreshed discovery") { p.refreshes > 0 }
+        assertEquals(0, p.stops)
+        assertEquals(setOf("peer"), app.sharing.state.value.connected)
+        val r = record(); main { p.onBytes("peer", bytes(r)) }
+        waitFor("Data still received over the existing link") { p.packets.any { it.second.type == "ACK" } }
+        assertEquals(r, runBlocking { app.store.get(group, r.originId) })
+        shell("svc bluetooth enable")
+    }
+
+    @Test fun bootReceiverRestartsOnlyPreviouslyEnabledCurrentGroup() {
+        io.github.nevaseme.plandmk1.cloud.CloudSettings(app).saveNearbyKey(group,"ab".repeat(32))
+        background()
+        main { app.sharing.stop() }
+        val prefs = app.getSharedPreferences("nearby-auto", 0)
+        fun boot() = main {
+            io.github.nevaseme.plandmk1.location.PositionResumeReceiver().onReceive(app,
+                android.content.Intent(android.content.Intent.ACTION_BOOT_COMPLETED))
+        }
+        boot(); SystemClock.sleep(300); assertTrue(ports.isEmpty())
+        prefs.edit().putString("group", "different-group").commit()
+        boot(); SystemClock.sleep(300); assertTrue(ports.isEmpty())
+        prefs.edit().putString("group", group).commit()
+        boot()
+        waitFor("Boot starts normal sharing without an Activity") { ports.size == 1 && app.sharing.state.value.active && !app.sharing.state.value.starting }
+        assertFalse(app.sharing.foreground)
+        boot(); SystemClock.sleep(300); assertEquals(1, ports.size)
+        val p = ports.single(); connect(p, "peer")
+        val r = record(); main { p.onBytes("peer", bytes(r)) }
+        waitFor("Boot service persists received data") { p.packets.any { it.second.type == "ACK" } }
+        assertEquals(r, runBlocking { app.store.get(group, r.originId) })
+        main { app.sharing.stop() }; boot(); SystemClock.sleep(300)
+        assertFalse(app.sharing.state.value.active)
+    }
+
     @Test fun notificationPermissionCanBeRequestedAgainAfterDenial() {
         // Start with POST_NOTIFICATIONS revoked and permission flags cleared externally.
         // Denial and permission recovery below use the actual system dialog.
@@ -253,7 +291,8 @@ class SharingServiceTest {
         override var onConnected: suspend (String) -> Unit = {}
         override var onDisconnected: (String) -> Unit = {}
         override var onBytes: (String, ByteArray) -> Unit = { _, _ -> }
-        var starts = 0; var stops = 0; var searching = true
+        var starts = 0; var stops = 0; var searching = true; var refreshes = 0
+        override fun refreshDiscovery() { refreshes++ }
         val packets = mutableListOf<Pair<String, WireMessage>>()
         override fun start(name: String) { starts++; state.value = NearbyState(active = true, discovering = true) }
         override fun stop() { stops++; state.value = NearbyState() }

@@ -50,7 +50,7 @@ class SharingSession(
         scope.launch {
             port.state.collect { state ->
                 if (!alive) return@collect
-                if (!state.active && automatic) publish(state.copy(active=true,starting=false,error=if(!radioReady) "Bluetoothが戻ると自動で共有を再開します" else state.error))
+                if (!state.active && automatic) publish(state.copy(active=true,starting=false,error=if(!radioReady) "BluetoothまたはWi-Fiが使える状態に戻ると自動で共有を再開します" else state.error))
                 else if (!state.active) stop(state.error, state.showPlayServicesSettings)
                 else if (!automatic && !foreground && state.connected.isEmpty()) stop(NO_PEERS)
                 else publish(state)
@@ -70,13 +70,17 @@ class SharingSession(
             }
         }
     }
-    fun setRadiosReady(ready: Boolean) {
-        if (!automatic || radioReady==ready) return
+    fun setRadiosReady(ready: Boolean, changed: Boolean = false) {
+        if (!automatic) return
+        if (radioReady==ready) {
+            if (alive && ready && changed) port.refreshDiscovery()
+            return
+        }
         radioReady=ready
         if (!alive) return
         if (!ready) {
             port.stop()
-            publish(NearbyState(active=true,error="Bluetoothが戻ると自動で共有を再開します"))
+            publish(NearbyState(active=true,error="BluetoothまたはWi-Fiが使える状態に戻ると自動で共有を再開します"))
         } else port.start(name)
     }
     fun setForeground(visible: Boolean) {

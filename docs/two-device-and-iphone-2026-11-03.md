@@ -51,3 +51,31 @@
 - iPhone実機でレポート発行・圏外再起動・復帰後共有。利用者へ圏外再起動後の集計・発行済みレポートの確認を依頼済み。
 
 当日の手順は [vivo管理者・PWAメンバーのデモ手順](venue-demo-vivo-pwa-guide.md) を最新版に更新した。APK配布QRは今回の通信試験とは別であり、未確認の配布先は案内しない。
+
+## 1.5.53：Bluetooth条件と端末起動時の修正
+
+利用者からの指示により、同じグループの自動共有を次のように修正した。
+
+- BluetoothとWi-Fiのうち一方が有効なら共有サービスを維持する。両方OFFまたは必要権限の不足時には待機し、復帰後は自動再開する。
+- 無線切替時は周辺端末の検索を更新するが、接続済みの相手をアプリ判断で切断しない。
+- 自動共有の広告・検索失敗では、接続済みの通信と受信処理を保持する。検索のみ5〜60秒の間隔で再試行する。SDK自身が切断した場合は通常の再接続処理へ進む。
+- BOOT_COMPLETED / MY_PACKAGE_REPLACEDから、以前有効だった現在のグループの共有を再開する。停止済み・別グループ・共有鍵なしの場合は開始しない。起動が拒否されても再開設定は消さない。
+- 通信試験にBluetooth OFF＋Wi-Fi ONの観察段階と、切断中に安否・通報を保存してから実際に再起動する段階を追加した。操作待ちには終了時刻を設定しない。
+
+### 完了したコード検証
+
+- 修正前のNearbyLifecycleTest追加試験で、検索失敗が認証済み接続を消す問題を再現（接続集合が空になり失敗）。
+- 修正後、同じ試験で接続・後続データ受信・検索再試行を確認。
+- JVMテスト261件成功。エミュレーターのNearbyLifecycleTest 9件とSharingServiceTestの3件、合計12件成功。
+- サービス試験ではBluetooth OFF / Wi-Fi ONでも受信・保存が続き、両無線OFFからの復帰を確認。起動Receiverでは、アプリが背景にある状態での再開、受信・保存、重複起動防止、停止済みグループの非再開を確認した。
+- これらのサービス試験はGoogleの通信境界を模擬しており、実機のWi-Fi単独通信や実OS再起動成功の代用ではない。
+- ローカル証拠：`.implementation/radio-fix-build.log`、`.implementation/radio-fix-emulator.log`。
+
+### 実機試験の準備状況
+
+- Mi 9TのDownloadへ`PlanD-1.5.53.apk`と`PlanD-communication-test-1.5.53.apk`をコピー済み。利用者の手動更新待ち。
+- vivoは更新を実行したが端末側で拒否されたため、ロック解除・インストール許可の返答後に再試行する。
+- 1.5.53の実無線・消灯・再接続・実再起動の結果はまだ出ていない。
+- 実再起動後はアプリ起動や追加のinstrumentationより前に、通常サービスの起動とRoom内の相手由来の安否・通報を読み取る。試験用グループの復元情報は端末内に残し、検証後に元のグループへ戻す。
+
+参考：Google公式の[Nearbyの通信方式](https://developers.google.com/nearby/connections/overview)、[接続構成](https://developers.google.com/nearby/connections/strategies)、[起動時のForeground Service条件](https://developer.android.com/develop/background-work/services/fgs/restrictions-bg-start)。SDKが無線を選択するため、Bluetooth OFF時の成功を測定せずにWi-Fi Direct成功とは呼ばない。

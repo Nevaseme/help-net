@@ -65,6 +65,35 @@ class NearbyLifecycleTest {
             p.stop();scope.cancel()
         }
     }
+    @Test fun automaticSearchFailureKeepsAuthenticatedConnectionAndReceivingRecords() {
+        val client = Client().apply { advertiseGate = TaskCompletionSource() }
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+        val local = GroupLink("g", "00000000-0000-0000-0000-000000000002", "ab".repeat(32))
+        val remote = GroupLink("g", "00000000-0000-0000-0000-000000000001", "ab".repeat(32))
+        lateinit var p: NearbyTransport
+        var received = ""
+        try {
+            main {
+                p = NearbyTransport(instrumentation.targetContext, scope, client.value) { true }
+                p.configureAutomatic(local); p.onBytes = { _, bytes -> received = bytes.decodeToString() }; p.start("local")
+                client.lifecycle.onConnectionInitiated("peer", ConnectionInfo(remote.endpoint("remote"), "token", true))
+                client.lifecycle.onConnectionResult("peer", ConnectionResolution(Status.RESULT_SUCCESS))
+                client.receiver.onPayloadReceived("peer", Payload.fromBytes(remote.proof("token".toByteArray(), remote.device, local.device)))
+                assertEquals(setOf("peer"), p.state.value.connected)
+                client.advertiseGate!!.setException(IllegalStateException("Bluetooth unavailable"))
+            }; idle()
+            main {
+                assertEquals("Discovery failure must not close established links", setOf("peer"), p.state.value.connected)
+                assertFalse(client.calls.any { it.first == "stopAllEndpoints" })
+                client.receiver.onPayloadReceived("peer", Payload.fromBytes("next report".toByteArray()))
+                assertEquals("next report", received)
+                client.advertiseGate = null
+            }
+            Thread.sleep(5_500); idle()
+            main { assertTrue(p.state.value.discovering); assertEquals(setOf("peer"), p.state.value.connected) }
+        } finally { main { p.stop(); scope.cancel() } }
+    }
+
     @Test fun wrongGroupProofNeverReleasesRecordsOrCountsAsConnected() {
         val client=Client();val scope=CoroutineScope(SupervisorJob()+Dispatchers.Main.immediate)
         val left=GroupLink("g","00000000-0000-0000-0000-000000000002","ab".repeat(32))

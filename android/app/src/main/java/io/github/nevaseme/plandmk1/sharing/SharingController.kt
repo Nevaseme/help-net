@@ -32,8 +32,9 @@ class SharingController(private val context: Context) {
                 .setAction(SharingService.START).putExtra("token", token).putExtra("group", groupId).putExtra("name", name))
         } catch (e: Exception) { stop("共有を開始できません。権限や無線設定を確認してください：${e.localizedMessage.orEmpty()}") }
     }
-    fun stop(reason: String? = null) {
-        prefs.edit().remove("group").apply()
+    fun stop(reason: String? = null) = stopSession(reason, forget = true)
+    private fun stopSession(reason: String?, forget: Boolean) {
+        if (forget) prefs.edit().remove("group").apply()
         generation++
         val previous = session; session = null
         previous?.stop()
@@ -52,6 +53,18 @@ class SharingController(private val context: Context) {
     fun changed() { session?.changed() }
     fun error(message: String) { mutable.update { it.copy(error = message) } }
     internal fun isCurrent(token: Long) = generation == token && mutable.value.active
+    internal fun startFailed(token: Long, reason: String) {
+        if (isCurrent(token)) stopSession(reason, forget = false)
+    }
+    /** Boot/package replacement is an OS exemption for connected-device foreground services. */
+    fun restoreAfterBoot(group: String) {
+        if (mutable.value.active) return
+        val token = restoreAutomatic(group) ?: return
+        try {
+            ContextCompat.startForegroundService(context, Intent(context, SharingService::class.java)
+                .setAction(SharingService.START).putExtra("token", token).putExtra("group", group))
+        } catch (_: Exception) { startFailed(token, "自動共有を再開できませんでした。アプリを開いて権限と自動起動の設定を確認してください") }
+    }
     internal fun restoreAutomatic(group: String): Long? {
         if (prefs.getString("group",null)!=group || io.github.nevaseme.plandmk1.cloud.CloudSettings(context).nearbyKey(group)==null) return null
         automatic=true

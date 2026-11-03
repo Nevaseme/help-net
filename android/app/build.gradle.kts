@@ -27,8 +27,8 @@ android {
         applicationId = "io.github.nevaseme.plandmk1"
         minSdk = 24
         targetSdk = 37
-        versionCode = 65
-        versionName = "1.5.52"
+        versionCode = 66
+        versionName = "1.5.53"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("boolean", "EEW_FIREBASE_CONFIGURED", firebaseConfigured.toString())

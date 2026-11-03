@@ -58,6 +58,8 @@ class NearbyTransport(
     private var automatic: GroupLink? = null
     private var topology: BoundedNearbyTopology? = null
     private var retryJob: Job? = null
+    private var nextSearchAt = 0L
+    private var searchBackoff = 5_000L
     private val devices = mutableMapOf<String, String>()
     private val challenges = mutableMapOf<String, ByteArray>()
     private fun now() = android.os.SystemClock.elapsedRealtime()
@@ -80,12 +82,14 @@ class NearbyTransport(
         topology = automatic?.let { BoundedNearbyTopology(it.device) }
         nativeOwner = ++latestOwner
         ++generation
+        nextSearchAt = 0L; searchBackoff = 5_000L
         mutable.value = NearbyState(active = true)
         resumeSearch()
         retryJob?.cancel()
         if (automatic != null) retryJob = scope.launch {
             while (isActive && mutable.value.active) {
                 delay(BoundedNearbyTopology.POLL_INTERVAL_MS)
+                if (!mutable.value.discovering && now() >= nextSearchAt) resumeSearch()
                 reconcileAutomatic()
             }
         }
@@ -109,6 +113,10 @@ class NearbyTransport(
                 if (!validSearch(token, epoch)) return@launch
                 client.startDiscovery(automatic?.serviceId ?: SERVICE_ID, discovery(token, epoch), DiscoveryOptions.Builder().setStrategy(Strategy.P2P_CLUSTER).build())
                     .addOnSuccessListener { if (owner == latestOwner && !validSearch(token, epoch)) client.stopDiscovery() }.awaitResult()
+                if (validSearch(token, epoch)) {
+                    searchBackoff = 5_000L
+                    mutable.update { it.copy(error = null, showPlayServicesSettings = false) }
+                }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 if (validSearch(token, epoch)) {
@@ -119,10 +127,32 @@ class NearbyTransport(
                         context.packageManager.checkPermission(permission, "com.google.android.gms") == PackageManager.PERMISSION_GRANTED
                     }.getOrNull() else null
                     val failure = sharingFailure((e as? ApiException)?.statusCode, ownGranted, gmsGranted, e.localizedMessage.orEmpty())
-                    stopWithReason(failure.message, failure.showPlayServicesSettings)
+                    if (automatic == null) stopWithReason(failure.message, failure.showPlayServicesSettings)
+                    else {
+                        // Advertising/discovery can fail while a Wi-Fi data link is still usable.
+                        // Keep the session generation and payload listeners until the SDK disconnects.
+                        pauseSearch()
+                        nextSearchAt = now() + searchBackoff
+                        searchBackoff = (searchBackoff * 2).coerceAtMost(60_000L)
+                        mutable.update { it.copy(error = failure.message, showPlayServicesSettings = failure.showPlayServicesSettings) }
+                    }
                 }
             }
         }
+    }
+
+    private fun pauseSearch() {
+        searchEpoch++
+        runCatching { client.stopAdvertising() }; runCatching { client.stopDiscovery() }
+        // Discovery callbacks from the old search will not deliver endpoint-lost events.
+        mutable.value.peers.forEach { topology?.lost(it.id, now()) }
+        mutable.update { s -> s.copy(discovering = false, peers = s.peers.filter { it.id in s.connected || it.id in s.connecting }) }
+    }
+
+    override fun refreshDiscovery() {
+        if (automatic == null || !mutable.value.active) return
+        pauseSearch()
+        searchBackoff = 5_000L; nextSearchAt = now() + 1_000L
     }
 
     override fun setVisible(visible: Boolean) {

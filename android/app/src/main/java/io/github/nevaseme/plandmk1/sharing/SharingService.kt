@@ -26,7 +26,13 @@ class SharingService : Service() {
     private var automatic = false
     private val radios = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            if (automatic) session?.setRadiosReady(ready())
+            val settled = when (intent.action) {
+                BluetoothAdapter.ACTION_STATE_CHANGED -> intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1) in setOf(BluetoothAdapter.STATE_ON, BluetoothAdapter.STATE_OFF)
+                WifiManager.WIFI_STATE_CHANGED_ACTION -> intent.getIntExtra(WifiManager.EXTRA_WIFI_STATE, -1) in setOf(WifiManager.WIFI_STATE_ENABLED, WifiManager.WIFI_STATE_DISABLED)
+                else -> false
+            }
+            if (!settled) return
+            if (automatic) session?.setRadiosReady(ready(), changed = true)
             else if (session != null && !ready()) app.sharing.stop("通信権限またはBluetooth・Wi-FiがOFFになったため共有を停止しました")
         }
     }
@@ -56,7 +62,7 @@ class SharingService : Service() {
             if (Build.VERSION.SDK_INT >= 29) startForeground(NOTIFICATION_ID, notice, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
             else startForeground(NOTIFICATION_ID, notice)
         } catch (e: Exception) {
-            if (app.sharing.isCurrent(token)) app.sharing.stop("共有を開始できません。権限を確認して、アプリを開いた状態で再試行してください")
+            app.sharing.startFailed(token, "共有を開始できません。権限を確認して、アプリを開いた状態で再試行してください")
             stopSelfResult(startId); return START_NOT_STICKY
         }
         val group = intent.getStringExtra("group") ?: ""
@@ -108,16 +114,17 @@ class SharingService : Service() {
           } catch (e: CancellationException) {
             throw e
           } catch (_: Exception) {
-            if (app.sharing.isCurrent(token)) app.sharing.stop("共有を開始できませんでした。アプリから再試行してください")
+            app.sharing.startFailed(token, "共有を開始できませんでした。アプリから再試行してください")
             stopSelfResult(startId)
           }
         }
         return if(automatic) START_STICKY else START_NOT_STICKY
     }
     private fun ready(): Boolean = try {
+        val bluetooth = getSystemService(BluetoothManager::class.java)?.adapter?.isEnabled == true
+        val wifi = (applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager).isWifiEnabled
         NearbyTransport.permissions().all { ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED } &&
-            getSystemService(BluetoothManager::class.java)?.adapter?.isEnabled == true &&
-            (automatic || (applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager).isWifiEnabled)
+            (if (automatic) bluetooth || wifi else bluetooth && wifi)
     } catch (_: SecurityException) { false }
 
     private fun notification(state: NearbyState): Notification {
