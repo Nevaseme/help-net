@@ -132,3 +132,24 @@
 - MiもRECEIVE_BOOT_COMPLETEDはgranted=true、stopped=false、自動共有対象の保存設定は保持。アプリ内例外ではなくMIUIの自動起動制限が起動通知を阻止している。
 - 両端末とも相手の段階4通報は未受信、最新安否はSAFEのまま。再起動後の双方向共有はまだ未合格。利用者にMiの自動起動許可を依頼し、許可後にMiのみ再起動して再試験する。
 - 証拠：`.implementation/radio-boot-evidence/` 内の再起動前後snapshot結果と各端末`-boot-log.txt`。
+
+
+## 最終結果：1.5.55、vivo V2417A・Mi 9T
+
+| 試験 | 実機結果 |
+| --- | --- |
+| ネット未接続の安否・通報共有 | 双方向成功 |
+| 消灯中のSOS・通報受信と保存 | 双方向成功 |
+| Bluetooth OFF後、ONだけで自動再接続 | 双方向成功。接続・同期ボタン操作なし |
+| 両無線OFFで切断した間の安否・通報を復帰後に再送 | 双方向成功。別Room接続でも保存を照合 |
+| OS再起動後、アプリを開かず共有再開 | vivo成功。Mi 9Tは自動起動許可後に成功 |
+| 再起動前の未送信SOS・通報の自動送受信 | 自動起動許可後の再試験で双方向成功。両画面OFF・ネット未接続 |
+| Bluetooth OFF・Wi-Fi ONのみで共有維持 | 今回の2台・P2P_CLUSTER構成では不成立。実接続がBLUETOOTHで、Wi-Fiへ切替なし |
+
+Mi 9Tで利用者が自動起動を許可した後、Miのみ再起動。利用者は初回ロック解除、無線状態の確認、消灯のみを行い、PlanDを開かなかった。通常アプリの追加起動やinstrumentation実行前に、両端末のForeground SharingService・相手の最新SOS・段階4通報をRoomから確認した。再試験のMi起動時間は約115秒。これは受信遅延の測定値ではない。
+
+証拠は`.implementation/radio-boot-evidence/`の端末別result.jsonと`-verified-boot-app-log.txt`。成功確認後のみqaCleanupを実行し、両端末の元グループ・自動共有設定への復元、端末内バックアップ解除を照合済み（cleanup-result.json）。既存登録・安否記録は削除していない。通信設定は利用者が操作し、試験終了時点でモバイルデータOFF・Wi-Fiアクセスポイント未接続のまま。
+
+### デモ時の条件
+
+Bluetooth・Wi-Fi無線はONにし、インターネットを切るときはモバイルデータOFFと会場Wi-Fiからの切断を使う。Mi 9TではPlanDの自動起動を許可する。再起動後は一度ロック解除する。この試験は2台での実証であり、20台の実機性能の測定値ではない。Miの自動起動未許可をアプリが回避したという結果ではない。
