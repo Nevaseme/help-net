@@ -19,7 +19,7 @@ try{
  await p.locator('#town-summary-sheet .sheet-close').click();
  assert.ok(await p.locator('.person-impact').count()>0);assert.ok(await p.locator('.person-enclosed').count()>0);
  const observed=p.locator('.person-enclosed').first();await observed.click();
- await p.locator('#person-sheet').waitFor({state:'visible'});assert.match(await p.locator('#detail-info').innerText(),/閉所を検知/);assert.match(await p.locator('#detail-info').innerText(),/デモの模擬検知/);await p.screenshot({path:out+'/observations-ja.png'});
+ await p.locator('#person-sheet').waitFor({state:'visible'});assert.match(await p.locator('#detail-info').innerText(),/閉所を検知/);assert.doesNotMatch(await p.locator('#detail-info').innerText(),/架空住民|デモの模擬検知/);await p.screenshot({path:out+'/observations-ja.png'});
  await p.locator('#person-sheet .sheet-close').click();
  await p.locator('[data-tab="response"]').click();await p.locator('#area-summary').click();assert.equal(await p.locator('.community-card').count(),3);await p.locator('#area-sheet .sheet-close').click();
  const moved=await p.evaluate(async()=>{
@@ -34,7 +34,7 @@ try{
  await p.reload();await p.waitForFunction(()=>!!document.querySelector('#incident-select').value&&!!document.querySelector('#list [data-person]'));
  await p.waitForFunction(value=>document.querySelector('#lat').value===String(value),moved.home.latitude);assert.equal(await p.locator('#home-address').inputValue(),'Changed demo home');
  await p.evaluate(()=>localStorage.setItem('tasukeai-language','en'));await p.reload();await p.waitForFunction(()=>!!document.querySelector('#incident-select').value&&!!document.querySelector('#list [data-person]'));await p.locator('[data-tab="buildings"]').click();await p.waitForFunction(()=>document.querySelectorAll('.community-map-marker').length===2);assert.match(await p.locator('.community-map-marker').first().innerText(),/Gosho South/);
- await p.locator('.person-enclosed').first().click();assert.match(await p.locator('#detail-info').innerText(),/Enclosed space detected/);assert.match(await p.locator('#detail-info').innerText(),/Simulated demo observations/);await p.screenshot({path:out+'/observations-en.png'});
+ await p.locator('.person-enclosed').first().click();assert.match(await p.locator('#detail-info').innerText(),/Enclosed space detected/);assert.doesNotMatch(await p.locator('#detail-info').innerText(),/Fictional resident|Simulated demo observations/);await p.screenshot({path:out+'/observations-en.png'});
  await p.waitForFunction(()=>!!navigator.serviceWorker.controller);await ctx.setOffline(true);await p.reload();await p.waitForFunction(()=>!!document.querySelector('#incident-select').value&&!!document.querySelector('#list [data-person]'));await p.locator('[data-tab="buildings"]').click();await p.waitForFunction(()=>document.querySelectorAll('.community-map-marker').length===2);assert.ok(await p.locator('.person-enclosed').count()>0);await ctx.setOffline(false);
  await p.setViewportSize({width:320,height:800});assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.deepEqual(errors,[]);
  console.log('PASS: member map → other-neighborhood counts only; all 3 summaries; impact/enclosure pins and detail; JA/EN; offline restart; 320 px; no page errors');

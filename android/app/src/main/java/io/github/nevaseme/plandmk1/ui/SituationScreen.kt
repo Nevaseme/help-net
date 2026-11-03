@@ -57,7 +57,7 @@ fun positionDescription(person: MapPerson, now: Long): String = when {
 
 @Composable fun safetyText(state:MapSafety)=if(state==MapSafety.SOS)"SOS" else uiText(when(state){MapSafety.SOS->"my_sos";MapSafety.UNANSWERED->"no_response";MapSafety.SAFE->"safe";MapSafety.RESCUED->"rescued"})
 @Composable fun personText(person:MapPerson)=when {person.demo->person.name;person.state==MapSafety.SAFE->uiText("safe_person");person.state==MapSafety.RESCUED->uiText("rescued_person");!person.identityVisible->uiText("no_response");person.name.isBlank()->uiText("registered_resident");else->person.name}
-@Composable private fun positionText(person:MapPerson,now:Long):String=if(person.fictional)if(LocalUiLanguage.current=="en")"Fictional resident" else "架空住民" else if(person.demo)if(LocalUiLanguage.current=="en")"Demo position" else "会場デモの位置" else if(person.point==null||person.acquiredAt==null)uiText("position_unreceived") else uiText("position_time",SimpleDateFormat("HH:mm",Locale.getDefault()).format(Date(person.acquiredAt)),((now-person.acquiredAt)/60_000).coerceAtLeast(0))+(person.accuracy?.let {" · "+uiText("accuracy",it)}?:"")
+@Composable private fun positionText(person:MapPerson,now:Long):String=if(person.point==null||person.acquiredAt==null)uiText("position_unreceived") else uiText("position_time",SimpleDateFormat("HH:mm",Locale.getDefault()).format(Date(person.acquiredAt)),((now-person.acquiredAt)/60_000).coerceAtLeast(0))+(person.accuracy?.let {" · "+uiText("accuracy",it)}?:"")
 
 @OptIn(ExperimentalMaterial3Api::class,ExperimentalLayoutApi::class)
 @Composable
@@ -322,7 +322,6 @@ fun filteredPeople(people:List<MapPerson>,filter:String?,now:Long)=when(filter){
         if(needsHelp) {
             if (person.impactAt != null || person.enclosedAt != null) {
                 HorizontalDivider(); Text(uiText("phone_observations"), style = MaterialTheme.typography.titleMedium)
-                if(person.fictional) Text(if(LocalUiLanguage.current=="en") "Simulated demo observations" else "デモの模擬検知",style=MaterialTheme.typography.bodySmall)
                 person.impactAt?.let { Observation(R.drawable.impact, "${uiText("impact")} ${formatTime(it)}") }
                 person.enclosedAt?.let { Observation(R.drawable.enclosed, "${uiText("enclosed")} ${formatTime(it)}") }
             }
