@@ -1,4 +1,5 @@
 import {linkedBuildingResidents,registeredBuildingForPerson,buildingAtRegisteredPlace} from './building-details.mjs';
+import {demoAddressLabel} from './demo-address-display.mjs';
 import {showCommunityScreen} from './community-screen.mjs';
 import {demoCommunityFor,communityMapOverview,communityOverview,areaCaseCategory,areaCaseCommunityIds} from './community-overview.mjs';
 import {setHtml} from './dom-state.mjs';
@@ -8,7 +9,7 @@ import {placeBuildings,currentBuildingCare,BUILDING_ACTIONS} from './places.mjs'
 import {englishUI} from './web1617-english.mjs';
 import {memberFor, responseKey, responsePermissions, responseTargetPermissions, canonicalIncidentId} from './managed-records.mjs';
 import {currentEvents} from './sync.mjs';
-import {appendScopedIncident} from './incidents.mjs';
+import {appendScopedIncident,revokePersonRescue} from './incidents.mjs';
 import {bindFormDraft} from './form-drafts.mjs';
 
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -52,23 +53,34 @@ export function residenceFloorLabel(floor, language='ja') {
  if(!Number.isSafeInteger(number)||number<-2147483648||number>2147483647)return value;
  return language==='en'?`Floor ${number}`:number<0?`地下${-number}階`:`${number}階`;
 }
+export function buildingStoreysLabel(floors,language='ja') {
+ return language==='en'?`${floors} ${Number(floors)===1?'floor':'floors'}`:`${floors}階建`;
+}
 
 /** Phone positions are separate records; home coordinates must never substitute for them. */
-export function personPresentation(person, events, view, ownId, now=Date.now(), position=null) {
- const rescued=currentEvents(events.filter(e=>e.subjectId===person.originId)).some(e=>e.action==='RESCUED' && e.createdAt >= (person.updatedAt||0));
+export function personPresentation(person, events, view, ownId, now=Date.now(), position=null, roster=null) {
+ const rescues=currentEvents(events.filter(e=>e.subjectId===person.originId),roster).filter(e=>e.action==='RESCUED' && e.createdAt >= (person.updatedAt||0));
+ const rescued=rescues.length>0;
  const status=rescued?'RESCUED':person.safety;
- if(['SAFE','RESCUED'].includes(status))return {status,disclosed:false,showDetails:false,unknownLocation:!position,name:status==='SAFE'?'無事の人':'救助済みの人',showHome:false,showObservations:false};
+ if(['SAFE','RESCUED'].includes(status))return {status,disclosed:false,showDetails:false,showStatus:true,rescuedAt:rescued?Math.max(...rescues.map(e=>e.createdAt)):null,unknownLocation:!position,name:status==='SAFE'?'無事の人':'救助済みの人',showHome:false,showObservations:false};
  // The later venue plan permits names for mutual recognition, not disclosure of homes behind a known SOS position.
- if(person.venueSessionId&&person.venueSessionId===view?.start.eventId)return {status,disclosed:true,showDetails:true,unknownLocation:!position,name:person.name,showHome:!position||status==='UNREPORTED',showObservations:!['SAFE','RESCUED'].includes(status)&&!!(person.impactAt||person.enclosedAt)};
+ if(!person.fictional&&person.venueSessionId&&person.venueSessionId===view?.start.eventId)return {status,disclosed:true,showDetails:true,unknownLocation:!position,name:person.name,showHome:!position||status==='UNREPORTED',showObservations:!['SAFE','RESCUED'].includes(status)&&!!(person.impactAt||person.enclosedAt)};
  const disclosed=person.originId===ownId || status!=='UNREPORTED' || (!!view && now-view.start.createdAt>=180000);
  return {status,disclosed,showDetails:true,unknownLocation:!position,name:!disclosed?'応答なし':status==='SAFE'?'無事の人':status==='RESCUED'?'救助済みの人':person.name,
   showHome:disclosed&&(!position||status==='UNREPORTED'),showObservations:!['SAFE','RESCUED'].includes(status)&&!!(person.impactAt||person.enclosedAt)};
 }
+/** Building statistics are anonymous, including before personal disclosure begins. */
+export function buildingSafetyCounts(people,events=[],roster=null) {
+ const counts={total:people.length,SAFE:0,SOS:0,UNREPORTED:0,RESCUED:0};
+ for(const person of people){const {status}=personPresentation(person,events,null,null,Date.now(),null,roster);if(Object.hasOwn(counts,status))counts[status]++;}
+ return counts;
+}
 
 export function personCommunity(snapshot, person) {
  const v=snapshot.venue;if(!v?.scenario)return 'group';
- if(v.positionMode==='ACTUAL'&&!v.scenario.people.some(p=>p.deviceId===person.originId))return 'venue';
- return demoCommunityFor(person.homeLongitude??person.longitude);
+ const sample=v.scenario.people.find(p=>p.deviceId===person.originId);if(sample)return sample.communityId;
+ if(v.positionMode==='ACTUAL')return 'venue';
+ return demoCommunityFor(person.homeLongitude??person.longitude,v.scenario.communityLongitudeCuts);
 }
 export function visiblePeople(snapshot) {
  const records=snapshot.records||[];if(!snapshot.venue?.scenario)return records;
@@ -82,13 +94,13 @@ export const isResolvedCase = row => row.progress.length>0 && row.progress.every
 export function responseCases(snapshot, heads) {
  const {records=[],events=[],view,id,memos=[]}=snapshot;
  const rows=visiblePeople(snapshot).filter(p=>p.safety==='SOS'||heads.some(e=>e.change.type!=='INJURY'&&e.change.target?.id===p.originId)).map(p=>{
-  const presentation=personPresentation(p,events,view,id);
+  const presentation=personPresentation(p,events,view,id,Date.now(),null,snapshot.roster);
   return {target:{kind:'PERSON',id:p.originId},title:presentation.name,description:p.safety==='SOS'?(memos.find(m=>m.answerId===view?.answers[p.originId]?.eventId)?.text||snapshot.venue?.scenario?.people?.find(x=>x.deviceId===p.originId)?.note||''):'',person:p,statusIcon:presentation.status};
  });
  const reports=new Map();
  for(const e of heads.filter(e=>e.change.type==='REPORT')){const list=reports.get(e.change.reportId)||[];list.push(e);reports.set(e.change.reportId,list);}
  for(const [reportId,list] of reports)rows.push({target:{kind:'REPORT',id:reportId},title:[...new Set((list.some(e=>!e.change.cancelled)?list.filter(e=>!e.change.cancelled):list).map(e=>e.change.category))].join(' / '),description:(list.some(e=>!e.change.cancelled)?list.filter(e=>!e.change.cancelled):list).map(e=>e.change.description).join(' / '),reports:list,statusIcon:'REPORT'});
- return rows.filter(row=>!row.person||personPresentation(row.person,events,view,id).disclosed).map(row=>{
+ return rows.filter(row=>!row.person||personPresentation(row.person,events,view,id,Date.now(),null,snapshot.roster).disclosed).map(row=>{
   const relevant=heads.filter(e=>e.change.target?.kind===row.target.kind&&e.change.target?.id===row.target.id);
   const progress=relevant.filter(e=>e.change.type==='PROGRESS');
   return {...row,heads:relevant,progress,assignments:relevant.filter(e=>e.change.type==='ASSIGNMENT'&&e.change.active),materials:relevant.filter(e=>e.change.type==='MATERIAL'&&!e.change.cancelled),cancelledMaterials:relevant.filter(e=>e.change.type==='MATERIAL'&&e.change.cancelled),priorities:relevant.filter(e=>e.change.type==='PRIORITY'),updatedAt:Math.max(0,...[...relevant,...row.reports||[]].map(e=>e.operatedAt))};
@@ -130,22 +142,24 @@ export function createWeb1617Ui({map,snapshot,getStore,changed,tab,selectPerson,
  const buildingSheet=dialog('map-building-sheet','建物の詳細'),townSheet=dialog('town-summary-sheet','町内会の状況'),townDetails=dialog('town-details-sheet','町内会の詳細');
  let selectedMapBuilding=null,buildingEpoch=0;
  const local=(ja,en)=>language==='en'?en:ja;
+ const addressLabel=value=>demoAddressLabel(value,language==='en');
  const observationIcon=kind=>`<span class="obs-icon ${kind}"><img src="/web1617-${kind==='enclosed'?'enclosed.png':'impact-collision.svg'}" alt=""></span>`;
  const observationCard=(kind,time)=>`<div class="observation">${observationIcon(kind)}<div><b>${kind==='enclosed'?h('閉所を検知'):local('衝撃あり','Impact detected')}</b><small>${escape(new Date(time).toLocaleString(language==='en'?'en-GB':'ja-JP',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}))}</small></div></div>`;
  function renderMapBuilding(){
   const b=selectedMapBuilding;if(!b)return;const s=snapshot(),input=communityInput(),own=input.people.find(p=>p.id===s.id)?.communityId;
-  const visible=linkedBuildingResidents(b,s.placeRows||[],s.records).map(p=>({p,v:personPresentation(p,s.events,s.view,s.id,Date.now(),positionFor(p.originId))})).filter(({p,v})=>v.disclosed&&v.showHome&&(!s.venue?.scenario||input.people.find(x=>x.id===p.originId)?.communityId===own));
+  const linked=linkedBuildingResidents(b,s.placeRows||[],s.records),counts=buildingSafetyCounts(linked,s.events,s.roster);
+  const visible=linked.map(p=>({p,v:personPresentation(p,s.events,s.view,s.id,Date.now(),positionFor(p.originId),s.roster)})).filter(({p,v})=>v.disclosed&&v.showHome&&(!s.venue?.scenario||input.people.find(x=>x.id===p.originId)?.communityId===own));
   const registered=(s.placeRows||[]).find(r=>r.kind==='BUILDING'&&(r.buildingId===b.registeredId||r.locationReference?.plateauId===b.id));
   const a=b.attributes||{},unknown=b.attributesStatus==='error'?local('取得できません','Unavailable'):b.attributesStatus==='unmatched'?local('照合できません','Not matched'):b.attributesStatus==='unlinked'?local('未登録','Not linked'):local('不明','Unknown'),structure=({'601':local('木造','Wood'),'602':local('鉄骨鉄筋コンクリート造','Steel reinforced concrete'),'603':local('鉄筋コンクリート造','Reinforced concrete'),'604':local('鉄骨造','Steel'),'605':local('軽量鉄骨造','Light steel')})[a.structureCode]||unknown;
   buildingSheet.dataset.buildingId=b.id;buildingSheet.querySelector('h2').textContent=local('建物の詳細','Building details');
-  setHtml(buildingSheet.querySelector('.sheet-body'),`<p>${escape(b.label||registered?.label||local('選択した建物','Selected building'))}</p><dl class="building-attributes"><div><dt>${local('建築年','Year built')}</dt><dd>${a.year?escape(a.year)+local('年',''):unknown}</dd></div><div><dt>${local('建材・構造','Structure')}</dt><dd>${escape(structure)}</dd></div><div><dt>${local('階数','Storeys')}</dt><dd>${a.floors?escape(a.floors)+local('階建',''):unknown}</dd></div></dl>${b.attributesStatus==='error'?`<button class="text-button" id="building-attributes-retry">${local('再読み込み','Retry')}</button>`:''}<h3>${local('個別に確認できる登録住民','Registered residents you can view')}</h3>${visible.map(({p,v})=>`<button class="resident person-row" data-building-person="${escape(p.originId)}">${icon(v.status)}<span><strong>${escape(v.name===p.name?p.name:t(v.name))}</strong><small>${statusName(v.status)}</small></span>${chevron}</button>`).join('')||`<p class="muted">${local('表示できる住民情報はありません。','No resident information available to display.')}</p>`}`);
+  setHtml(buildingSheet.querySelector('.sheet-body'),`<p>${escape(addressLabel(b.label||registered?.label||local('選択した建物','Selected building')))}</p><dl class="building-attributes"><div><dt>${local('建築年','Year built')}</dt><dd>${a.year?escape(a.year)+local('年',''):unknown}</dd></div><div><dt>${local('建材・構造','Structure')}</dt><dd>${escape(structure)}</dd></div><div><dt>${local('階数','Storeys')}</dt><dd>${a.floors?escape(buildingStoreysLabel(a.floors,language)):unknown}</dd></div></dl>${b.attributesStatus==='error'?`<button class="text-button" id="building-attributes-retry">${local('再読み込み','Retry')}</button>`:''}<h3>${local('登録住民の安否','Registered resident safety')}</h3><dl class="town-counts building-safety-counts">${[['total',local('合計','Total')],['SAFE',t('無事')],['UNREPORTED',t('応答なし')],['SOS','SOS'],['RESCUED',t('救助済み')]].map(([key,label])=>`<div data-building-count="${key}"><dt>${escape(label)}</dt><dd>${counts[key]}<small>${local('人','')}</small></dd></div>`).join('')}</dl><h3>${local('個別に確認できる登録住民','Registered residents you can view')}</h3>${visible.map(({p,v})=>`<button class="resident person-row" data-building-person="${escape(p.originId)}">${icon(v.status)}<span><strong>${escape(v.name===p.name?p.name:t(v.name))}</strong><small>${statusName(v.status)}</small></span>${chevron}</button>`).join('')||`<p class="muted">${local('表示できる住民情報はありません。','No resident information available to display.')}</p>`}`);
   const retry=buildingSheet.querySelector('#building-attributes-retry');if(retry&&b.registeredPlace)retry.onclick=()=>openRegisteredBuilding(b.registeredPlace);
-  for(const button of buildingSheet.querySelectorAll('[data-building-person]'))button.onclick=()=>{buildingSheet.close();selectPerson(button.dataset.buildingPerson);renderPerson(button.dataset.buildingPerson,true);};
+  for(const button of buildingSheet.querySelectorAll('[data-building-person]'))button.onclick=()=>{const id=button.dataset.buildingPerson;buildingSheet.close();const position=positionFor(id);if(position){tab('buildings');map.focusPerson(position);}selectPerson(id);renderPerson(id,true);};
  }
  function showMapBuildings(buildings){
   personSheet.close();townSheet.close();townDetails.close();
   if(buildings.length===1){selectedMapBuilding=buildings[0];renderMapBuilding();}
-  else{selectedMapBuilding=null;buildingSheet.querySelector('h2').textContent=local('建物を選ぶ','Choose a building');buildingSheet.querySelector('.sheet-body').innerHTML=buildings.map((b,i)=>`<button class="resident" data-roof="${i}">${escape(b.label||local('建物','Building')+' '+(i+1))} · ${escape(b.attributes?.floors||local('階数不明','Unknown storeys'))}</button>`).join('');for(const btn of buildingSheet.querySelectorAll('[data-roof]'))btn.onclick=()=>{selectedMapBuilding=buildings[Number(btn.dataset.roof)];renderMapBuilding();};}
+  else{selectedMapBuilding=null;buildingSheet.querySelector('h2').textContent=local('建物を選ぶ','Choose a building');buildingSheet.querySelector('.sheet-body').innerHTML=buildings.map((b,i)=>`<button class="resident" data-roof="${i}">${escape(addressLabel(b.label||local('建物','Building')+' '+(i+1)))} · ${escape(b.attributes?.floors?buildingStoreysLabel(b.attributes.floors,language):local('階数不明','Unknown storeys'))}</button>`).join('');for(const btn of buildingSheet.querySelectorAll('[data-roof]'))btn.onclick=()=>{selectedMapBuilding=buildings[Number(btn.dataset.roof)];renderMapBuilding();};}
   if(!buildingSheet.open)buildingSheet.show();
  }
  async function openRegisteredBuilding(place){const epoch=++buildingEpoch;try{const building=await buildingAtRegisteredPlace(place);if(epoch===buildingEpoch&&snapshot().group===place.groupId)showMapBuildings([building]);}catch{if(epoch===buildingEpoch)showMapBuildings([{id:place.locationReference?.plateauId||place.buildingId,registeredId:place.buildingId,label:place.label,attributes:{},attributesStatus:'error',registeredPlace:place}]);}}
@@ -197,7 +211,7 @@ document.querySelector('[data-menu="settings"]').onclick=()=>{$('app-menu').clos
  const header=document.querySelector('.app-header');const adaptHeader=()=>header.classList.toggle('large-header-text',parseFloat(getComputedStyle(document.documentElement).fontSize)>20);new ResizeObserver(adaptHeader).observe(header);adaptHeader();
  const updateInternet=()=>{offlineHost.style.visibility=navigator.onLine?'hidden':'visible';offlineHost.setAttribute('aria-hidden',String(navigator.onLine));};window.addEventListener('online',updateInternet);window.addEventListener('offline',updateInternet);updateInternet();
  function statusName(status){return h(statusLabels[status]||status);}
- function renderPeople(){const s=snapshot(),presented=visiblePeople(s).map(p=>({p,...personPresentation(p,s.events,s.view,s.id,Date.now(),positionFor(p.originId))}));
+ function renderPeople(){const s=snapshot(),presented=visiblePeople(s).map(p=>({p,...personPresentation(p,s.events,s.view,s.id,Date.now(),positionFor(p.originId),s.roster)}));
   const towns=communityOverview(communityInput());
   setHtml(stats,`<h3>${local('町内会の安否','Neighborhood safety')}</h3><div class="neighborhood-table-wrap"><table class="neighborhood-table"><thead><tr><th scope="col">${local('町内会','Neighborhood')}</th>${['SOS','UNREPORTED','SAFE','RESCUED'].map(k=>`<th scope="col">${statusName(k)}</th>`).join('')}</tr></thead><tbody>${towns.map(r=>`<tr><th scope="row">${escape(language==='en'?r.nameEn:r.nameJa)}</th>${['sos','unreported','safe','rescued'].map(k=>`<td>${r[k]}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`);
   setHtml(listIntro,`<h2>${h('メンバー一覧')}</h2><p>${h('個別に確認できる人')}</p>`);
@@ -206,12 +220,19 @@ document.querySelector('[data-menu="settings"]').onclick=()=>{$('app-menu').clos
   for(const b of filterBar.querySelectorAll('button'))b.onclick=()=>{unknownOnly=false;$('filter').value=b.dataset.personFilter;renderPeople();};
   setHtml(locationNote,`<img src="/nav-user.svg" alt="">${h('位置不明')} ${presented.filter(p=>p.unknownLocation).length}`);
   const shown=presented.filter(p=>!unknownOnly||p.unknownLocation).filter(p=>$('filter').value==='ALL'||($('filter').value==='NONSAFE'?!['SAFE','RESCUED'].includes(p.status):$('filter').value==='SAFE'?['SAFE','RESCUED'].includes(p.status):p.status===$('filter').value));
-  setHtml($('list'),shown.length?shown.map(p=>`<button class="resident person-row" data-person="${escape(p.p.originId)}" ${p.showDetails===false?'disabled aria-disabled="true"':''}>${icon(p.status)}<span><strong>${escape(p.disclosed&&p.name===p.p.name?p.name:t(p.name))}</strong><small>${statusName(p.status)} · ${h(p.unknownLocation?'位置不明':'最後の端末位置')}${!p.unknownLocation?' · '+escape(elapsed(positionFor(p.p.originId).acquiredAt)):''}</small>${p.showObservations?`<small class="person-observations">${[p.p.impactAt?h('衝撃を検知'):'',p.p.enclosedAt?h('閉所を検知'):''].filter(Boolean).join(' · ')}</small>`:''}${p.showHome&&(p.p.floor||p.p.room)?`<small>${h('寝室')}：${escape([residenceFloorLabel(p.p.floor,language),p.p.room].filter(Boolean).join(' · '))}</small>`:''}</span>${p.showDetails===false?'':chevron}</button>`).join(''):`<p class="empty-state">${h('対象の記録はありません。')}</p>`);
+  setHtml($('list'),shown.length?shown.map(p=>`<button class="resident person-row" data-person="${escape(p.p.originId)}" >${icon(p.status)}<span><strong>${escape(p.disclosed&&p.name===p.p.name?p.name:t(p.name))}</strong><small>${statusName(p.status)} · ${h(p.unknownLocation?'位置不明':'最後の端末位置')}${!p.unknownLocation?' · '+escape(elapsed(positionFor(p.p.originId).acquiredAt)):''}</small>${p.showObservations?`<small class="person-observations">${[p.p.impactAt?h('衝撃を検知'):'',p.p.enclosedAt?h('閉所を検知'):''].filter(Boolean).join(' · ')}</small>`:''}${p.showHome&&(p.p.floor||p.p.room)?`<small>${h('寝室')}：${escape([residenceFloorLabel(p.p.floor,language),p.p.room].filter(Boolean).join(' · '))}</small>`:''}</span>${chevron}</button>`).join(''):`<p class="empty-state">${h('対象の記録はありません。')}</p>`);
   for(const b of $('list').querySelectorAll('button'))b.onclick=()=>{selectPerson(b.dataset.person);renderPerson(b.dataset.person,true);};
  }
  function renderPerson(id,open=false){const s=snapshot(),p=visiblePeople(s).find(p=>p.originId===id);detail.hidden=!p;if(!p){personSheet.close();return;}
-  personSheet.dataset.personId=id;const v=personPresentation(p,s.events,s.view,s.id,Date.now(),positionFor(p.originId));if(v.showDetails===false){detail.hidden=true;personSheet.close();$('detail-info').replaceChildren();$('history').replaceChildren();return;}personSheet.querySelector('h2').textContent=v.name===p.name?p.name:t(v.name);$('detail-name').hidden=true;
+  personSheet.dataset.personId=id;const v=personPresentation(p,s.events,s.view,s.id,Date.now(),positionFor(p.originId),s.roster);personSheet.querySelector('h2').textContent=v.name===p.name?p.name:t(v.name);$('detail-name').hidden=true;
   setHtml(headingIcon,icon(v.status));headingStatus.textContent=t(statusLabels[v.status]);headingStatus.dataset.status=v.status;
+  if(v.showStatus){
+   careEditor.close();$('care-form').hidden=true;personAction.hidden=true;personFooter.hidden=true;historyDetails.hidden=true;$('history').replaceChildren();$('supersedes').replaceChildren();
+   setHtml($('detail-info'),`<p class="anonymous-person-status">${statusName(v.status)}</p>${v.status==='RESCUED'?`<p class="person-rescued-at">${local('救助日時','Rescued at')}：${escape(date(v.rescuedAt))}</p>`:''}${v.status==='RESCUED'&&member()?.role==='ADMIN'&&canWrite()?`<button id="person-revoke-rescue" class="secondary" type="button">${local('救助済みを取り消す','Revoke rescue')}</button><p id="person-rescue-feedback" class="feedback" role="status"></p>`:''}`);
+   const revoke=$('person-revoke-rescue');if(revoke)revoke.onclick=()=>{if(busy)return;revoke.disabled=true;save(async()=>{const current=snapshot();await revokePersonRescue(getStore(),{groupId:current.group,incidentId:current.incidentId,authorId:current.id},id);},$('person-rescue-feedback')).finally(()=>{revoke.disabled=false;});};
+   if(open&&!personSheet.open)personSheet.show();return;
+  }
+  historyDetails.hidden=false;
   const pos=positionFor(id),homeBuilding=v.showHome?registeredBuildingForPerson(s.placeRows||[],id):null;
   const homeKey=homeBuilding?JSON.stringify([s.group,homeBuilding.buildingId,homeBuilding.latitude,homeBuilding.longitude,homeBuilding.locationReference]):null;
   if(homeKey&&!personHomeCache.has(homeKey)){personHomeCache.set(homeKey,{pending:true});buildingAtRegisteredPlace(homeBuilding).then(b=>personHomeCache.set(homeKey,{attributes:b.attributes||{},status:b.attributesStatus})).catch(()=>personHomeCache.set(homeKey,{attributes:{},status:'error'})).finally(()=>{if(personSheet.open&&personSheet.dataset.personId===id&&snapshot().group===s.group)renderPerson(id);});}
@@ -224,10 +245,10 @@ document.querySelector('[data-menu="settings"]').onclick=()=>{$('app-menu').clos
   const bedroom=[residenceFloorLabel(p.floor,language),p.room].filter(Boolean).join('・')||t('未登録');
   const pin='<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7m0 10a3 3 0 1 1 0-6 3 3 0 0 1 0 6"/></svg>';
   const bed='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 4v17m20-10v10M2 17h20M2 9h6v8m0-6h11a3 3 0 0 1 3 3v3H8Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';
-  setHtml($('detail-info'),`<p class="person-position">${pin}<span>${positionText}</span></p>${memo?`<p class="sos-note">${escape(memo)}</p>`:''}${v.showHome?`<section class="person-home"><h3>${local('普段の住居・寝室','Usual home and sleeping area')}</h3><div class="person-address"><strong>${escape(p.homeAddress||homeBuilding?.label||t('未登録'))}</strong>${homeBuilding?`<button id="person-home-building" class="text-button">${local('建物を見る','View building')}${chevron}</button>`:''}</div><div class="person-bedroom">${bed}<strong>${escape(bedroom)}</strong></div><dl id="person-home-attributes" class="building-attributes" data-status="${homeData?.pending?'loading':homeData?.status==='error'?'error':'ready'}"><div><dt>${local('築年数','Building age')}</dt><dd>${age!==null?local('築'+age+'年',age+' years'):unknown}</dd></div><div><dt>${local('建材・構造','Structure')}</dt><dd>${escape(material)}</dd></div><div><dt>${local('階数','Storeys')}</dt><dd>${attrs.floors?escape(attrs.floors)+local('階建',''):unknown}</dd></div></dl>${homeData?.status==='error'?`<button id="person-attributes-retry" class="text-button">${local('再読み込み','Retry')}</button>`:''}</section><section class="person-daytime"><h3>${h('普段昼間いる場所')}</h3><p>${escape(p.daytimePlace||sample?.daytimePlace||t('未登録'))}</p></section>`:!v.disclosed?`<p class="notice">${h('応答がない人の詳細は、安否確認の開始から3分後に表示します。')}</p>`:''}${v.showObservations?`<section class="person-observation-section"><h3>${local('検知情報','Detected events')}</h3><div class="observations">${p.impactAt?observationCard('impact',p.impactAt):''}${p.enclosedAt?observationCard('enclosed',p.enclosedAt):''}</div></section>`:''}`);
+  setHtml($('detail-info'),`<p class="person-position">${pin}<span>${positionText}</span></p>${memo?`<p class="sos-note">${escape(memo)}</p>`:''}${v.showHome?`<section class="person-home"><h3>${local('普段の住居・寝室','Usual home and sleeping area')}</h3><div class="person-address"><strong>${escape(addressLabel(p.homeAddress||homeBuilding?.label||t('未登録')))}</strong>${homeBuilding?`<button id="person-home-building" class="text-button">${local('建物を見る','View building')}${chevron}</button>`:''}</div><div class="person-bedroom">${bed}<strong>${escape(bedroom)}</strong></div><dl id="person-home-attributes" class="building-attributes" data-status="${homeData?.pending?'loading':homeData?.status==='error'?'error':'ready'}"><div><dt>${local('築年数','Building age')}</dt><dd>${age!==null?local('築'+age+'年',age+' years'):unknown}</dd></div><div><dt>${local('建材・構造','Structure')}</dt><dd>${escape(material)}</dd></div><div><dt>${local('階数','Storeys')}</dt><dd>${attrs.floors?escape(buildingStoreysLabel(attrs.floors,language)):unknown}</dd></div></dl>${homeData?.status==='error'?`<button id="person-attributes-retry" class="text-button">${local('再読み込み','Retry')}</button>`:''}</section><section class="person-daytime"><h3>${h('普段昼間いる場所')}</h3><p>${escape(p.daytimePlace||sample?.daytimePlace||t('未登録'))}</p></section>`:!v.disclosed?`<p class="notice">${h('応答がない人の詳細は、安否確認の開始から3分後に表示します。')}</p>`:''}${v.showObservations?`<section class="person-observation-section"><h3>${local('検知情報','Detected events')}</h3><div class="observations">${p.impactAt?observationCard('impact',p.impactAt):''}${p.enclosedAt?observationCard('enclosed',p.enclosedAt):''}</div></section>`:''}`);
   const attrRetry=$('person-attributes-retry');if(attrRetry)attrRetry.onclick=()=>{personHomeCache.delete(homeKey);renderPerson(id);};
   const homeButton=$('person-home-building');if(homeButton)homeButton.onclick=()=>openRegisteredBuilding(homeBuilding);
-  const all=s.events.filter(e=>e.subjectId===id).sort((a,b)=>b.createdAt-a.createdAt);const active=currentEvents(all);
+  const all=s.events.filter(e=>e.subjectId===id).sort((a,b)=>b.createdAt-a.createdAt);const active=currentEvents(all,s.roster);
   $('history').innerHTML=v.disclosed&&all.length?all.map(e=>`<div class="event"><strong>${h(({CHECKING:'確認中',NEEDS_HELP:'要救助',RESCUED:'救助済み',REVOKED:'撤回'})[e.action]||e.action)}</strong><p>${escape(e.note)}</p><small>${escape(e.authorName)} · ${escape(date(e.createdAt))}</small></div>`).join(''):`<p class="muted">${h('まだ記録はありません。')}</p>`;
   const old=$('supersedes').value;$('supersedes').innerHTML='<option value="">'+h('対応の記録')+'</option>'+active.filter(e=>e.authorId===s.id).map(e=>`<option value="${e.eventId}">${escape(date(e.createdAt))}</option>`).join('');if(active.some(e=>e.eventId===old))$('supersedes').value=old;
   $('care-form').hidden=!v.disclosed||!s.view||s.view.closed||!s.records.some(r=>r.originId===s.id);personAction.hidden=$('care-form').hidden||v.status==='SAFE';personFooter.hidden=personAction.hidden;setHtml(personAction,`<img src="/web1617-rescued.svg" alt="">${h(v.status==='RESCUED'?'救助記録を訂正する':'救助済みにする')}`);historyDetails.querySelector('summary').textContent=local('救助・確認の記録','Rescue and check history')+' '+(v.disclosed?all.length:0)+local('件','');
@@ -262,9 +283,9 @@ document.querySelector('[data-menu="settings"]').onclick=()=>{$('app-menu').clos
  function reportAuthor(row){
   const s=snapshot(),original=history.find(e=>e.eventId===row.target.id&&e.change.type==='REPORT')||row.reports[0],person=s.records.find(p=>p.originId===original.actorDeviceId);
   const own=s.records.find(p=>p.originId===s.id),same=person&&own&&personCommunity(s,person)===personCommunity(s,own);
-  if(person&&['SAFE','RESCUED'].includes(personPresentation(person,s.events,s.view,s.id).status))return local('通報者','Reporter');
+  if(person&&['SAFE','RESCUED'].includes(personPresentation(person,s.events,s.view,s.id,Date.now(),null,s.roster).status))return local('通報者','Reporter');
   if(coordinator()&&same)return person.name;
-  return person?.homeAddress||registeredBuildingForPerson(s.placeRows||[],original.actorDeviceId)?.label||t('未登録');
+  return addressLabel(person?.homeAddress||registeredBuildingForPerson(s.placeRows||[],original.actorDeviceId)?.label||t('未登録'));
  }
  function regionOptions(ids=[]){const available=communityInput().communities;return `<option value="">${local('地域未設定','Area not set')}</option>`+[...available,...ids.filter(id=>!available.some(c=>c.id===id)).map(id=>({id,nameJa:id,nameEn:id}))].map(c=>`<option value="${escape(c.id)}" ${ids.includes(c.id)?'selected':''}>${escape(language==='en'?c.nameEn:c.nameJa)}</option>`).join('');}
  function showCase(open=true){
@@ -327,7 +348,7 @@ document.querySelector('[data-menu="settings"]').onclick=()=>{$('app-menu').clos
    review.append(check,language==='en'?'The shared record changed. Review your draft before saving.':'共有された記録が更新されています。入力内容を確認してから保存してください。');form.prepend(review);
   });
   function updateLocationLabel(){const label=form.querySelector('#report-location-label');if(label)label.textContent=form.elements.latitude.value&&form.elements.longitude.value?local('地図で選択済み','Location selected on map'):local('場所を選んでください','Choose a location');}
-  if(picked&&form.elements.latitude){form.elements.latitude.value=picked.latitude;form.elements.longitude.value=picked.longitude;if(s.venue?.scenario&&picked.latitude>35&&picked.latitude<35.04&&picked.longitude>135.75&&picked.longitude<135.78)form.elements.region.value=demoCommunityFor(picked.longitude);draft.capture();}
+  if(picked&&form.elements.latitude){form.elements.latitude.value=picked.latitude;form.elements.longitude.value=picked.longitude;if(s.venue?.scenario&&picked.latitude>35&&picked.latitude<35.04&&picked.longitude>135.75&&picked.longitude<135.78)form.elements.region.value=demoCommunityFor(picked.longitude,s.venue.scenario.communityLongitudeCuts);draft.capture();}
   updateLocationLabel();
   const pick=form.querySelector('#report-pick-location');if(pick)pick.onclick=()=>{draft.capture();editor.close();caseSheet.close();tab('buildings');map.pickLocation(point=>{target=formTarget;edit(kind,record,point);},{language});};
   form.onsubmit=e=>{e.preventDefault();const d=new FormData(form);save(async()=>{await onSubmit(d);draft.clear();},form.querySelector('.feedback'));};
@@ -336,9 +357,9 @@ document.querySelector('[data-menu="settings"]').onclick=()=>{$('app-menu').clos
  let communitySignature="";
  function communityInput(){const s=snapshot(),v=s.venue;const fictional=new Set((v?.scenario?.people||[]).map(p=>p.deviceId));
   const communities=v?.scenario?[...v.scenario.communities,...(v.positionMode==='ACTUAL'?[{id:'venue',nameJa:'会場参加者',nameEn:'Venue participants'}]:[])]:[{id:'group',nameJa:groupName(),nameEn:groupName()}];
-  const people=s.records.map(p=>({id:p.originId,name:p.name,communityId:v?.scenario?(v.positionMode==='ACTUAL'&&!fictional.has(p.originId)?'venue':demoCommunityFor(p.homeLongitude??p.longitude)):'group',latitude:p.homeLatitude??p.latitude,longitude:p.homeLongitude??p.longitude,status:personPresentation(p,s.events,s.view,s.id).status,fictional:fictional.has(p.originId),buildingId:(v?.placements.find(x=>x.deviceId===p.originId)?.home||v?.scenario?.people.find(x=>x.deviceId===p.originId)?.home)?.buildingId||null}));
+  const people=s.records.map(p=>({id:p.originId,name:p.name,communityId:personCommunity(s,p),latitude:p.homeLatitude??p.latitude,longitude:p.homeLongitude??p.longitude,status:personPresentation(p,s.events,s.view,s.id,Date.now(),null,s.roster).status,fictional:fictional.has(p.originId),buildingId:(v?.placements.find(x=>x.deviceId===p.originId)?.home||v?.scenario?.people.find(x=>x.deviceId===p.originId)?.home)?.buildingId||null}));
   const aggregateCases=[...people.filter(p=>p.status==='SOS').map(p=>({target:{kind:'PERSON',id:p.id},statusIcon:'SOS'})),...cases.filter(c=>c.target.kind==='REPORT')];
-  const input={cases,aggregateCases,visiblePersonIds:visiblePeople(s).filter(p=>personPresentation(p,s.events,s.view,s.id).disclosed).map(p=>p.originId),groupId:s.group,groupName:groupName(),incidentId:s.incidentId,demo:!!v,communities,people,heads:heads.filter(e=>e.groupId===s.group&&e.incidentId===s.incidentId),sourceIds:[...s.events.map(e=>e.eventId),...Object.values(s.view?.answers||{}).map(e=>e.eventId)]};
+  const input={cases,aggregateCases,visiblePersonIds:visiblePeople(s).filter(p=>personPresentation(p,s.events,s.view,s.id,Date.now(),null,s.roster).disclosed).map(p=>p.originId),groupId:s.group,groupName:groupName(),incidentId:s.incidentId,demo:!!v,communities,people,heads:heads.filter(e=>e.groupId===s.group&&e.incidentId===s.incidentId),sourceIds:[...s.events.map(e=>e.eventId),...Object.values(s.view?.answers||{}).map(e=>e.eventId)]};
   return input;
  }
  function showSummary(force=true,communityId=summary.dataset.communityId||null){
@@ -352,7 +373,7 @@ document.querySelector('[data-menu="settings"]').onclick=()=>{$('app-menu').clos
  const mapAdd=document.createElement('button');mapAdd.id='map-report-add';mapAdd.className='map-report-add';mapAdd.type='button';mapAdd.textContent=t('通報を追加');mapAdd.onclick=beginReport;document.querySelector('.map-stage').append(mapAdd);
  $('map-show-safe').onchange=()=>renderMap();
  $('map-unknown').onclick=()=>{unknownOnly=true;$('filter').value=$('map-show-safe').checked?'ALL':'NONSAFE';tab('residents');renderPeople();};
- function renderMap(){legendTitle.textContent=t('安否');observationLegend.innerHTML=`<span>${observationIcon('impact')} ${h('衝撃を検知')}</span><span>${observationIcon('enclosed')} ${h('閉所を検知')}</span>`;const s=snapshot(),input=communityInput(),other=communityMapOverview(input,s.id),otherIds=new Set(other.map(r=>r.id)),otherPeople=new Set(input.people.filter(p=>otherIds.has(p.communityId)).map(p=>p.id));map.setCommunities(s.venue?.scenario?other:[],id=>showTown(id));for(const label of legend.querySelectorAll('[data-legend-status]'))label.textContent=t(statusLabels[label.dataset.legendStatus]);map.setShowSafe($('map-show-safe').checked);map.setPeople(visiblePeople(s).map(p=>{const position=positionFor(p.originId),v=personPresentation(p,s.events,s.view,s.id,Date.now(),position);return {id:p.originId,status:v.status,label:v.name===p.name?p.name:t(v.name),position,impactAt:v.showObservations?p.impactAt:null,enclosedAt:v.showObservations?p.enclosedAt:null};}),id=>{selectPerson(id);renderPerson(id,true);});map.setReports(cases.flatMap(r=>(r.reports||[]).filter(e=>!e.change.cancelled).map(e=>({...e.change,id:r.target.id,label:t(r.title),urgency:urgencyFor(r)}))),id=>{target={kind:'REPORT',id};showCase();});$('map-unknown-count').textContent=String(visiblePeople(s).filter(p=>!positionFor(p.originId)&&($('map-show-safe').checked||!['SAFE','RESCUED'].includes(personPresentation(p,s.events,s.view,s.id).status))).length);mapAdd.disabled=!canWrite();mapAdd.textContent=t('通報を追加');}
+ function renderMap(){legendTitle.textContent=t('安否');observationLegend.innerHTML=`<span>${observationIcon('impact')} ${h('衝撃を検知')}</span><span>${observationIcon('enclosed')} ${h('閉所を検知')}</span>`;const s=snapshot(),input=communityInput(),other=communityMapOverview(input,s.id),otherIds=new Set(other.map(r=>r.id)),otherPeople=new Set(input.people.filter(p=>otherIds.has(p.communityId)).map(p=>p.id));map.setCommunities(s.venue?.scenario?other:[],id=>showTown(id));for(const label of legend.querySelectorAll('[data-legend-status]'))label.textContent=t(statusLabels[label.dataset.legendStatus]);map.setShowSafe($('map-show-safe').checked);map.setPeople(visiblePeople(s).map(p=>{const position=positionFor(p.originId),v=personPresentation(p,s.events,s.view,s.id,Date.now(),position,s.roster);return {id:p.originId,status:v.status,label:v.name===p.name?p.name:t(v.name),position,impactAt:v.showObservations?p.impactAt:null,enclosedAt:v.showObservations?p.enclosedAt:null};}),id=>{selectPerson(id);renderPerson(id,true);});map.setReports(cases.flatMap(r=>(r.reports||[]).filter(e=>!e.change.cancelled).map(e=>({...e.change,id:r.target.id,label:t(r.title),urgency:urgencyFor(r)}))),id=>{target={kind:'REPORT',id};showCase();});$('map-unknown-count').textContent=String(visiblePeople(s).filter(p=>!positionFor(p.originId)&&($('map-show-safe').checked||!['SAFE','RESCUED'].includes(personPresentation(p,s.events,s.view,s.id,Date.now(),null,s.roster).status))).length);mapAdd.disabled=!canWrite();mapAdd.textContent=t('通報を追加');}
 
  $('response-export').onclick=async()=>{try{const s=snapshot(),csv=await getStore().exportCsv(s.group,s.incidentId,{}, {language,allowedResidentIds:cases.filter(c=>c.target.kind==='PERSON').map(c=>c.target.id)});const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='tasukeai-'+s.incidentId+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(e){$('message').textContent=e.message;}};
  const safetyForm=document.createElement('form');safetyForm.id='own-status-form';safetyForm.innerHTML='<label id="memo-label">SOSメモ<textarea id="own-memo" maxlength="500" rows="3"></textarea></label><p class="memo-count"></p><button id="memo-save" type="button" class="secondary">メモだけ保存する</button><button id="status-update" type="submit">安否を更新する</button><p id="own-status-feedback" class="feedback" role="status"></p>';document.querySelector('.safety-actions').after(safetyForm);
@@ -370,6 +391,6 @@ document.querySelector('[data-menu="settings"]').onclick=()=>{$('app-menu').clos
   safetyForm.querySelector('.memo-count').hidden=choice!=='SOS';safetyForm.querySelector('.memo-count').textContent=`${$('own-memo').value.length} / 500`;
  }
  applyLanguage();setInterval(()=>{if(!getStore())return;renderPeople();if(personSheet.open)renderPerson(personSheet.dataset.personId);if(incidentSheet.open)renderIncidentDetails();},30000);
- return {render,renderResponse,renderPerson,buildingResidents:()=>{const s=snapshot();return visiblePeople(s).flatMap(p=>{const v=personPresentation(p,s.events,s.view,s.id,Date.now(),positionFor(p.originId));return v.disclosed&&v.showHome?[{...p,name:v.name===p.name?p.name:t(v.name),safety:v.status}]:[];});},closeSheets:()=>{for(const d of [personSheet,caseSheet,editor,summary,settingsSheet,careEditor,incidentSheet,buildingSheet,townSheet,townDetails])d.close();}};
+ return {render,renderResponse,renderPerson,buildingResidents:()=>{const s=snapshot();return visiblePeople(s).flatMap(p=>{const v=personPresentation(p,s.events,s.view,s.id,Date.now(),positionFor(p.originId),s.roster);return v.disclosed&&v.showHome?[{...p,name:v.name===p.name?p.name:t(v.name),safety:v.status}]:[];});},closeSheets:()=>{for(const d of [personSheet,caseSheet,editor,summary,settingsSheet,careEditor,incidentSheet,buildingSheet,townSheet,townDetails])d.close();}};
 }
 

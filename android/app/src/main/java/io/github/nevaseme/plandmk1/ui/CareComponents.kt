@@ -26,11 +26,12 @@ fun careSummary(events: List<CareEvent>, subject: String): String {
 @Composable
 fun CareHistoryAndEditor(model: PlanViewModel, resident: Resident, events: List<CareEvent>, canEdit: Boolean, saving: Boolean) {
     val residents by model.residents.collectAsStateWithLifecycle()
+    val roster by model.roster.collectAsStateWithLifecycle()
     var action by rememberSaveable(resident.originId) { mutableStateOf(CareAction.CHECKING) }
     var note by rememberSaveable(resident.originId) { mutableStateOf("") }
     var supersedes by rememberSaveable(resident.originId) { mutableStateOf<String?>(null) }
     val history = events.filter { it.subjectId == resident.originId }.sortedWith(compareByDescending<CareEvent> { it.createdAt }.thenBy { it.eventId })
-    val current = currentCareEvents(history).map { it.eventId }.toSet()
+    val current = currentCareEvents(history,roster).map { it.eventId }.toSet()
     HorizontalDivider()
     Text("この人への対応記録", style = MaterialTheme.typography.titleMedium)
     if (history.isEmpty()) Text("まだ対応記録はありません")

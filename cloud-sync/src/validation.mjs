@@ -1,3 +1,4 @@
+import {canReplaceCare} from '../../lab/web/care-policy.mjs';
 import {validateResident,validateEvent} from '../../lab/web/sync.mjs';
 import {validateIncident} from '../../lab/web/incidents.mjs';
 import {validatePlace} from '../../lab/web/places.mjs';
@@ -37,6 +38,12 @@ export function validateContext(collection,record,identity,roster,history){
    const receipt=events.find(e=>e.action==='EEW'&&e.targetId===record.incidentId),report=events.find(e=>['REPORT','TRAINING_START'].includes(e.action)&&e.eventId===record.incidentId);
    const startAuthor=receipt?record.incidentId:report?.actorDeviceId;
    requireValue(!(record.sequence===1&&record.authorId===startAuthor),'sequence_conflict',409);
+   if(record.kind==='CARE'&&record.supersedes){
+    const old=history('incidents').find(e=>e.eventId===record.supersedes);
+    requireValue(old,'missing_care_record',409);
+    const canonical=e=>({...e,incidentId:canonicalIncidentId(roster,events,e.incidentId)});
+    requireValue(canReplaceCare(canonical(record),canonical(old),roster),'care_forbidden',403);
+   }
   }
   if(collection==='quakes'){
    const e=validateQuake(roster,record),events=history('quakes');

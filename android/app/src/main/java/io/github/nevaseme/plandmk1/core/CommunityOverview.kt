@@ -7,7 +7,11 @@ import kotlinx.serialization.Serializable
 @Serializable data class CommunityMaterial(val name:String,val unit:String,var shortfall:Double=0.0,var conflict:Boolean=false)
 @Serializable data class CommunityRow(val id:String,val nameJa:String,val nameEn:String,var total:Int=0,var fictional:Int=0,var safe:Int=0,var sos:Int=0,var rescued:Int=0,var unreported:Int=0,var injured:Int=0,var injuryUnknown:Int=0,var reports:Int=0,val materials:MutableList<CommunityMaterial> = mutableListOf())
 @Serializable data class CommunityReport(val version:Int=1,val id:String,val issuedAt:Long,val language:String,val groupId:String,val groupName:String,val incidentId:String,val demo:Boolean,val rows:List<CommunityRow>,val people:List<CommunityPerson>,val sourceIds:List<String>)
-fun demoCommunityFor(longitude:Double)=if(!longitude.isFinite())null else if(longitude<135.760)"demo-west" else if(longitude<135.7615)"demo-central" else "demo-east"
+fun demoCommunityFor(longitude:Double,cuts:List<Double>?=null):String? {
+ val boundaries=cuts?:listOf(135.760,135.7615)
+ require(boundaries.size==2&&boundaries.all {it.isFinite()}&&boundaries[0]<boundaries[1])
+ return if(!longitude.isFinite())null else if(longitude<boundaries[0])"demo-west" else if(longitude<boundaries[1])"demo-central" else "demo-east"
+}
 fun communityInjury(changes:List<ResponseChange>,id:String)=changes.filterIsInstance<ResponseChange.Injury>().filter {it.target==ResponseTarget(TargetKind.PERSON,id)}.map {it.state}.distinct().singleOrNull()?:InjuryState.UNKNOWN
 fun communityOverview(people:List<CommunityPerson>,changes:List<ResponseChange>,communities:List<CommunityName>):List<CommunityRow>{
  val rows=communities.associate {it.id to CommunityRow(it.id,it.nameJa,it.nameEn)}.toMutableMap()

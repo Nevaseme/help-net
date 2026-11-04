@@ -1,6 +1,6 @@
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export const communityLabels=en=>en?{title:'Neighborhood overview',total:'People',fictional:'Fictional residents',safe:'Safe',sos:'SOS',rescued:'Rescued',unreported:'No response',injured:'Injured',injuryUnknown:'Injury unknown',reports:'Reports',materials:'Material shortfalls',none:'None recorded',issue:'Issue report',saved:'Issued reports',unknown:'Unassigned',injury:'Injury information',UNINJURED:'Not injured',INJURED:'Injured',UNKNOWN:'Unknown',demo:'Demo neighborhoods',conflict:'Concurrent updates — largest shortfall shown',source:'Source record IDs'}:{title:'町内会の状況',total:'人数',fictional:'架空住民',safe:'無事',sos:'SOS',rescued:'救助済み',unreported:'応答なし',injured:'負傷者',injuryUnknown:'負傷状況不明',reports:'通報',materials:'不足資材',none:'記録なし',issue:'レポートを発行',saved:'発行済みレポート',unknown:'未分類',injury:'負傷情報',UNINJURED:'負傷なし',INJURED:'負傷あり',UNKNOWN:'不明',demo:'デモ用の町内会',conflict:'同時更新あり・最大の不足数を表示',source:'集計元の記録ID'};
-export const demoCommunityFor=lon=>!Number.isFinite(lon)?null:lon<135.760?'demo-west':lon<135.7615?'demo-central':'demo-east';
+export const demoCommunityFor=(lon,cuts=null)=>!Number.isFinite(lon)?null:lon<(cuts?.[0]??135.760)?'demo-west':lon<(cuts?.[1]??135.7615)?'demo-central':'demo-east';
 const activeReports=row=>(row.reports||[]).filter(e=>e.change.type==='REPORT'&&!e.change.cancelled);
 /** Classify only live incidents; response work on safe/rescued people is not a new SOS. */
 export function areaCaseCategory(row){

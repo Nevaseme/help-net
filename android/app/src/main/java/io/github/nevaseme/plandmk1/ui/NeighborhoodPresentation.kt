@@ -68,11 +68,11 @@ fun activeHighReports(changes:List<ResponseChange>,regionId:String):Int =
 fun communityNamesFor(venue:io.github.nevaseme.plandmk1.demo.VenueSession?,groupName:String):List<CommunityName> =
     venue?.scenario?.communities?.map {CommunityName(it.id,it.nameJa,it.nameEn)}?.let {if(venue.positionMode=="ACTUAL")it+CommunityName("venue","会場参加者","Venue participants")else it}?:listOf(CommunityName("group",groupName,groupName))
 
-fun communityPeopleFor(residents:List<Resident>,care:List<CareEvent>,venue:io.github.nevaseme.plandmk1.demo.VenueSession?):List<CommunityPerson> = residents.map {p->
+fun communityPeopleFor(residents:List<Resident>,care:List<CareEvent>,venue:io.github.nevaseme.plandmk1.demo.VenueSession?,roster:MemberRoster?=null):List<CommunityPerson> = residents.map {p->
     val scenarioPerson=venue?.scenario?.people?.find {it.deviceId==p.originId}
     val placement=venue?.allPlacements()?.find {it.deviceId==p.originId}
-    val region=when {venue?.scenario==null->"group";scenarioPerson!=null->scenarioPerson.communityId;venue.positionMode=="ACTUAL"->"venue";else->placement?.home?.longitude?.let(::demoCommunityFor)}
-    CommunityPerson(p.originId,p.name,region,residentMapState(p,care).name,scenarioPerson!=null,placement?.home?.buildingId)
+    val region=when {venue?.scenario==null->"group";scenarioPerson!=null->scenarioPerson.communityId;venue.positionMode=="ACTUAL"->"venue";else->placement?.home?.longitude?.let {demoCommunityFor(it,venue.scenario.communityLongitudeCuts)}}
+    CommunityPerson(p.originId,p.name,region,residentMapState(p,care,roster).name,scenarioPerson!=null,placement?.home?.buildingId)
 }
 
 fun reportCategoryGroup(category:String)=when(category){"道路閉塞","ROAD_BLOCKED"->"ROAD";"建物倒壊","BUILDING_COLLAPSE"->"BUILDING";else->"OTHER"}

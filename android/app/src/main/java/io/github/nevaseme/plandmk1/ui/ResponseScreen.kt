@@ -36,10 +36,10 @@ import java.util.UUID
 data class ResponseCase(val target:ResponseTarget,val title:String,val description:String,val report:ResponseChange.Report?=null,val cancelled:Boolean=false,val person:MapPerson?=null)
 
 /** Keep concurrent report revisions visible in the detail; cancellation never silently wins a conflict. */
-fun responseCases(residents:List<Resident>,care:List<CareEvent>,heads:List<ResponseEvent>,memos:Map<String,String> = emptyMap(),incidentStartedAt:Long?=null,now:Long=System.currentTimeMillis(),demoIds:Set<String> = emptySet()):List<ResponseCase> {
+fun responseCases(residents:List<Resident>,care:List<CareEvent>,heads:List<ResponseEvent>,memos:Map<String,String> = emptyMap(),incidentStartedAt:Long?=null,now:Long=System.currentTimeMillis(),demoIds:Set<String> = emptySet(),roster:MemberRoster?=null):List<ResponseCase> {
     val recorded=heads.filter {it.change !is ResponseChange.Injury}.mapNotNull {it.change.target()?.takeIf {target->target.kind==TargetKind.PERSON}?.id}.toSet()
-    val people=residents.filter {residentMapState(it,care)==MapSafety.SOS||(residentMapState(it,care)==MapSafety.UNANSWERED&&it.originId in recorded)}.map {
-        val person=projectPersonPrivacy(MapPerson(it.originId,it.displayName(),residentMapState(it,care),demo=it.originId in demoIds),incidentStartedAt,now)
+    val people=residents.filter {residentMapState(it,care,roster)==MapSafety.SOS||(residentMapState(it,care,roster)==MapSafety.UNANSWERED&&it.originId in recorded)}.map {
+        val person=projectPersonPrivacy(MapPerson(it.originId,it.displayName(),residentMapState(it,care,roster),demo=it.originId in demoIds),incidentStartedAt,now)
         ResponseCase(ResponseTarget(TargetKind.PERSON,it.originId),person.publicName,if(person.state==MapSafety.SOS)memos[it.originId].orEmpty()else "",person=person)
     }
     val reports=heads.filter {it.change is ResponseChange.Report}.groupBy {(it.change as ResponseChange.Report).reportId}.map {(id,events)->
@@ -81,12 +81,12 @@ fun responseResolved(events:List<ResponseEvent>,target:ResponseTarget):Boolean {
     LaunchedEffect(incident.current?.start?.createdAt){while(true){now=System.currentTimeMillis();val until=incident.current?.start?.createdAt?.plus(180_000)?.minus(now)?.takeIf {it>0}?:60_000;kotlinx.coroutines.delay(minOf(60_000L,until))}}
     val heads=allHeads.filter {it.groupId==group&&it.incidentId==incidentId}
     val history=allHistory.filter {it.groupId==group&&it.incidentId==incidentId}
-    val communityPeople=communityPeopleFor(residents,care,venue)
+    val communityPeople=communityPeopleFor(residents,care,venue,roster)
     val ownCommunity=communityPeople.find {it.id==model.localId}?.communityId
     val accessibleResidents=residents.filter {p->venue?.scenario==null||p.originId==model.localId||communityPeople.any {it.id==p.originId&&it.communityId==ownCommunity}}
     val regions=communityNamesFor(venue,groupLabel)
     val english=LocalUiLanguage.current=="en"
-    val cases=responseCases(accessibleResidents,care,heads,residents.associate {p->p.originId to (memos.firstOrNull {m->m.answerId==incident.current?.answers?.get(p.originId)?.eventId&&m.authorId==p.originId&&m.incidentId==incidentId}?.text?:venue?.scenario?.people?.find {it.deviceId==p.originId}?.note.orEmpty())},incident.current?.start?.createdAt,now,venue?.allPlacements()?.map {it.deviceId}?.toSet().orEmpty())
+    val cases=responseCases(accessibleResidents,care,heads,residents.associate {p->p.originId to (memos.firstOrNull {m->m.answerId==incident.current?.answers?.get(p.originId)?.eventId&&m.authorId==p.originId&&m.incidentId==incidentId}?.text?:venue?.scenario?.people?.find {it.deviceId==p.originId}?.note.orEmpty())},incident.current?.start?.createdAt,now,venue?.allPlacements()?.map {it.deviceId}?.toSet().orEmpty(),roster)
     var filter by rememberSaveable(group,incidentId){mutableStateOf("all")}
     var showCancelled by rememberSaveable(group,incidentId){mutableStateOf(false)}
     var selected by rememberSaveable(group,incidentId,stateSaver=Saver<ResponseTarget?,ArrayList<String>>(save={it?.let {arrayListOf(it.kind.name,it.id)}?:arrayListOf()},restore={if(it.isEmpty())null else ResponseTarget(TargetKind.valueOf(it[0]),it[1])})){mutableStateOf<ResponseTarget?>(null)}
@@ -167,7 +167,7 @@ fun responseResolved(events:List<ResponseEvent>,target:ResponseTarget):Boolean {
                     val reporter=residents.find {it.originId==creator}
                     val reporterCommunity=communityPeople.find {it.id==creator}?.communityId
                     val reporterHome=creator?.let {validHome(places,it)}?.buildingId?.let {id->placeBuildings(places).find {it.buildingId==id}?.displayLabel()}
-                    Text((if(LocalUiLanguage.current=="en")"Reported by: " else "通報者：")+(if(reporter!=null&&residentMapState(reporter,care) in setOf(MapSafety.SAFE,MapSafety.RESCUED))if(english)"Reporter" else "通報者" else if(coordinator&&reporterCommunity==ownCommunity)reporter?.displayName().orEmpty() else reporterHome?:uiText("unregistered")),fontSize=13.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text((if(LocalUiLanguage.current=="en")"Reported by: " else "通報者：")+(if(reporter!=null&&residentMapState(reporter,care,roster) in setOf(MapSafety.SAFE,MapSafety.RESCUED))if(english)"Reporter" else "通報者" else if(coordinator&&reporterCommunity==ownCommunity)reporter?.displayName().orEmpty() else reporterHome?:uiText("unregistered")),fontSize=13.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
                     ResponseFact(if(LocalUiLanguage.current=="en")"Region" else "地域",report.regionIds.joinToString(" / "){id->regions.find {it.id==id}?.let {if(english)it.nameEn else it.nameJa}?:id}.ifBlank {uiText("region_unset")},mayEditReport&&!case.cancelled,mayEditReport){editor="report"}
                     if(report.cancelled)Text(report.cancelReason,color=MaterialTheme.colorScheme.error)
                 }

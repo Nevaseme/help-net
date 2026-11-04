@@ -32,7 +32,7 @@ import java.util.UUID
  val incident=state.current;val incidentId=incident?.start?.eventId;val heads=allHeads.filter {it.groupId==group&&it.incidentId==incidentId};val changes=heads.map {it.change}
  val editable=incident!=null&&!incident.closed&&roster?.members?.any {model.localId in it.deviceIds}==true
  val communities=communityNamesFor(venue,groupName)
- val people=communityPeopleFor(residents,care,venue)
+ val people=communityPeopleFor(residents,care,venue,roster)
  val ownRegion=people.find {it.id==model.localId}?.communityId
  val accessibleIds=people.filter {venue?.scenario==null||it.id==model.localId||it.communityId==ownRegion}.map {it.id}.toSet()
  val cases=responseCases(residents.filter {it.originId in accessibleIds},care,heads,incidentStartedAt=incident?.start?.createdAt)

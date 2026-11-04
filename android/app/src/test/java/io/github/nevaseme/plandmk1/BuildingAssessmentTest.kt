@@ -97,7 +97,7 @@ class BuildingAssessmentTest {
     @Test fun venueScenarioHomesUseBundledSourceAttributes() = runTest {
         val catalogue=Json.parseToJsonElement(java.io.File("../../cloud-sync/src/venue-buildings.json").readText()).jsonObject.getValue("homes").jsonArray.map{it.jsonObject}.sortedBy{it.getValue("buildingId").jsonPrimitive.content}
         val selected=mutableListOf<JsonObject>()
-        repeat(12){i->val region=listOf("demo-west","demo-central","demo-east")[i%3];selected+=catalogue.first{it !in selected&&io.github.nevaseme.plandmk1.core.demoCommunityFor(it.getValue("longitude").jsonPrimitive.double)==region}}
+        repeat(12){i->val region=listOf("demo-west","demo-central","demo-east")[i%3];selected+=catalogue.first{home->selected.none {it.getValue("buildingId")==home.getValue("buildingId")}&&io.github.nevaseme.plandmk1.core.demoCommunityFor(home.getValue("longitude").jsonPrimitive.double,listOf(135.760,135.7644))==region}}
         val repository=BuildingAssessmentRepository {java.io.File("src/main/assets",it).inputStream()}
         val mapped=selected.map {home->
             val lat=home.getValue("latitude").jsonPrimitive.double;val lon=home.getValue("longitude").jsonPrimitive.double
@@ -105,7 +105,12 @@ class BuildingAssessmentTest {
             assertNotNull("The registered PLATEAU building must be present in the packaged data",source)
             io.github.nevaseme.plandmk1.ui.MapHome(home.getValue("buildingId").jsonPrimitive.content,"登録住所",MapPoint(lat,lon)).withBuildingAttributes(source!!)
         }
-        assertEquals(10,mapped.count{it.built!=null});assertEquals(11,mapped.count{it.floors!=null});assertEquals(10,mapped.count{it.material!="不明"})
-        assertEquals(10,mapped.count{it.built!=null&&it.floors!=null&&it.material!="不明"})
+        assertEquals(12,mapped.size)
+        selected.zip(mapped).forEach {(catalogueHome,mapHome)->
+            val attrs=catalogueHome.getValue("attributes").jsonObject
+            assertEquals(attrs["year"]?.jsonPrimitive?.intOrNull,mapHome.built)
+            assertEquals(attrs["floors"]?.jsonPrimitive?.intOrNull,mapHome.floors)
+            assertEquals(attrs["structureCode"]?.jsonPrimitive?.contentOrNull==null,mapHome.material=="不明")
+        }
     }
 }

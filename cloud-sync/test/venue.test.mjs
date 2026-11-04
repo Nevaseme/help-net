@@ -26,13 +26,16 @@ test('venue creates persistent fictional scenario without consuming audience ide
  const f=fixture(t),admin=await setup(f),g=admin.groupId,requestId=id();
  const input={requestId,password,areaId:'kyoto-gosho-south'};
  const start=await f.call(`/groups/${g}/venue`,input,admin.token);
- const scenario=start.body.venue.scenario;assert.equal(scenario?.people?.length,12);
+ const scenario=start.body.venue.scenario;assert.equal(scenario?.people?.length,64);
+ assert.equal(scenario.people.filter(p=>p.safety==='SAFE').length,40);assert.equal(scenario.people.filter(p=>p.safety==='UNREPORTED').length,12);assert.equal(scenario.people.filter(p=>p.initialRescue).length,6);assert.equal(new Set(scenario.people.map(p=>p.home.plateauId)).size,12);assert.equal(new Set(scenario.people.map(p=>p.home.placementId)).size,64);
  assert.equal(start.body.roster.members.length,1);assert.equal(start.body.venue.placements.length,1);
+ assert.deepEqual(scenario.communityLongitudeCuts,[135.760,135.7644]);
+ for(const c of scenario.communities){const residents=scenario.people.filter(p=>p.communityId===c.id);assert.equal(new Set(residents.map(p=>p.home.buildingId)).size,4);assert.ok(residents.some(p=>p.safety==='SAFE'));assert.ok(residents.some(p=>p.safety==='UNREPORTED'));assert.ok(residents.some(p=>p.safety==='SOS'&&!p.initialRescue));}
  assert.ok(scenario.people.every(p=>p.home.plateauId&&p.home.buildingId&&p.home.address&&p.communityId));
  assert.deepEqual(new Set(scenario.people.map(p=>p.safety)),new Set(['SAFE','SOS','UNREPORTED']));
  assert.ok(scenario.people.every(p=>!/[\u3040-\u30ff\u3400-\u9fff]/.test(p.note+p.name+p.home.room)));
  assert.equal(f.get(g).history('responses').filter(r=>r.change.type==='REPORT').length,3);
- assert.equal(f.get(g).history('incidents').filter(r=>r.kind==='CARE'&&r.action==='RESCUED').length,2);
+ assert.equal(f.get(g).history('incidents').filter(r=>r.kind==='CARE'&&r.action==='RESCUED').length,6);
  const replay=await f.call(`/groups/${g}/venue`,input,admin.token);assert.deepEqual(replay.body.venue.scenario,scenario);
  assert.equal(f.get(g).history('responses').filter(r=>r.change.type==='REPORT').length,3);
 });
@@ -87,7 +90,7 @@ test('administrator selects actual positions; join creates no invented coordinat
  assert.equal(member.venue.placements.every(p=>p.source==='DEVICE_LOCATION'&&p.latitude===null&&p.longitude===null),true);
  const {saveVenue,venuePositions}=await import('../../lab/web/venue-demo.mjs');await saveVenue({read:async()=>null,update:async(_table,_key,fn)=>fn()},member);
  const point={groupId:g,originId:member.deviceId,revision:1,latitude:35.66,longitude:139.73,acquiredAt:Date.now(),accuracyMeters:20};
- const actual=rows=>rows.filter(p=>p.originId===member.deviceId);assert.equal(actual(venuePositions(member.venue,[])).length,0);assert.equal(actual(venuePositions(member.venue,[{...point,acquiredAt:1}])).length,0);assert.deepEqual(actual(venuePositions(member.venue,[point])),[point]);assert.equal(venuePositions(member.venue,[]).length,12);
+ const actual=rows=>rows.filter(p=>p.originId===member.deviceId);assert.equal(actual(venuePositions(member.venue,[])).length,0);assert.equal(actual(venuePositions(member.venue,[{...point,acquiredAt:1}])).length,0);assert.deepEqual(actual(venuePositions(member.venue,[point])),[point]);assert.equal(venuePositions(member.venue,[]).length,64);
  assert.equal((await f.call(`/groups/${g}/records`,{records:[{collection:'positions',record:point}]},member.token)).status,200);
  assert.equal(f.get(g).history('residents').length,0);assert.equal(f.get(g).history('positions').length,1);
 });
@@ -158,6 +161,25 @@ async function setup(f){
  const result=await f.call('/groups',{requestId:id(),deviceId:id(),groupName:'会場テスト',activityName:'管理者',registrationToken:token()});assert.equal(result.status,200);
  return result.body;
 }
+
+test('only administrator can reverse another author rescue; server preserves signed original',async t=>{
+ const f=fixture(t),admin=await setup(f),g=admin.groupId,sessionId=id();
+ await f.call(`/groups/${g}/venue`,{requestId:sessionId,password,areaId:'kyoto-gosho-south'},admin.token);
+ const member=(await f.call('/venue/join',{groupName:'会場テスト',password,activityName:'Helper',deviceId:id(),registrationToken:token()})).body;
+ const original=f.get(g).history('incidents').find(e=>e.kind==='CARE'&&e.action==='RESCUED');
+ const push=(record,auth)=>f.call(`/groups/${g}/records`,{records:[{collection:'incidents',record}]},auth);
+ const base={...original,eventId:id(),authorId:member.deviceId,authorName:'Helper',sequence:2,createdAt:Date.now(),action:'REVOKED',supersedes:original.eventId};
+ const denied=await push(base,member.token);assert.equal(denied.status,403,JSON.stringify(denied.body));assert.equal(denied.body.error.code,'care_forbidden');
+ const helperRescue={...original,eventId:id(),authorId:member.deviceId,authorName:'Helper',sequence:2,createdAt:Date.now(),supersedes:null};
+ assert.equal((await push(helperRescue,member.token)).status,200);
+ const next=Math.max(...f.get(g).history('incidents').filter(e=>e.authorId===admin.deviceId&&e.incidentId===sessionId).map(e=>e.sequence))+1;
+ const reversal={...base,eventId:id(),authorId:admin.deviceId,authorName:'管理者',sequence:next,supersedes:helperRescue.eventId};
+ assert.equal((await push(reversal,admin.token)).status,200);assert.equal((await push(reversal,admin.token)).status,200);
+ assert.deepEqual(f.get(g).history('incidents').find(e=>e.eventId===helperRescue.eventId),helperRescue);
+ const pending={...helperRescue,eventId:id(),sequence:3},early={...reversal,eventId:id(),sequence:next+1,supersedes:pending.eventId};
+ assert.equal((await push(early,admin.token)).status,409);
+ assert.equal((await push(pending,member.token)).status,200);assert.equal((await push(early,admin.token)).status,200);
+});
 test('administrator starts venue and forty named attendees join its existing incident without home records',async t=>{
  const f=fixture(t),admin=await setup(f),sessionId=id();
  const started=await f.call(`/groups/${admin.groupId}/venue`,{requestId:sessionId,password,areaId:'kyoto-gosho-south'},admin.token);

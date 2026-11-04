@@ -20,7 +20,26 @@ test('residence floors get localized units without changing free-text descriptio
   assert.equal(personUi.residenceFloorLabel(input,'ja'),ja,input);
  }
 });
+test('total storeys use floor units separately from the residence floor number',()=>{
+ assert.equal(personUi.buildingStoreysLabel(1,'en'),'1 floor');
+ assert.equal(personUi.buildingStoreysLabel(2,'en'),'2 floors');
+ assert.equal(personUi.buildingStoreysLabel(2,'ja'),'2階建');
+ assert.equal(personUi.residenceFloorLabel(2,'en'),'Floor 2');
+});
 const person={originId:'other',name:'Private name',safety:'UNREPORTED',updatedAt:0};
+test('anonymous status remains actionable without private details and uses current rescue time',()=>{
+ const rescue={eventId:'care',subjectId:'other',action:'RESCUED',createdAt:100};
+ const result=personPresentation(person,[rescue],null,'me',200);
+ assert.equal(result.showStatus,true);assert.equal(result.showDetails,false);assert.equal(result.rescuedAt,100);
+ assert.equal(personPresentation({...person,safety:'SAFE'},[],null,'me').showStatus,true);
+ assert.equal(personPresentation(person,[rescue,{...rescue,eventId:'revoke',supersedes:'care',action:'REVOKED',createdAt:150}],null,'me',200).status,'UNREPORTED');
+ assert.notEqual(personPresentation({...person,updatedAt:101},[rescue],null,'me',200).status,'RESCUED');
+});
+test('building summary counts all linked statuses without returning person data',()=>{
+ const rows=['SAFE','SOS','UNREPORTED','SOS'].map((safety,i)=>({...person,originId:String(i),safety}));
+ const summary=personUi.buildingSafetyCounts(rows,[{eventId:'rescued',subjectId:'3',action:'RESCUED',createdAt:100}]);
+ assert.deepEqual(summary,{total:4,SAFE:1,SOS:1,UNREPORTED:1,RESCUED:1});
+});
 test('unanswered person remains anonymous before three minutes; known position does not expose a home',()=>{
  const view={start:{createdAt:1000}};
  assert.equal(personPresentation(person,[],view,'me',180999).disclosed,false);
@@ -81,6 +100,12 @@ test('venue mutual recognition does not expose homes for SOS with a known phone 
  assert.equal(result.name,p.name);assert.equal(result.disclosed,true);assert.equal(result.showHome,false);
  assert.equal(personPresentation(p,[],v,'me',200).showHome,true);
 });
+test('fictional venue residents keep the three-minute disclosure boundary',()=>{
+ const p={...person,fictional:true,venueSessionId:'demo',homeAddress:'Private home'};
+ const view={start:{eventId:'demo',createdAt:1000}};
+ assert.equal(personPresentation(p,[],view,'me',180999).disclosed,false);
+ assert.equal(personPresentation(p,[],view,'me',181000).disclosed,true);
+});
 
 test('map, people and task scopes use the same home community; outside reports remain available',()=>{
  const records=[{originId:'me',homeLongitude:135.759,safety:'SAFE'},{originId:'west',homeLongitude:135.7595,safety:'SOS'},{originId:'east',homeLongitude:135.763,safety:'SOS'}];
@@ -90,6 +115,15 @@ test('map, people and task scopes use the same home community; outside reports r
  assert.deepEqual(rows.map(r=>r.target.id),['west','outside']);
  assert.deepEqual(visiblePeople({...snapshot,id:'absent'}),[]);
  assert.equal(visiblePeople({...snapshot,venue:null}).length,3);
+});
+test('new demo community boundaries preserve scenario membership and legacy sessions',()=>{
+ const records=[{originId:'me',homeLongitude:135.762,safety:'SAFE'},{originId:'sample',homeLongitude:135.763,safety:'SOS'}];
+ const legacy={id:'me',records,events:[],venue:{scenario:{people:[]},positionMode:'KYOTO'}};
+ assert.equal(personUi.personCommunity(legacy,records[0]),'demo-east');
+ const current={...legacy,venue:{...legacy.venue,scenario:{communityLongitudeCuts:[135.760,135.7644],people:[{deviceId:'sample',communityId:'demo-west'}]}}};
+ assert.equal(personUi.personCommunity(current,records[0]),'demo-central');
+ assert.equal(personUi.personCommunity(current,records[1]),'demo-west');
+ assert.deepEqual(visiblePeople(current).map(p=>p.originId),['me']);
 });
 
 // Safe/rescued status must not expose another resident's private detail, including venue demos.

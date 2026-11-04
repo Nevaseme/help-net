@@ -309,7 +309,7 @@ private fun PlanAppContent(model: PlanViewModel) {
     }
     buildingId?.let {id->key(group,incident.selection,id){BuildingDetail(model,id,{buildingId=null;detailId=it.originId},{buildingId=null}, registration = tab == 2)}}
     residents.find { it.originId == detailId }?.let { resident ->
-        val person = projectPersonPrivacy(residentMapPerson(resident, places, careEvents, language=LocalUiLanguage.current),incident.current?.start?.createdAt,System.currentTimeMillis())
+        val person = projectPersonPrivacy(residentMapPerson(resident, places, careEvents, language=LocalUiLanguage.current,roster=roster),incident.current?.start?.createdAt,System.currentTimeMillis())
         PlanModalBottomSheet(onDismissRequest = { detailId = null }) {
             PersonMapDetail(person, System.currentTimeMillis(), false, false, {}, {},
                 onHome = { home -> if (placeBuildings(places).any { it.buildingId == home.id }) { detailId = null; buildingId = home.id } },

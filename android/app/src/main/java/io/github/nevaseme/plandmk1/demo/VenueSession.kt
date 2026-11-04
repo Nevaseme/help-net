@@ -7,7 +7,7 @@ import kotlinx.serialization.Serializable
 @Serializable data class DemoCommunity(val id:String,val nameJa:String,val nameEn:String)
 @Serializable data class DemoObservations(val impact:Boolean=false,val enclosed:Boolean=false)
 @Serializable data class ScenarioPerson(val deviceId:String,val name:String,val safety:String,val injury:String,val note:String,val communityId:String,val home:DemoHome,val observations:DemoObservations?=null)
-@Serializable data class VenueScenario(val version:Int=1,val sessionId:String,val communities:List<DemoCommunity>,val people:List<ScenarioPerson>)
+@Serializable data class VenueScenario(val version:Int=1,val sessionId:String,val communities:List<DemoCommunity>,val people:List<ScenarioPerson>,val communityLongitudeCuts:List<Double>?=null)
 @Serializable data class VenueSession(val version:Int=1,val mode:String="VENUE_DEMO",val groupId:String,val sessionId:String,val incidentId:String,val areaId:String,val areaName:String="",val closed:Boolean=false,val placements:List<DemoPlacement>,val inactiveMemberIds:List<String> = emptyList(),val recoveryAvailable:Boolean=false,val positionMode:String="KYOTO",val startedAt:Long=0,val scenario:VenueScenario?=null) {
     fun active(group:String,incident:String?)=version==1&&mode=="VENUE_DEMO"&&groupId==group&&incidentId==incident&&!closed
     fun validate(roster:MemberRoster) {
@@ -15,7 +15,8 @@ import kotlinx.serialization.Serializable
         require(placements.map {it.deviceId}.distinct().size==placements.size)
         require(positionMode in setOf("KYOTO","ACTUAL")&&startedAt>=0)
         scenario?.let {s->
-            require(s.version==1&&s.sessionId==sessionId&&s.people.size<=40&&s.communities.size in 1..10)
+            require(s.version==1&&s.sessionId==sessionId&&s.people.size<=64&&s.communities.size in 1..10)
+            s.communityLongitudeCuts?.let {cuts->require(cuts.size==2&&cuts.all {it.isFinite()}&&cuts[0]<cuts[1])}
             require(s.communities.map{it.id}.distinct().size==s.communities.size)
             require(s.people.map{it.deviceId}.distinct().size==s.people.size)
             for(p in s.people){require(recordIdPattern.matches(p.deviceId)&&placements.none{it.deviceId==p.deviceId}&&roster.members.none{p.deviceId in it.deviceIds});require(p.name.isNotBlank()&&p.name.length<=60&&p.note.length<=500&&p.safety in listOf("SAFE","SOS","UNREPORTED")&&p.injury in listOf("UNKNOWN","INJURED","UNINJURED")&&s.communities.any{it.id==p.communityId});p.home.validate()}

@@ -1,3 +1,5 @@
+import {careAdministrator,currentCareHeads} from './care-policy.mjs';
+import {managedIncidentOptions,canonicalIncidentId} from './managed-records.mjs';
 import {venueAuthor} from './venue-demo.mjs';
 const uuid=/^[0-9a-fA-F-]{36}$/;
 const ensure=(ok,msg)=>{if(!ok)throw Error(msg);};
@@ -29,4 +31,18 @@ export async function appendScopedIncident(store,scope,kind,extra={}){
  const own=await store.get(groupId,authorId),demo=await venueAuthor(store,groupId,incidentId,authorId);
  const name=demo||own?.name;if(!name)throw Error('先に登録してください');
  return store.appendIncident({groupId,eventId:crypto.randomUUID(),incidentId,authorId,authorName:name,createdAt:Date.now(),kind,...extra});
+}
+
+/** Append reversals for every active rescue; never edit or delete the original signed records. */
+export async function revokePersonRescue(store,scope,subjectId){
+ const roster=await store.roster(scope.groupId);
+ if(!careAdministrator(roster,scope.authorId,scope.groupId))throw Error('救助済みを取り消せるのは管理者だけです');
+ const quakes=await store.quakeEvents(scope.groupId),rows=await store.incidents(scope.groupId);
+ const canonical=canonicalIncidentId(roster,quakes,scope.incidentId);
+ const view=managedIncidentOptions(rows,roster,quakes).find(v=>v.start.eventId===canonical);
+ if(!view||view.closed)throw Error('開始中の災害を選んでください');
+ const rescues=currentCareHeads(view.care.filter(e=>e.subjectId===subjectId),roster).filter(e=>e.action==='RESCUED');
+ if(!rescues.length)throw Error('救助済みの記録はありません');
+ for(const old of rescues)await appendScopedIncident(store,scope,'CARE',{subjectId,action:'REVOKED',note:'',supersedes:old.eventId});
+ return rescues.length;
 }

@@ -56,7 +56,7 @@ fun positionDescription(person: MapPerson, now: Long): String = when {
 }
 
 @Composable fun safetyText(state:MapSafety)=if(state==MapSafety.SOS)"SOS" else uiText(when(state){MapSafety.SOS->"my_sos";MapSafety.UNANSWERED->"no_response";MapSafety.SAFE->"safe";MapSafety.RESCUED->"rescued"})
-@Composable fun personText(person:MapPerson)=when {person.state==MapSafety.SAFE->uiText("safe_person");person.state==MapSafety.RESCUED->uiText("rescued_person");person.demo->person.name;!person.identityVisible->uiText("no_response");person.name.isBlank()->uiText("registered_resident");else->person.name}
+@Composable fun personText(person:MapPerson)=when {person.state==MapSafety.SAFE->uiText("safe_person");person.state==MapSafety.RESCUED->uiText("rescued_person");!person.identityVisible->uiText("no_response");person.name.isBlank()->uiText("registered_resident");else->person.name}
 @Composable private fun positionText(person:MapPerson,now:Long):String=if(person.point==null||person.acquiredAt==null)uiText("position_unreceived") else uiText("position_time",SimpleDateFormat("HH:mm",Locale.getDefault()).format(Date(person.acquiredAt)),((now-person.acquiredAt)/60_000).coerceAtLeast(0))+(person.accuracy?.let {" · "+uiText("accuracy",it)}?:"")
 
 @OptIn(ExperimentalMaterial3Api::class,ExperimentalLayoutApi::class)
@@ -75,6 +75,7 @@ fun SituationScreen(
     reports:List<MapReport> = emptyList(),onReport:(String)->Unit = {},
     statisticsLabel:String=uiText("group_label"), initialZoom:Double=16.8,
     neighborhoods:List<MapNeighborhood> = emptyList(), ownNeighborhoodId:String?=null, onPersonResponse:((String)->Unit)?=null,
+    buildingCounts:Map<String,BuildingResidentCounts> = emptyMap(),
 ) {
     var neighborhoodId by rememberSaveable {mutableStateOf<String?>(null)}
     val statistics=neighborhoods.map {it.row}.ifEmpty { listOf(io.github.nevaseme.plandmk1.core.CommunityRow("group",statisticsLabel,statisticsLabel,total=people.size,sos=people.count {it.state==MapSafety.SOS},unreported=people.count {it.state==MapSafety.UNANSWERED},safe=people.count {it.state==MapSafety.SAFE},rescued=people.count {it.state==MapSafety.RESCUED})) }
@@ -97,7 +98,7 @@ fun SituationScreen(
     val unknown = people.filterNot { it.hasPosition(now) }
     LaunchedEffect(openList) { if (openList) { sheet = "all"; listFilter = null; areaIds = null } }
     val close = { sheet = null; onListClosed() }
-    val selectedPerson = people.find { it.id == selectedId }?.takeIf { it.canOpenDetails() }
+    val selectedPerson = people.find { it.id == selectedId }
     LaunchedEffect(sheet, selectedPerson?.id) {
         if (sheet == "person" && selectedPerson == null) close()
     }
@@ -139,7 +140,7 @@ fun SituationScreen(
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             SituationMap(people, homes, center, showSafe, now, preview, camera, initialZoom=initialZoom, tsunamiResult=tsunamiResult,neighborhoods=neighborhoods.filter {it.row.id!=ownNeighborhoodId},onNeighborhood={neighborhoodId=it;sheet="neighborhood"},
-                onPerson = { if (it.canOpenDetails()) { selectedId = it.id; sheet = "person" } },
+                onPerson = { selectedId = it.id; sheet = "person" },
                 onHome = { extraHome = it; homePersonId = null; homeId = it.id; sheet = "home" },
                 onOverlapping = { areaIds = it.map(MapPerson::id); listFilter = null; sheet = "overlap" }, onError = { failed = true }, modifier = Modifier.fillMaxSize(),
                 assessmentIntensity=assessmentIntensity,onReportPoint=if(choosingReport){{point->choosingReport=false;onAddReport?.invoke(point)}}else null,reports=reports,onReport=onReport)
@@ -179,21 +180,12 @@ fun SituationScreen(
                     }
                 }
                 "person" -> selectedPerson?.let { person ->
+                    if(person.state in setOf(MapSafety.SAFE,MapSafety.RESCUED)) AnonymousSafetyDetail(person,close) {feedback(person)} else
                     PersonMapDetail(person, now, canRescue, canUndo(person), onRescue, onUndo, onHome = { home -> extraHome = home; homePersonId = person.id; homeId = home.id; sheet = "home" }, onClose = close, history = { history(person) }, feedback = { feedback(person) },showActions=false,onResponse=onPersonResponse?.let {action->{action(person.id)}})
                 }
                 "home" -> visibleHomeDetail(homeId,homePersonId,people,homes,extraHome)?.let { home ->
-                    Column(Modifier.fillMaxWidth().fillMaxHeight(.86f).verticalScroll(rememberScrollState()).padding(horizontal = 22.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                        DetailHeading(uiText("building_details"), home.address, close)
-                        HomeAttributes(home,showYear=true)
-                        Text(uiText("registered_people"), style = MaterialTheme.typography.titleMedium)
-                        val members = people.filter { it.home?.id == home.id }
-                        if (members.isEmpty()) Text(uiText("no_registration"), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        members.forEach { person -> PersonRow(person, now, false) {
-                            selectedId = person.id; sheet = "person"
-                            if (person.hasPosition(now)) camera.move(person.point!!)
-                        } }
-                        Spacer(Modifier.height(20.dp))
-                    }
+                    BuildingMapDetail(home,buildingCounts[home.id]?:home.plateauId?.let(buildingCounts::get)?:BuildingResidentCounts(),people,now,
+                        onResidentPosition={camera.move(it);close()},onResidentDetail={selectedId=it.id;sheet="person"},close=close)
                 }
                 "legend" -> Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 22.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     DetailHeading(uiText("legend"), null, close)
@@ -227,6 +219,33 @@ fun SituationScreen(
     }
 }
 
+@Composable fun BuildingMapDetail(home:MapHome,counts:BuildingResidentCounts,people:List<MapPerson>,now:Long,onResidentPosition:(MapPoint)->Unit,onResidentDetail:(MapPerson)->Unit,close:()->Unit) {
+    Column(Modifier.fillMaxWidth().fillMaxHeight(.86f).verticalScroll(rememberScrollState()).padding(horizontal=22.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
+        DetailHeading(uiText("building_details"),demoAddressLabel(home.address,LocalUiLanguage.current),close)
+        HomeAttributes(home,showYear=true)
+        Text(if(LocalUiLanguage.current=="en")"Total residents: ${counts.total}" else "登録住民：${counts.total}人",fontWeight=FontWeight.Bold)
+        Text("${safetyText(MapSafety.SAFE)} ${counts.safe} · ${safetyText(MapSafety.UNANSWERED)} ${counts.unanswered}\nSOS ${counts.sos} · ${safetyText(MapSafety.RESCUED)} ${counts.rescued}")
+        Text(uiText("registered_people"),style=MaterialTheme.typography.titleMedium)
+        val members=disclosedBuildingResidents(home,people)
+        if(members.isEmpty())Text(if(LocalUiLanguage.current=="en")"No resident details are available to view" else "閲覧できる住民の詳細はありません",color=MaterialTheme.colorScheme.onSurfaceVariant)
+        members.forEach {person->PersonRow(person,now,false){
+            val destination=buildingResidentDestination(person,now)
+            if(destination!=null)onResidentPosition(destination)else onResidentDetail(person)
+        }}
+        Spacer(Modifier.height(20.dp))
+    }
+}
+
+/** Intentionally excludes identity, home, observations, notes, response links and care history. */
+@Composable private fun AnonymousSafetyDetail(person:MapPerson,close:()->Unit,feedback:@Composable ()->Unit) {
+    Column(Modifier.fillMaxWidth().padding(horizontal=22.dp,vertical=16.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
+        DetailHeading(personText(person),null,close)
+        Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)){StateSymbol(person.state);Text(safetyText(person.state))}
+        if(person.state==MapSafety.RESCUED)Text((if(LocalUiLanguage.current=="en")"Rescued at: " else "救助日時：")+(person.rescuedAt?.let(::formatTime)?:uiText("unregistered")))
+        feedback()
+    }
+}
+
 @Composable private fun SituationFilters(people: List<MapPerson>, selected: String?, now: Long, onSelect: (String?) -> Unit) {
     val options=listOf(null to uiText("all_count",people.size),MapSafety.SOS.name to uiText("sos_count",people.count {it.state==MapSafety.SOS}),MapSafety.UNANSWERED.name to uiText("no_response_count",people.count {it.state==MapSafety.UNANSWERED}),"safe" to uiText("safe_rescued_count",people.count {it.state in listOf(MapSafety.SAFE,MapSafety.RESCUED)}))
     Column(verticalArrangement=Arrangement.spacedBy(9.dp)) {
@@ -256,23 +275,23 @@ fun filteredPeople(people:List<MapPerson>,filter:String?,now:Long)=when(filter){
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) { Image(painterResource(resource), null, Modifier.size(24.dp)); Text(text, style = MaterialTheme.typography.bodyMedium) }
 }
 
-private fun MapPerson.canOpenDetails() = state != MapSafety.SAFE && state != MapSafety.RESCUED
-
 @Composable private fun PersonRow(person: MapPerson, now: Long, unknown: Boolean, click: () -> Unit) {
-    Row(Modifier.fillMaxWidth().clickable(enabled = person.canOpenDetails(), onClick = click).padding(vertical = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Row(Modifier.fillMaxWidth().clickable(onClick = click).padding(vertical = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         if (!unknown) StateSymbol(person.state) else PlanIcon("person", null)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(personText(person),fontSize=15.sp,lineHeight=22.sp,fontWeight=FontWeight.Bold)
-            Text(if(unknown&&person.registeredPlaceVisible)person.home?.address?:uiText("unregistered")else if(person.hasPosition(now))safetyText(person.state)+" · "+uiText("position_age",((now-(person.acquiredAt?:now))/60_000).coerceAtLeast(0))else uiText("unknown_location"),fontSize=13.sp,lineHeight=21.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(if(unknown&&person.registeredPlaceVisible)person.home?.address?.let {demoAddressLabel(it,LocalUiLanguage.current)}?:uiText("unregistered")else if(person.hasPosition(now))safetyText(person.state)+" · "+uiText("position_age",((now-(person.acquiredAt?:now))/60_000).coerceAtLeast(0))else uiText("unknown_location"),fontSize=13.sp,lineHeight=21.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
             if(!person.hasPosition(now)&&person.registeredPlaceVisible&&person.bedroom.isNotBlank())Text(person.bedroom,fontSize=13.sp,lineHeight=21.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
 
         }
-        if (person.canOpenDetails()) PlanIcon("chevron",null,Modifier.size(16.dp))
+        PlanIcon("chevron",null,Modifier.size(16.dp))
     }
     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 }
 
 @Composable private fun HomeAttributes(home: MapHome,showYear:Boolean=false) {
+    val english=LocalUiLanguage.current=="en"
+    val unknown=if(english)"Unknown" else "不明"
     if(home.attributesUnavailable)Text(if(LocalUiLanguage.current=="en")"Building information is unavailable" else "建物情報を読み込めません",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.error)
     if(showYear&&home.assessmentIntensity!=null) {
         Text("想定震度 ${home.assessmentIntensity}・全壊率 ${home.fullDamagePercent?.let {String.format(Locale.JAPAN,"%.1f%%",it)} ?: "不明"}",style=MaterialTheme.typography.titleMedium)
@@ -287,13 +306,20 @@ private fun MapPerson.canOpenDetails() = state != MapSafety.SAFE && state != Map
         }
     }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        listOf((if(showYear)"建築年・築年数" else "築年数") to (home.built?.let { (if(showYear)"${it}年・" else "")+"築${java.util.Calendar.getInstance().get(java.util.Calendar.YEAR) - it}年" } ?: "不明"), "建材・構造" to home.material, "階数" to (home.floors?.let { "${it}階建" } ?: "不明")).forEach { (label, value) ->
+        listOf((if(english)if(showYear)"Built / age" else "Age" else if(showYear)"建築年・築年数" else "築年数") to (home.built?.let { (if(showYear)if(english)"$it · " else "${it}年・" else "")+if(english)"${java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)-it} years" else "築${java.util.Calendar.getInstance().get(java.util.Calendar.YEAR) - it}年" } ?: unknown), (if(english)"Structure" else "建材・構造") to home.material, (if(english)"Floors" else "階数") to (home.floors?.let { if(english)"$it floors" else "${it}階建" } ?: unknown)).forEach { (label, value) ->
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) { Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant); Text(value, style = MaterialTheme.typography.titleSmall) }
         }
     }
 }
 
 @Composable fun PersonMapDetail(person: MapPerson, now: Long, canRescue: Boolean, canUndo: Boolean, rescue: (MapPerson) -> Unit, undo: (MapPerson) -> Unit, onHome: (MapHome) -> Unit, onClose: () -> Unit, history: @Composable () -> Unit, feedback: @Composable () -> Unit = {}, showActions:Boolean=true,onResponse:(()->Unit)?=null) {
+    if(person.state in setOf(MapSafety.SAFE,MapSafety.RESCUED)) {
+        AnonymousSafetyDetail(person,onClose) {
+            if(showActions)PersonDetailActions(person,canRescue,canUndo,rescue,undo)
+            feedback()
+        }
+        return
+    }
     val needsHelp = person.state in listOf(MapSafety.SOS, MapSafety.UNANSWERED)
     Column(Modifier.fillMaxWidth().heightIn(max = 640.dp).padding(horizontal = 22.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -317,7 +343,7 @@ private fun MapPerson.canOpenDetails() = state != MapSafety.SAFE && state != Map
             HorizontalDivider()
             Text(uiText("home_sleeping"), style = MaterialTheme.typography.titleMedium)
             person.home?.let { home ->
-                Row(verticalAlignment = Alignment.CenterVertically) { Text(home.address, Modifier.weight(1f), fontWeight = FontWeight.Bold); TextButton(onClick = { onHome(home) }) { Text(uiText("see_building")) } }
+                Row(verticalAlignment = Alignment.CenterVertically) { Text(demoAddressLabel(home.address,LocalUiLanguage.current), Modifier.weight(1f), fontWeight = FontWeight.Bold); TextButton(onClick = { onHome(home) }) { Text(uiText("see_building")) } }
             }
             Surface(color=MaterialTheme.colorScheme.surfaceContainerLow,shape=RoundedCornerShape(10.dp)) {Text(person.bedroom.ifBlank {uiText("unregistered")},Modifier.fillMaxWidth().padding(12.dp),fontSize=15.sp,fontWeight=FontWeight.SemiBold)}
             person.home?.let { HomeAttributes(it) }

@@ -23,6 +23,7 @@ data class MapHome(
     val fullDamagePercent: Double? = null, val assessmentIntensity: Double? = null,
     val assessmentAssumed: Boolean = false,
     val attributesUnavailable:Boolean=false,
+    val plateauId: String? = null,
 )
 
 fun MapHome.withBuildingAttributes(building:AssessedBuilding):MapHome {
@@ -39,6 +40,7 @@ data class MapPerson(
     val home: MapHome? = null, val bedroom: String = "未登録", val memo: String = "",
     val impactAt: Long? = null, val enclosedAt: Long? = null,
     val identityVisible: Boolean = true, val registeredPlaceVisible: Boolean = true, val demo:Boolean=false,val fictional:Boolean=false,
+    val rescuedAt: Long? = null,
 ) {
     val publicName get() = when (state) {
         MapSafety.SAFE -> "無事の人"
@@ -51,7 +53,6 @@ data class MapPerson(
 /** Display projection only; the stored profile and incident's earliest formation time are retained. */
 fun projectPersonPrivacy(person:MapPerson,incidentStartedAt:Long?,now:Long):MapPerson {
     if(person.state in setOf(MapSafety.SAFE,MapSafety.RESCUED))return person.copy(name="",identityVisible=false,registeredPlaceVisible=false,home=null,bedroom="",memo="",impactAt=null,enclosedAt=null)
-    if(person.demo)return person.copy(identityVisible=true,registeredPlaceVisible=person.home!=null&&(person.state!=MapSafety.SOS||!person.hasPosition(now)),home=person.home.takeUnless {person.state==MapSafety.SOS&&person.hasPosition(now)},bedroom=person.bedroom.takeUnless {person.state==MapSafety.SOS&&person.hasPosition(now)}.orEmpty())
     val anonymous=person.state==MapSafety.UNANSWERED && (incidentStartedAt==null || now-incidentStartedAt<180_000)
     val homeVisible=when(person.state) {
         MapSafety.UNANSWERED -> !anonymous
@@ -62,6 +63,20 @@ fun projectPersonPrivacy(person:MapPerson,incidentStartedAt:Long?,now:Long):MapP
         home=person.home.takeIf {homeVisible},bedroom=if(homeVisible)person.bedroom else "",memo=if(anonymous)""else person.memo,
         impactAt=person.impactAt.takeIf {observations},enclosedAt=person.enclosedAt.takeIf {observations})
 }
+
+/** Aggregate values only: never retain resident IDs or private home links in map totals. */
+data class BuildingResidentCounts(val total:Int=0,val safe:Int=0,val unanswered:Int=0,val sos:Int=0,val rescued:Int=0)
+fun buildingResidentCounts(people:List<Resident>,places:List<PlaceEvent>,care:List<CareEvent>,roster:MemberRoster?=null):Map<String,BuildingResidentCounts> {
+    val buildings=placeBuildings(places).associateBy {it.buildingId}
+    return people.flatMap {person->
+        val building=validHome(places,person.originId)?.buildingId?.let(buildings::get)?:return@flatMap emptyList()
+        listOfNotNull(building.buildingId,building.locationReference?.plateauId).distinct().map {it to residentMapState(person,care,roster)}
+    }.groupBy({it.first},{it.second}).mapValues {(_,states)->BuildingResidentCounts(states.size,states.count {it==MapSafety.SAFE},states.count {it==MapSafety.UNANSWERED},states.count {it==MapSafety.SOS},states.count {it==MapSafety.RESCUED})}
+}
+fun disclosedBuildingResidents(home:MapHome,people:List<MapPerson>)=people.filter {p->
+    p.identityVisible&&p.registeredPlaceVisible&&p.home?.let {it.id==home.id||it.plateauId==home.id||(home.plateauId!=null&&it.plateauId==home.plateauId)}==true
+}
+fun buildingResidentDestination(person:MapPerson,now:Long):MapPoint? = person.point.takeIf {person.identityVisible&&person.hasPosition(now)}
 
 /** Re-check live disclosure when an already-open building sheet outlives a safety update. */
 fun visibleHomeDetail(homeId:String?,personId:String?,people:List<MapPerson>,homes:List<MapHome>,extraHome:MapHome?):MapHome? =
@@ -161,8 +176,8 @@ fun mapClusters(people: List<MapPerson>, zoom: Double, showSafe: Boolean, now: L
     }
 }
 
-fun residentMapState(person: Resident, care: List<CareEvent>): MapSafety {
-    val current = currentCareEvents(care.filter { it.subjectId == person.originId })
+fun residentMapState(person: Resident, care: List<CareEvent>,roster:MemberRoster?=null): MapSafety {
+    val current = currentCareEvents(care.filter { it.subjectId == person.originId },roster)
     val rescued = current.any { it.action == CareAction.RESCUED && it.createdAt >= person.updatedAt }
     return when {
         rescued -> MapSafety.RESCUED
@@ -191,13 +206,14 @@ fun residenceFloorLabel(floor: String, language: String = "ja"): String {
 }
 
 // The old schema stores home coordinates, not measured phone positions.
-fun residentMapPerson(person: Resident, places: List<PlaceEvent>, care: List<CareEvent>, position: PhonePosition? = null, memo: String = "", language: String = "ja"): MapPerson {
+fun residentMapPerson(person: Resident, places: List<PlaceEvent>, care: List<CareEvent>, position: PhonePosition? = null, memo: String = "", language: String = "ja",roster:MemberRoster?=null): MapPerson {
     val building = validHome(places, person.originId)?.buildingId?.let { id -> placeBuildings(places).find { it.buildingId == id } }
-    val home = building?.let { MapHome(it.buildingId!!, it.displayLabel(), MapPoint(it.latitude!!, it.longitude!!)) }
+    val home = building?.let { MapHome(it.buildingId!!, it.displayLabel(), MapPoint(it.latitude!!, it.longitude!!),plateauId=it.locationReference?.plateauId) }
         ?: MapHome("home:${person.originId}", "登録住居", MapPoint(person.latitude, person.longitude))
     val measured = position?.takeIf { it.groupId == person.groupId && it.originId == person.originId }
-    return MapPerson(person.originId, person.displayName(), residentMapState(person, care),
+    return MapPerson(person.originId, person.displayName(), residentMapState(person, care,roster),
         point = measured?.let { MapPoint(it.latitude, it.longitude) }, acquiredAt = measured?.acquiredAt,
         accuracy = measured?.accuracyMeters?.let { ceil(it).toInt() }, memo = memo, home = home,
+        rescuedAt = currentCareEvents(care.filter {it.subjectId==person.originId},roster).filter {it.action==CareAction.RESCUED&&it.createdAt>=person.updatedAt}.maxOfOrNull {it.createdAt},
         bedroom = listOf(residenceFloorLabel(person.floor, language), person.room).filter { it.isNotBlank() }.joinToString("・").ifBlank { if (language == "en") "Not registered" else "未登録" })
 }

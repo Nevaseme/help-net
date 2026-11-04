@@ -1,3 +1,4 @@
+import {canReplaceCare,currentCareHeads} from './care-policy.mjs';
 import {homeEvents} from './home-registration.mjs';
 import {validateIncident,normalizeIncident,sameIncident,incidentView,incidentOptions} from './incidents.mjs';
 import {validatePlace,samePlace,preparePlace} from './places.mjs';
@@ -25,12 +26,8 @@ export function validateEvent(e) {
  require(e.action!=='REVOKED'||e.supersedes!=null,'撤回には訂正元が必要です'); return e;
 }
 const sameEvent=(a,b)=>['groupId','eventId','subjectId','authorId','authorName','createdAt','action','note','supersedes'].every(k=>(a[k]??null)===(b[k]??null));
-export function currentEvents(events) {
- const byId=new Map(events.map(e=>[e.eventId,e]));
- // Only same-author, same-subject corrections affect the displayed heads. Preserve dangling/foreign references in history.
- const replaced=new Set(events.filter(e=>{const old=byId.get(e.supersedes);return old&&old.authorId===e.authorId&&old.subjectId===e.subjectId&&old.groupId===e.groupId;}).map(e=>e.supersedes));
- return events.filter(e=>!replaced.has(e.eventId));
-}
+export function currentEvents(events,roster=null) {return currentCareHeads(events,roster);}
+
 export class Store extends ManagedStore {
  constructor(db){super(db);this.name=db.name;}
  static open(name='pland-lab',factory=globalThis.indexedDB){return new Promise((resolve,reject)=>{
@@ -96,7 +93,7 @@ export class Store extends ManagedStore {
   const relevant=rows.filter(x=>x.groupId===e.groupId),v=managedIncidentOptions(relevant,roster,tables.quakes).find(v=>v.start.eventId===canonical);require(v&&!v.closed,'開始中の災害を選んでください');
   require(!roster||e.kind!=='END','管理者の災害終了処理を使ってください');
   if(e.kind==='END')require(v.start.authorId===e.authorId,'終了できるのは開始した人だけです');
-  if(e.kind==='CARE'&&e.supersedes){const old=v.care.find(x=>x.eventId===e.supersedes);require(old&&old.authorId===e.authorId&&old.subjectId===e.subjectId,'同じ災害の自分の記録だけ訂正できます');}
+  if(e.kind==='CARE'&&e.supersedes){const old=v.care.find(x=>x.eventId===e.supersedes);require(canReplaceCare({...e,incidentId:canonical},old,roster),'自分の記録、または管理者による救助済みの取消だけが可能です');}
   const sequence=Math.max(0,...relevant.filter(x=>x.incidentId===e.incidentId&&x.authorId===e.authorId).map(x=>x.sequence))+1;return {...e,sequence};
  });}
  merge(r){validateResident(r);return this.update('residents',[r.groupId,r.originId],old=>old&&old.revision>=r.revision?undefined:r);}

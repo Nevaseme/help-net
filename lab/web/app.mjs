@@ -143,14 +143,14 @@ for(const button of document.querySelectorAll('[data-response-filter]'))button.o
 function renderResponse(){
  if(designUi){designUi.renderResponse();return;}
  const buildingNames=new Map(placeBuildings(placeRows).map(b=>[b.buildingId,b.label]));
- const rows=[...currentEvents(events).map(e=>({...e,targetName:records.find(r=>r.originId===e.subjectId)?.name||'人物',actionLabel:ACTIONS[e.action]})),...currentBuildingCare(placeRows.filter(e=>e.kind==='CARE'&&e.incidentId===incidentId)).map(e=>({...e,targetName:buildingNames.get(e.buildingId)||'建物',actionLabel:BUILDING_ACTIONS[e.action]}))].filter(e=>responseFilter!=='mine'||e.authorId===id).sort((a,b)=>b.createdAt-a.createdAt);
+ const rows=[...currentEvents(events,roster).map(e=>({...e,targetName:records.find(r=>r.originId===e.subjectId)?.name||'人物',actionLabel:ACTIONS[e.action]})),...currentBuildingCare(placeRows.filter(e=>e.kind==='CARE'&&e.incidentId===incidentId)).map(e=>({...e,targetName:buildingNames.get(e.buildingId)||'建物',actionLabel:BUILDING_ACTIONS[e.action]}))].filter(e=>responseFilter!=='mine'||e.authorId===id).sort((a,b)=>b.createdAt-a.createdAt);
  $('response-context').textContent=view?`${view.start.training?'訓練':'地震'}：${view.start.title}`:'災害・訓練を選択すると、その対応記録を表示します。';
  document.querySelectorAll('[data-response-filter]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.responseFilter===responseFilter)));
  $('response-list').innerHTML=rows.length?rows.map(e=>`<button class="resident" data-response-person="${esc(e.subjectId||'')}" data-response-building="${esc(e.buildingId||'')}"><strong>${esc(e.targetName)}</strong><span class="building-status">${esc(e.actionLabel)}</span><small>${esc(e.note||e.scope||'')}</small><small>${esc(e.authorName)} · ${esc(time(e.createdAt))}</small></button>`).join(''):'<p class="empty-state">対応の記録はありません。</p>';
  for(const b of $('response-list').querySelectorAll('button'))b.onclick=()=>{if(b.dataset.responsePerson){selected=b.dataset.responsePerson;tab('residents');renderDetail();$('detail').scrollIntoView({block:'start'});}else{tab('property');$('building-registry').open=true;const target=[...$('building-list').querySelectorAll('button')].find(x=>x.dataset.building===b.dataset.responseBuilding);target?.click();}};
 }
 function badge(r){return `<span class="badge ${r.safety}">${labels[r.safety]}</span>`;}
-function statusFor(subject){const active=currentEvents(events.filter(e=>e.subjectId===subject));return active.length?active.map(e=>ACTIONS[e.action]).join(' / '):'対応記録なし';}
+function statusFor(subject){const active=currentEvents(events.filter(e=>e.subjectId===subject),roster);return active.length?active.map(e=>ACTIONS[e.action]).join(' / '):'対応記録なし';}
 async function refresh({background=false}={}){
  const epoch=++refreshRevision,g=group;const [raw,legacy,journal,savedSelection,places,participants,quakes,venueData]=await Promise.all([store.all(g),store.events(g),store.incidents(g),store.resolveIncidentSelection(g),store.places(g),store.roster(g),store.quakeEvents(g),store.read('meta','venue:'+g)]);if(epoch!==refreshRevision||g!==group)return;
  const extras=await Promise.all([store.positions(g),store.memos(g),store.responseEvents(g),store.deviceRecords(g)]);if(epoch!==refreshRevision||g!==group)return;
@@ -194,7 +194,7 @@ async function refresh({background=false}={}){
 }
 function renderDetail(){if(designUi)return designUi.renderPerson(selected);const r=records.find(r=>r.originId===selected);$('detail').hidden=!r;if(!r)return;
  $('detail-name').textContent=r.name;$('detail-info').textContent=`安否：${labels[r.safety]}\n登録住居：${r.latitude}, ${r.longitude}\n${placeUI.homeLabel(placeRows,r.originId)}\n階数：${r.floor||'未登録'}\n寝る部屋：${r.room||'未登録'}\n安否更新：${time(r.updatedAt)}`;
- const history=events.filter(e=>e.subjectId===selected).sort((a,b)=>b.createdAt-a.createdAt||a.eventId.localeCompare(b.eventId)),heads=currentEvents(history),active=new Set(heads.map(e=>e.eventId));
+ const history=events.filter(e=>e.subjectId===selected).sort((a,b)=>b.createdAt-a.createdAt||a.eventId.localeCompare(b.eventId)),heads=currentEvents(history,roster),active=new Set(heads.map(e=>e.eventId));
  $('history').innerHTML=history.length?history.map(e=>`<div class="event"><strong>${esc(ACTIONS[e.action])}${active.has(e.eventId)?'':'（訂正前）'}</strong><p>${esc(e.note||'詳細なし')}</p><small>${esc(e.authorName)} · ${esc(time(e.createdAt))}${e.supersedes?' · 訂正記録':''}<br>記録ID ${esc(e.eventId)}</small></div>`).join(''):'<p>まだ対応記録はありません。</p>';
  if(saves.busy)return;
  const old=$('supersedes').value;$('supersedes').innerHTML='<option value="">新しい記録</option>'+heads.filter(e=>e.authorId===id).map(e=>`<option value="${e.eventId}">${esc(time(e.createdAt))} ${esc(ACTIONS[e.action])} を訂正</option>`).join('');
@@ -269,7 +269,7 @@ await task(async()=>{
  attachCityOffline({store,getGroup:()=>group,host:document.querySelector('.appearance-settings').parentElement});
  if($('cloud-map-preview'))$('cloud-map-preview').onclick=()=>tab('buildings');$('tsunami-back').onclick=()=>tab('settings');
  if($('cloud-map-preview'))$('cloud-map-preview').textContent='地図を見る';
- document.querySelector('footer').textContent='Tasukeai · PWA 1.6.36 · この端末に記録を保存';
+ document.querySelector('footer').textContent='Tasukeai · PWA 1.6.37 · この端末に記録を保存';
  await refresh();
  if(document.body.classList.contains('registration-needed'))openSettings('group');else if(!startupNavigationChosen)await afterJoining();
  if('serviceWorker'in navigator){await setupAppUpdates();$('offline').textContent=cloudMode?'オフライン起動の準備ができました。接続できるときに記録を共有します。':'オフライン起動の準備ができました。通信には同じWi-Fiと実験サーバーが必要です。';}

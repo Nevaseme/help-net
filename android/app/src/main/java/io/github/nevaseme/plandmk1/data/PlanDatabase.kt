@@ -234,7 +234,7 @@ class RoomRecordStore(private val db: PlanDatabase,private val localDeviceId:Str
         if(event.kind==IncidentKind.END) require(view.start.authorId==event.authorId) { "終了できるのは開始した人だけです" }
         if(event.kind==IncidentKind.CARE && event.supersedes!=null) {
             val old=view.care.find { it.eventId==event.supersedes }
-            require(old!=null && old.authorId==event.authorId && old.subjectId==event.subjectId) { "同じ災害の自分の記録だけ訂正できます" }
+            require(old!=null && canCorrectCare(event.care(),old,quakeStore.roster(event.groupId))) { "同じ災害の自分の記録、または管理者による救助取り消しだけ訂正できます" }
         }
         val sequence=Math.addExact(rows.filter { it.incidentId==event.incidentId && it.authorId==event.authorId }.maxOfOrNull { it.sequence } ?: 0,1)
         event.copy(sequence=sequence).also { mergeIncident(it) }

@@ -14,7 +14,7 @@ test('old and new demo scenarios show identical fictional observations without c
  const residents=venueResidents(venue);
  assert.equal(residents[0].impactAt,undefined);assert.equal(residents[0].enclosedAt,undefined);
  for(const community of scenario.communities){
-  const eligible=scenario.people.filter(p=>p.communityId===community.id&&p.safety!=='SAFE'&&scenario.people.indexOf(p)<10);
+  const eligible=scenario.people.filter(p=>p.communityId===community.id&&p.safety!=='SAFE'&&!p.initialRescue);
   assert.ok(eligible.some(p=>p.observations.impact));assert.ok(eligible.some(p=>p.observations.enclosed));
  }
  const enclosed=residents.find(p=>p.enclosedAt&&!p.impactAt);

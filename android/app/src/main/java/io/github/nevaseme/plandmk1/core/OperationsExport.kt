@@ -38,7 +38,7 @@ fun operationRows(
     }
     val people=residents.filter {it.groupId==roster.groupId&&(allowedResidentIds==null||it.originId in allowedResidentIds)}.groupBy {it.originId}.values.map {it.maxBy {r->r.revision}}.map {person->
         val answer=view.answers[person.originId]
-        val care=currentCareEvents(view.care.filter {it.subjectId==person.originId})
+        val care=currentCareEvents(view.care.filter {it.subjectId==person.originId},roster)
         val rescued=care.any {it.action==CareAction.RESCUED&&it.createdAt>=(answer?.createdAt?:0)}
         val safety=when {rescued->if(en)"Rescued" else "救助済み";answer?.safety==Safety.SAFE->if(en)"Safe" else "無事";answer?.safety==Safety.SOS->"SOS";else->if(en)"No response" else "応答なし"}
         row(ResponseTarget(TargetKind.PERSON,person.originId),if(en)"Resident" else "住民",if(!rescued&&answer?.safety!=Safety.SAFE)person.name else "",safety,

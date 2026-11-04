@@ -98,9 +98,23 @@ fun homeLabel(rows: List<PlaceEvent>,person: String): String {
 }
 @Composable fun BuildingDetail(model: PlanViewModel,buildingId: String,onResident: (Resident)->Unit,onClose: ()->Unit,registration: Boolean = false) {
     val care by model.careEvents.collectAsStateWithLifecycle()
+    val roster by model.roster.collectAsStateWithLifecycle()
+    val positions by model.positions.collectAsStateWithLifecycle()
+    val venue by model.activeVenue.collectAsStateWithLifecycle()
     val rows by model.places.collectAsStateWithLifecycle();val residents by model.residents.collectAsStateWithLifecycle()
     val incident by model.incidentUi.collectAsStateWithLifecycle();val saving by model.saving.collectAsStateWithLifecycle()
     val own=residents.find {it.originId==model.localId};val building=placeBuildings(rows).find {it.buildingId==buildingId}?:return
+    var now by remember {mutableLongStateOf(System.currentTimeMillis())}
+    LaunchedEffect(incident.current?.start?.createdAt){while(true){now=System.currentTimeMillis();val until=incident.current?.start?.createdAt?.plus(180_000)?.minus(now)?.takeIf {it>0}?:60_000;kotlinx.coroutines.delay(minOf(60_000L,until))}}
+    val communityPeople=communityPeopleFor(residents,care,venue,roster)
+    val ownCommunity=communityPeople.find {it.id==model.localId}?.communityId
+    val visibleResidents=residents.filter {person->
+        val sameCommunity=venue?.scenario==null||person.originId==model.localId||communityPeople.any {it.id==person.originId&&it.communityId==ownCommunity}
+        val base=residentMapPerson(person,rows,care,positions.find {it.originId==person.originId},roster=roster)
+        val placement=venue?.allPlacements()?.find {it.deviceId==person.originId&&it.latitude!=null&&it.longitude!=null}
+        val projected=projectPersonPrivacy(if(placement==null)base else base.copy(point=MapPoint(placement.latitude!!,placement.longitude!!),acquiredAt=venue?.startedAt),incident.current?.start?.createdAt,now)
+        sameCommunity&&projected.identityVisible&&projected.registeredPlaceVisible
+    }
     var editing by rememberSaveable {mutableStateOf(false)};var newUnit by rememberSaveable {mutableStateOf(false)}
     var unitName by rememberSaveable {mutableStateOf("")}
     var editingUnit by rememberSaveable {mutableStateOf<String?>(null)}
@@ -122,8 +136,11 @@ fun homeLabel(rows: List<PlaceEvent>,person: String): String {
         OperationFeedback(model,model.placeSaveKey(PlaceKind.HOME))
         }
         HorizontalDivider()
+        val counts=buildingResidentCounts(residents,rows,care,roster)[buildingId]?:BuildingResidentCounts()
+        Text(if(LocalUiLanguage.current=="en")"Total residents: ${counts.total}" else "登録住民：${counts.total}人")
+        Text("${safetyText(MapSafety.SAFE)} ${counts.safe} · ${safetyText(MapSafety.UNANSWERED)} ${counts.unanswered}\nSOS ${counts.sos} · ${safetyText(MapSafety.RESCUED)} ${counts.rescued}")
         Text("この建物に登録されている人",style=MaterialTheme.typography.titleMedium)
-        BuildingPeople(rows,buildingId,residents,model.localId,onResident,care)
+        BuildingPeople(rows,buildingId,visibleResidents,model.localId,onResident,care)
         key(incident.selection,buildingId) {BuildingCareEditor(model,buildingId,rows,incident.selection,own!=null&&incident.canEdit,saving)}
     }},confirmButton={TextButton(enabled=!saving,onClick=onClose){Text("閉じる")}})
     if(editing)BuildingForm(model,building,own){editing=false}
