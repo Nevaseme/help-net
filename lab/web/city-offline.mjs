@@ -34,6 +34,13 @@ export async function cityDownloadPlan(code){
  }
  return {code,name:city.name,files,bytes:map.bytes+city.addresses.bytes+(city.places?.bytes||0)+riskBytes+buildingBytes};
 }
+export async function fetchCityFile(url,signal){
+ for(let attempt=0;;attempt++){
+  signal.throwIfAborted();
+  try{const response=await fetch(url,{signal,cache:'no-store'});if(response.status===429||response.status>=500)throw Error('地域データを取得できません');return response;}
+  catch(error){signal.throwIfAborted();if(attempt>=2)throw error;await new Promise(resolve=>setTimeout(resolve,250*(attempt+1)));}
+ }
+}
 export class CityDownload {
  constructor(onProgress=()=>{}){this.onProgress=onProgress;this.controller=null;}
  pause(){this.controller?.abort();}
@@ -55,7 +62,7 @@ export class CityDownload {
    const worker=async()=>{while(next<plan.files.length){signal.throwIfAborted();const file=plan.files[next++];let response=file.sha256?await cache.match(file.url):null;let data;
     if(!response&&file.sha256)for(const p of previous){response=await p.cache.match(file.url);if(response)break;}
     if(response){try{const copy=response.clone();data=await verifiedBytes(response,file.sha256);await cache.put(file.url,copy);}catch{await cache.delete(file.url);response=null;}}
-    if(!response){response=await fetch(file.url,{signal,cache:'no-store'});const type=response.headers.get('content-type')||'application/octet-stream';data=await verifiedBytes(response,file.sha256);signal.throwIfAborted();await cache.put(file.url,new Response(data,{headers:{'Content-Type':type}}));}
+    if(!response){response=await fetchCityFile(file.url,signal);const type=response.headers.get('content-type')||'application/octet-stream';data=await verifiedBytes(response,file.sha256);signal.throwIfAborted();await cache.put(file.url,new Response(data,{headers:{'Content-Type':type}}));}
     bytes+=data.byteLength;count++;this.onProgress({count,total:plan.files.length,bytes});
    }};
    await Promise.all([worker(),worker()]);signal.throwIfAborted();

@@ -5,7 +5,7 @@ import {startVenueServer} from './venue-server.mjs';
 const server=process.env.PARCEL_TEST_URL?null:await startVenueServer({cityFixture:true});
 const base=process.env.PARCEL_TEST_URL||server.base,out=process.env.PARCEL_TEST_OUTPUT||'output/parcel-browser-local';await mkdir(out,{recursive:true});
 const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe'}),context=await browser.newContext({viewport:{width:390,height:844}}),page=await context.newPage(),errors=[],requests=[];page.on('requestfailed',r=>requests.push({url:r.url(),error:r.failure()}));
-page.setDefaultTimeout(60000);page.on('pageerror',e=>errors.push(e.message));
+page.setDefaultTimeout(60000);page.on('console',m=>{if(m.text().startsWith('City files saved'))console.log(m.text());});page.on('pageerror',e=>errors.push(e.message));
 const ready=async()=>{await page.reload();await page.waitForFunction(()=>document.querySelector('#offline')?.textContent.includes('オフライン起動の準備ができました'));};
 const profile=async()=>{await page.locator('#menu-open').click();await page.locator('[data-menu="profile"]').click();};
 try {
