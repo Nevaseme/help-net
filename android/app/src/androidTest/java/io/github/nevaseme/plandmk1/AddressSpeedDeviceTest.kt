@@ -16,7 +16,7 @@ class AddressSpeedDeviceTest {
   val times=mutableListOf<Double>()
   for(i in 0 until 25){val q=queries[if(i==0)0 else (i-1)%queries.size];val start=SystemClock.elapsedRealtimeNanos();val result=repo.candidates(q,"26100");val ms=(SystemClock.elapsedRealtimeNanos()-start)/1e6
    assertTrue("No result: $q",result.isNotEmpty())
-   if(q.contains("203")||q.contains("２０３")){assertEquals("block",result.first().precision);assertTrue(result.first().address.contains("讃州寺町203"))}
+   if(q.contains("203")||q.contains("２０３")){assertEquals("parcel-area",result.first().precision);assertTrue(result.first().address.contains("讃州寺町203"))}
    if(i>0)times+=ms
    Log.i("AddressSpeed","sample=$i ms=$ms hits=${result.size} query=$q")
   }

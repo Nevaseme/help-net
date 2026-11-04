@@ -3,6 +3,11 @@ import {mapMunicipality,demoMapMunicipality} from './municipalities.mjs';
 import {CITY_DATA,verifiedBytes,refreshAddressPackage} from './city-addresses.mjs';
 import {CITY_MAP_PATHS} from './city-map-resources.mjs';
 export const CITY_CACHE_PREFIX='tasukeai-city-v2-';
+export function hasCurrentCityFiles(code,saved){
+ if(!saved)return false;
+ const paths=code==='26100'?['26100/parcel-addresses/index.json','26100/parcel-search/index.json']:code==='13103'?['13103/risk/index.json']:[];
+ return paths.every(path=>saved.urls.includes(CITY_DATA+path));
+}
 async function completedCaches(code){const names=(await caches.keys()).filter(n=>n.startsWith(CITY_CACHE_PREFIX+code+'-')||n==='tasukeai-city-v1-'+code);const found=[];for(const name of names){const cache=await caches.open(name),marker=await cache.match('/__city_complete__');if(marker)found.push({name,cache,value:await marker.json()});}return found.sort((a,b)=>b.value.savedAt-a.value.savedAt);}
 export const mapResourceUrl=url=>{if(!url.startsWith('https://tiles.openfreemap.org/'))return url;const path=new URL(url).pathname;return CITY_MAP_PATHS.has(path)?CITY_DATA+'map-assets/'+path.slice(1):url;};
 export async function cityDownloadPlan(code){
@@ -12,11 +17,19 @@ export async function cityDownloadPlan(code){
  let riskBytes=0,buildingBytes=0;
  const files=[{url:CITY_DATA+'map-style.json'},{url:CITY_DATA+code+'/city.json'},{url:CITY_DATA+code+'/map-manifest.json'},{url:CITY_DATA+city.addresses.path,...city.addresses},...map.resources.map(r=>({...r,url:mapResourceUrl(r.url)}))];
  if(city.places)files.push({url:CITY_DATA+city.places.path,...city.places});
+ for(const descriptor of [city.parcelAddresses,city.parcelSearch].filter(Boolean)){
+  const index=await verifiedBytes(await fetch(CITY_DATA+descriptor.path,{cache:'reload'}),descriptor.sha256);
+  const parsed=JSON.parse(new TextDecoder().decode(index));
+  if(parsed.schemaVersion!==1||!Array.isArray(parsed.chunks))throw Error('住所候補のデータが不正です');
+  const base=descriptor.path.slice(0,descriptor.path.lastIndexOf('/')+1);
+  files.push({url:CITY_DATA+descriptor.path,...descriptor},...parsed.chunks.map(c=>({url:CITY_DATA+base+c.file,sha256:c.sha256,bytes:c.bytes})));
+  buildingBytes+=descriptor.bytes+parsed.chunks.reduce((n,c)=>n+c.bytes,0);
+ }
  if(['26100','13103'].includes(code)){
   const risk=await read(code+'/risk/index.json');riskBytes=risk.bytes;files.push({url:CITY_DATA+code+'/risk/index.json'},...risk.tiles.map(t=>({url:CITY_DATA+code+'/risk/'+t.file,sha256:t.sha256,bytes:t.bytes})));
   const index=await read(code+'/buildings/index.json');
   files.push({url:CITY_DATA+code+'/buildings/index.json'},{url:CITY_DATA+code+'/buildings/model.json',sha256:index.modelSha256});
-  buildingBytes=index.chunks.reduce((n,c)=>n+c.bytes,0);
+  buildingBytes+=index.chunks.reduce((n,c)=>n+c.bytes,0);
   files.push(...index.chunks.map(c=>({url:CITY_DATA+code+'/buildings/'+c.file,sha256:c.sha256,bytes:c.bytes})));
  }
  return {code,name:city.name,files,bytes:map.bytes+city.addresses.bytes+(city.places?.bytes||0)+riskBytes+buildingBytes};
@@ -60,8 +73,8 @@ export function attachCityOffline({store,getGroup,host}){
   if(group!==getGroup())return;
   if(code!==city?.code){code=city?.code;plan=null;attempted=null;}
   button.disabled=!code;if(!code){state.textContent=t('グループの活動地域を管理者が設定してください');return;}
-  const current=code,existing=await downloader.status(current),saved=current==='13103'&&existing&&!existing.urls.includes(CITY_DATA+'13103/risk/index.json')?null:existing;if(current!==code||group!==getGroup())return;
-  state.textContent=saved?`${city.name}${t('全域')} · ${t('保存済み・圏外で利用可能')}（${(saved.bytes/1048576).toFixed(1)} MB）`:`${city.name}${t('全域')} · ${t('約')}${code==='26100'?'219':code==='13103'?'18':'8'} MB`;
+  const current=code,existing=await downloader.status(current),saved=hasCurrentCityFiles(current,existing)?existing:null;if(current!==code||group!==getGroup())return;
+  state.textContent=saved?`${city.name}${t('全域')} · ${t('保存済み・圏外で利用可能')}（${(saved.bytes/1048576).toFixed(1)} MB）`:`${city.name}${t('全域')} · ${t('約')}${code==='26100'?'274':code==='13103'?'18':'8'} MB`;
   button.textContent=saved?t('地図を保存し直す'):t('地図を保存');
   if(!saved&&demoMapMunicipality(venue)&&attempted!==code){attempted=code;await download();}
  }

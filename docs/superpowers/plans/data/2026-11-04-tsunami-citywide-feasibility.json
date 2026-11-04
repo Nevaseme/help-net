@@ -1,0 +1,455 @@
+{
+  "schema": "pland-citywide-terrain-coverage-1",
+  "status": "whole_city_terrain_incomplete; mainland_3m_candidate_passed_only",
+  "source_tiles": 358,
+  "source_bytes": 159327347,
+  "new_download_bytes": 98994626,
+  "acquisition_sha256": "145f5d77ede01b9242ef41623f43fe22f53548a0d8ddf604f625f38281fc52a9",
+  "boundary_geojson_sha256": "c156d7b3074219a1a474354294a2b6b164b86e404f559be40260b94cf660b821",
+  "municipality_code": "22205",
+  "municipal_bounds_epsg6676": [
+    48134.03030014633,
+    -108032.27358268952,
+    61726.32718740235,
+    -94087.18128299779
+  ],
+  "all_municipal_vertices_inside_acquisition_envelope": true,
+  "spacing_m": 20,
+  "municipal_node_count": 154233,
+  "municipal_nodes_present": 38515,
+  "municipal_nodes_missing": 115718,
+  "municipal_node_coverage_fraction": 0.2497195801157988,
+  "full_city_rectangle": {
+    "bounds_m": [
+      48120.5,
+      -108039.5,
+      61740.5,
+      -94079.5
+    ],
+    "cells": 475338,
+    "required_nodes": 476718,
+    "present_nodes": 62839,
+    "missing_nodes": 413879,
+    "native_mesh_triangle_count": 1901352,
+    "native_triangle_limit": 250000,
+    "browser_cell_limit": 1000000,
+    "passes_exact_terrain_requirement": false
+  },
+  "regional_diagnostics": [
+    {
+      "name": "izumi_izusan_north",
+      "diagnostic_bounds_m": [
+        52800.5,
+        -98999.5,
+        55600.5,
+        -94799.5
+      ],
+      "required_rectangle_nodes": 29751,
+      "present_nodes": 8672,
+      "missing_nodes": 21079,
+      "present_below_tp0_nodes": 2639,
+      "below_tp0_nodes_connected_to_original_gauge": 2625,
+      "municipal_nodes": 18561,
+      "municipal_nodes_missing_alb": 13131
+    },
+    {
+      "name": "central_atami",
+      "diagnostic_bounds_m": [
+        50800.5,
+        -102599.5,
+        54000.5,
+        -98399.5
+      ],
+      "required_rectangle_nodes": 33971,
+      "present_nodes": 25586,
+      "missing_nodes": 8385,
+      "present_below_tp0_nodes": 4863,
+      "below_tp0_nodes_connected_to_original_gauge": 4853,
+      "municipal_nodes": 21855,
+      "municipal_nodes_missing_alb": 1532
+    },
+    {
+      "name": "taga",
+      "diagnostic_bounds_m": [
+        50800.5,
+        -106199.5,
+        54000.5,
+        -102599.5
+      ],
+      "required_rectangle_nodes": 29141,
+      "present_nodes": 11512,
+      "missing_nodes": 17629,
+      "present_below_tp0_nodes": 5024,
+      "below_tp0_nodes_connected_to_original_gauge": 5018,
+      "municipal_nodes": 16687,
+      "municipal_nodes_missing_alb": 10782
+    },
+    {
+      "name": "ajiro_south",
+      "diagnostic_bounds_m": [
+        51600.5,
+        -109199.5,
+        55200.5,
+        -105599.5
+      ],
+      "required_rectangle_nodes": 32761,
+      "present_nodes": 7949,
+      "missing_nodes": 24812,
+      "present_below_tp0_nodes": 2760,
+      "below_tp0_nodes_connected_to_original_gauge": 2738,
+      "municipal_nodes": 13747,
+      "municipal_nodes_missing_alb": 10302
+    },
+    {
+      "name": "hatsushima",
+      "diagnostic_bounds_m": [
+        60000.5,
+        -107399.5,
+        62400.5,
+        -105299.5
+      ],
+      "required_rectangle_nodes": 12826,
+      "present_nodes": 8184,
+      "missing_nodes": 4642,
+      "present_below_tp0_nodes": 5070,
+      "below_tp0_nodes_connected_to_original_gauge": 0,
+      "municipal_nodes": 1307,
+      "municipal_nodes_missing_alb": 0
+    }
+  ],
+  "original_gauge_m": [
+    52660.5,
+    -100209.5
+  ],
+  "connectivity_test": "4-neighbor exact 20m source nodes with z<0, starting at the nearest source node to the requested gauge; this diagnostic is not a hydrodynamic connectivity proof",
+  "missing_node_fill_used": false,
+  "published_bundle_modified": false,
+  "limitations": [
+    "ALB-only coverage; absent inland data may be supplied by separately verified LP terrain.",
+    "Absence in this catalog is not a claim that no other bathymetry exists.",
+    "Region boxes are diagnostic windows, not exhaustive municipal subdivisions.",
+    "20m exact-node sampling can lose narrow channels and coastal structures.",
+    "Independent regional gauges would change the meaning of the input coastal height."
+  ],
+  "required_next": [
+    "Acquire and reconcile measured offshore bathymetry connecting mainland and Hatsushima, plus missing inland terrain.",
+    "Use an adequate regional mesh and common wave forcing while retaining the original gauge, or explicitly approve local-reference semantics.",
+    "Run two-domain checks and all 36 heights; no publication until all pass."
+  ],
+  "audit_elapsed_s": 27.18699999997625,
+  "source_urls": {
+    "alb_catalog": "https://virtual-shizuoka.s3.ap-northeast-1.amazonaws.com/?list-type=2&prefix=2019/ALB/Grid/08/NF/&max-keys=1000",
+    "boundary": "https://nlftp.mlit.go.jp/ksj/gml/data/N03/N03-2025/N03-20250101_22_GML.zip",
+    "city_extent": "https://www.city.atami.lg.jp/shisei/atamishi/1001238.html",
+    "lp_sample": "https://virtual-shizuoka.s3.ap-northeast-1.amazonaws.com/2019/LP/Grid/08/NF/32/08NF3255.zip",
+    "bathymetry_candidate": "https://www.jodc.go.jp/jodcweb/JDOSS/infoJEGG.html"
+  },
+  "lp_audit": {
+    "url": "https://virtual-shizuoka.s3.ap-northeast-1.amazonaws.com/2019/LP/Grid/08/NF/32/08NF3255.zip",
+    "sha256": "f3e674b09b516a761e12669dd210796c9584e8564d91fc07401a935272f84cde",
+    "bytes": 1866166,
+    "sample_count": 480000,
+    "xyz_min": [
+      50000.25,
+      -100799.75,
+      276.85
+    ],
+    "xyz_max": [
+      50399.75,
+      -100500.25,
+      447.85
+    ],
+    "spacing_x_m": [
+      0.5
+    ],
+    "spacing_y_m": [
+      0.5
+    ],
+    "municipal_alb_missing_nodes_inside_sample_tile": 274,
+    "all_rectangular_samples_present": true,
+    "integrated_into_model": false,
+    "alignment_note": "LP sample centers at 0.25+0.5k metres; ALB at 0.5+1k. Requires explicitly reviewed source resampling and overlap checks, not exact-node concatenation."
+  },
+  "first_mainland_pair_3m": {
+    "mean": 0.12398362198280821,
+    "max": 1.0396104612232997,
+    "iou": 0.9444444444444444,
+    "wet": 234,
+    "largest": [
+      {
+        "x": 52950.5,
+        "y": -100889.5,
+        "bed": 2.32,
+        "a": 0.4017776012608357,
+        "b": 1.0735952850860428,
+        "diff": 0.6718176838252071
+      },
+      {
+        "x": 52930.5,
+        "y": -100749.5,
+        "bed": 1.72975,
+        "a": 0.9820226214804552,
+        "b": 1.6540792251509493,
+        "diff": 0.6720566036704941
+      },
+      {
+        "x": 52950.5,
+        "y": -100829.5,
+        "bed": 0.7910000000000001,
+        "a": 1.9461296964383215,
+        "b": 2.656113182018882,
+        "diff": 0.7099834855805607
+      },
+      {
+        "x": 52950.5,
+        "y": -100849.5,
+        "bed": 1.5185000000000004,
+        "a": 1.231518053736198,
+        "b": 1.9987765416998293,
+        "diff": 0.7672584879636313
+      },
+      {
+        "x": 52950.5,
+        "y": -100869.5,
+        "bed": 1.6605,
+        "a": 1.0824534014545806,
+        "b": 1.876366739403731,
+        "diff": 0.7939133379491505
+      },
+      {
+        "x": 52970.5,
+        "y": -100969.5,
+        "bed": 0.4119999999999999,
+        "a": 2.3574237722890166,
+        "b": 3.3138173126161616,
+        "diff": 0.9563935403271451
+      },
+      {
+        "x": 52970.5,
+        "y": -101049.5,
+        "bed": 1.67675,
+        "a": 1.0766620151981214,
+        "b": 2.050386511231755,
+        "diff": 0.9737244960336338
+      },
+      {
+        "x": 52970.5,
+        "y": -100989.5,
+        "bed": 0.12675000000000014,
+        "a": 2.637762421477431,
+        "b": 3.633791917609254,
+        "diff": 0.9960294961318228
+      },
+      {
+        "x": 52970.5,
+        "y": -101009.5,
+        "bed": 0.23899999999999988,
+        "a": 2.523361682504875,
+        "b": 3.5371771426018954,
+        "diff": 1.0138154600970206
+      },
+      {
+        "x": 52970.5,
+        "y": -101029.5,
+        "bed": 0.6285,
+        "a": 2.133271776515372,
+        "b": 3.172882237738672,
+        "diff": 1.0396104612232997
+      }
+    ],
+    "wall_s": [
+      122.338,
+      142.877
+    ],
+    "passed": false
+  },
+  "whole_city_calibrated_cases_run": 0,
+  "diagnostic_calibrated_domain_results": 4,
+  "fresh_simulations_including_still_water": 16,
+  "second_mainland_pair_3m": {
+    "schema": "pland-diagnostic-pair-review-1",
+    "height_m": 3,
+    "pair_id": "atami-pair-a6d533a328026cba1fcff4a7",
+    "saved_pair_review_status": "pending",
+    "publication_approved": false,
+    "comparison": {
+      "passed": true,
+      "metrics": {
+        "meanWetDepthDifferenceM": 0.0008951550044751491,
+        "maximumDepthDifferenceM": 0.010939151554604898,
+        "footprintIoU": 1,
+        "depthThresholdM": 0.1,
+        "limits": {
+          "meanWetDepthDifferenceM": 0.1,
+          "maximumDepthDifferenceM": 0.5,
+          "footprintIoU": 0.9
+        }
+      }
+    },
+    "direct_metrics": {
+      "land_cells": 8284,
+      "wet_union_cells": 226,
+      "mean_wet_depth_difference_m": 0.0008951550044751491,
+      "maximum_land_depth_difference_m": 0.010939151554604898,
+      "land_footprint_iou": 1
+    },
+    "source_hashes": {
+      "pair-pending.json-0": "f22f0ebd77ad6ce29538f60f29519d2061184ee08aa5ff7acda957795c400acd",
+      "large.json-1": "8af686f7a1f7b717c834c13c045aa79e7db969658defb0b8a0242e427ea1c580",
+      "small.json-2": "85d47bc8bd08ec9652adfce1efe07acee8c8c69c4890042561c1f1d24e4b8ea1",
+      "height-3.json-3": "115009b23cd194da052f2ea8bdfc9ad0a10f280bb25135d76587f004b2ac8d5e",
+      "height-3.json-4": "331b139f0d36b1ca17e7c3b142b38a0466a485d92cf1d8afe9b7b7bd1e84b9df"
+    },
+    "cases": [
+      {
+        "domain_id": "atami-c3047e0b8801fed88a07ea5e",
+        "status": "accepted",
+        "reason": null,
+        "achieved_height_m": 2.999903968100867,
+        "wall_s": 129.809,
+        "cpu_s": 125.391,
+        "calibration": {
+          "target_height_m": 3,
+          "achieved_height_m": 2.999903968100867,
+          "residual_m": -9.603189913320875e-05,
+          "tolerance_m": 0.005,
+          "forcing_amplitude_m": 2.9620558073364887,
+          "reference_index": 6610,
+          "baseline_maximum_depth_drift_m": 6.217248937900877e-15,
+          "elapsed_wall_ms": 129804.648,
+          "cpu_time_ms": null,
+          "runs": [
+            {
+              "forcing_amplitude_m": 0,
+              "achieved_height_m": 0,
+              "elapsed_wall_ms": 14455.338399999999,
+              "steps": 5991
+            },
+            {
+              "forcing_amplitude_m": 3,
+              "achieved_height_m": 3.03563645023318,
+              "elapsed_wall_ms": 39794.6725,
+              "steps": 6911
+            },
+            {
+              "forcing_amplitude_m": 2.7,
+              "achieved_height_m": 2.753882265481879,
+              "elapsed_wall_ms": 38015.6732,
+              "steps": 6859
+            },
+            {
+              "forcing_amplitude_m": 2.9620558073364887,
+              "achieved_height_m": 2.999903968100867,
+              "elapsed_wall_ms": 37516.02369999999,
+              "steps": 6903
+            }
+          ],
+          "definition": "maximum model coastal stage rise above initial baseline at declared wet reference cell",
+          "real_world_validated": false
+        },
+        "diagnostics": {
+          "solver": "pland-cartesian-swe-2.3",
+          "steps": 6903,
+          "simulated_s": 900,
+          "compute_wall_ms": 37485.98840000041,
+          "cpu_time_ms": null,
+          "initial_volume_m3": 5266149.600000001,
+          "final_volume_m3": 5264964.84097922,
+          "net_boundary_volume_m3": -1184.7590207759613,
+          "roundoff_volume_m3": 0,
+          "mass_residual_m3": -4.2518877307884395e-09,
+          "relative_mass_residual": 8.073997234693901e-16,
+          "maximum_depth_change_m": 3.477799795204776,
+          "real_world_validated": false,
+          "completed": true,
+          "elapsed_wall_ms": 37516.02369999999
+        }
+      },
+      {
+        "domain_id": "atami-95622dc25fa7955ab7e6161d",
+        "status": "accepted",
+        "reason": null,
+        "achieved_height_m": 2.999866264340543,
+        "wall_s": 119.721,
+        "cpu_s": 115.891,
+        "calibration": {
+          "target_height_m": 3,
+          "achieved_height_m": 2.999866264340543,
+          "residual_m": -0.00013373565945684618,
+          "tolerance_m": 0.005,
+          "forcing_amplitude_m": 2.961153592429214,
+          "reference_index": 5818,
+          "baseline_maximum_depth_drift_m": 7.993605777301127e-15,
+          "elapsed_wall_ms": 119716.718,
+          "cpu_time_ms": null,
+          "runs": [
+            {
+              "forcing_amplitude_m": 0,
+              "achieved_height_m": 0,
+              "elapsed_wall_ms": 12602.4622,
+              "steps": 5633
+            },
+            {
+              "forcing_amplitude_m": 3,
+              "achieved_height_m": 3.0365095056463165,
+              "elapsed_wall_ms": 36967.176,
+              "steps": 6643
+            },
+            {
+              "forcing_amplitude_m": 2.7,
+              "achieved_height_m": 2.7545567491671825,
+              "elapsed_wall_ms": 35050.4395,
+              "steps": 6584
+            },
+            {
+              "forcing_amplitude_m": 2.961153592429214,
+              "achieved_height_m": 2.999866264340543,
+              "elapsed_wall_ms": 35076.2797,
+              "steps": 6633
+            }
+          ],
+          "definition": "maximum model coastal stage rise above initial baseline at declared wet reference cell",
+          "real_world_validated": false
+        },
+        "diagnostics": {
+          "solver": "pland-cartesian-swe-2.3",
+          "steps": 6633,
+          "simulated_s": 900,
+          "compute_wall_ms": 35052.38679999988,
+          "cpu_time_ms": null,
+          "initial_volume_m3": 4890501.099999999,
+          "final_volume_m3": 4887250.354180854,
+          "net_boundary_volume_m3": -3250.745819145475,
+          "roundoff_volume_m3": 0,
+          "mass_residual_m3": 5.925357982050627e-10,
+          "relative_mass_residual": 1.2116054900898866e-16,
+          "maximum_depth_change_m": 3.4775709541206794,
+          "real_world_validated": false,
+          "completed": true,
+          "elapsed_wall_ms": 35076.2797
+        }
+      }
+    ],
+    "note": "The runtime comparison is exercised on an in-memory review clone. Saved domains stay pending. No all-city or actual-tsunami validation is implied."
+  },
+  "second_candidate_status": "3m_only_passed; 0..35 set incomplete; no publication",
+  "published_bundle_sha256": "bea139087ad7a6844d7a3e470ae752695aa5a850f68cd1a396761f6dafc4951c",
+  "current_published_reporting_dimensions_m": [
+    1760,
+    1280
+  ],
+  "second_candidate_reporting_dimensions_m": [
+    1780,
+    2120
+  ],
+  "verification": {
+    "all_358_raw_source_hashes_rechecked": true,
+    "boundary_extraction_reproduced_identically": true,
+    "published_bundle_unchanged": true,
+    "second_candidate_domains_and_pair_reproduced_byte_identically": true
+  },
+  "connectivity_reference_node_m": [
+    52660.5,
+    -100199.5
+  ]
+}

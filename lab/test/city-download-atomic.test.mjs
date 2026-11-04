@@ -1,7 +1,13 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {loadCityPackage} from '../web/city-addresses.mjs';
 import {gzipSync} from 'node:zlib';
-import {CityDownload} from '../web/city-offline.mjs';
+import {CityDownload,hasCurrentCityFiles} from '../web/city-offline.mjs';
+test('old Kyoto downloads remain usable but require an update for parcel searches',()=>{
+ const old={urls:['https://nevaseme.github.io/safety_confirm/data/cities/26100/buildings/index.json']};
+ assert.equal(hasCurrentCityFiles('26100',old),false);
+ assert.equal(hasCurrentCityFiles('26100',{urls:[...old.urls,...['parcel-addresses','parcel-search'].map(p=>'https://nevaseme.github.io/safety_confirm/data/cities/26100/'+p+'/index.json')]}),true);
+ assert.equal(old.urls.length,1);
+});
 test('failed city update leaves the previous complete package usable',async t=>{
  const buckets=new Map();const original=globalThis.caches,fetcher=globalThis.fetch;
  globalThis.caches={keys:async()=>[...buckets.keys()],delete:async k=>buckets.delete(k),open:async k=>{if(!buckets.has(k))buckets.set(k,new Map());const b=buckets.get(k);return {match:async u=>b.get(String(u))?.clone(),put:async(u,r)=>{b.set(String(u),r.clone());},delete:async u=>b.delete(String(u))};}};

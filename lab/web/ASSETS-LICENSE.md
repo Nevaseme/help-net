@@ -40,3 +40,7 @@ Kyoto facility index additionally includes 1,077 named PLATEAU building points e
 ## Venue building addresses (2026-11-04)
 
 The derived demonstration placement database is available at [demo-building-addresses.json](./demo-building-addresses.json), with geometry and source references at [demo-building-address-sources.json](./demo-building-address-sources.json). OpenStreetMap building names and geometry: © OpenStreetMap contributors, [ODbL 1.0](https://www.openstreetmap.org/copyright). The derived database is distributed under ODbL 1.0. PLATEAU geometry and attributes: 京都市・国土交通省 Project PLATEAU (2025); source assets and checksums accompany each row. Published building addresses are cross-checked against the cited sources. The 64 demonstration placements represent 12 buildings, not verified dwellings or cadastral parcels; no occupant information is included.
+
+## Kyoto parcel candidates (2026-11-04)
+
+京都市「京都市全域地番参考図」由来の国土交通省試行公開データ（ファイル名2025）を加工。原市データの基準日は未確認です。国土交通省: https://www.mlit.go.jp/tochi_fudousan_kensetsugyo/tochi_fudousan_kensetsugyo_tk17_000001_00063.html （公共データ利用規約1.0）、京都市原データ: https://data.city.kyoto.lg.jp/dataset/00677/ （CC BY 4.0）。地番区画内の代表点を検索用に生成し、PLATEAU建物形状との重なりから候補を生成しました。地番と郵便上の住所、建物入口は同一と保証しません。取得元・チェックサム・処理条件は各索引に記録しています。
