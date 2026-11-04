@@ -1,3 +1,4 @@
+import {placeMapLabel} from './map-label-layout.mjs';
 import {currentLocationControl} from './current-location.mjs';
 import {mapBuildingFeatures} from './building-details.mjs';
 import {tsunamiDepthColor} from './tsunami-map-model.mjs';
@@ -5,7 +6,9 @@ import {tsunamiDepthColor} from './tsunami-map-model.mjs';
 /** One map for normal browsing and exact, previously checked height results. */
 export function createTsunamiMap(){
  const $=id=>document.getElementById(id);let map,home=null,initialFocus=null,result=null,layers=[],generation=0,controller=null;
- let locationControl=null,myDot=null,myAccuracy=null,lastLanguage=null;
+ let locationControl=null,myDot=null,myAccuracy=null,lastLanguage=null,demoLocation=null;
+ let registeredIds=[];
+ function highlightRegisteredBuildings(){if(!vectorMap)return;for(const source of ["kyoto-risk","toranomon-risk"]){if(!vectorMap.getSource(source))continue;const id=source+"-registered",filter=["in",["get","bid"],["literal",registeredIds]];if(!vectorMap.getLayer(id))vectorMap.addLayer({id,type:"line",source,"source-layer":"buildings",minzoom:14,filter,paint:{"line-color":"#216879","line-width":2}});else vectorMap.setFilter(id,filter);}}
  let tsunamiEnabled=false,heightTimer,vectorMap,selectBuilding=()=>{},buildingRequest=0;
  let statusKey='off',statusHeight=null,loadStarted=null;
  function status(key,height=null){statusKey=key;statusHeight=height;renderStatus();}
@@ -29,16 +32,15 @@ export function createTsunamiMap(){
    const marker=L.marker([person.position.latitude,person.position.longitude],{icon:L.divIcon({className:'person-map-marker',html:`<span class="person-symbol ${escape(person.status)}">${symbol}</span>${person.impactAt?`<span class="person-impact" aria-label="${local('衝撃を検知','Impact')}"><img src="/web1617-impact-collision.svg" alt=""></span>`:''}${person.enclosedAt?`<span class="person-enclosed" aria-label="${local('閉所を検知','Enclosed space')}"><img src="/web1617-enclosed.png" alt=""></span>`:''}`,iconSize:[44,44],iconAnchor:[22,22]}),title:person.label,keyboard:true});
    marker.on('click',()=>selectEntry({kind:'person',id:person.id,...person.position}));marker.addTo(map);caseLayers.push(marker);
   }
-  const occupied=entries.map(p=>{const c=map.latLngToContainerPoint([p.latitude,p.longitude]);return {x:c.x-26,y:c.y-26,w:52,h:52};});
+  const occupied=[{x:map.getSize().x-66,y:0,w:66,h:120},...entries.map(p=>{const c=map.latLngToContainerPoint([p.latitude,p.longitude]);return {x:c.x-26,y:c.y-26,w:52,h:52};})];
   for(const region of communities.filter(validPosition)){
    const label=en()?region.nameEn:region.nameJa;
    const html=`<span class="community-map-label"><strong>${escape(label)}</strong>${[['sos','SOS','SOS'],['unreported','応答なし','No response'],['safe','無事','Safe'],['rescued','救助済み','Rescued']].map(([key,ja,en])=>`<span>${local(ja,en)} ${region[key]}${local('人','')}</span>`).join('')}</span>`;
    const point=map.latLngToContainerPoint([region.latitude,region.longitude]),size=map.getSize();
-   const options=[[0,0],[0,-125],[0,125],[-100,0],[100,0],[-100,-125],[100,-125],[-100,125],[100,125],[0,-180],[0,180]];
-   const score=([x,y])=>{const r={x:point.x+x-68,y:point.y+y-53,w:136,h:106};return occupied.reduce((n,o)=>n+Math.max(0,Math.min(r.x+r.w,o.x+o.w)-Math.max(r.x,o.x))*Math.max(0,Math.min(r.y+r.h,o.y+o.h)-Math.max(r.y,o.y)),0)+(r.x<5||r.x+r.w>size.x-5||r.y<10||r.y+r.h>size.y-50?100000:0)+Math.hypot(x,y);};
-   const [dx,dy]=options.sort((a,b)=>score(a)-score(b))[0];occupied.push({x:point.x+dx-68,y:point.y+dy-53,w:136,h:106});
+   if(point.x<0||point.y<0||point.x>size.x||point.y>size.y)continue;
+   const rect=placeMapLabel(point,size,occupied),dx=rect.x+rect.w/2-point.x,dy=rect.y+rect.h/2-point.y;occupied.push(rect);
    if(dx||dy){const line=L.polyline([[region.latitude,region.longitude],map.containerPointToLatLng([point.x+dx,point.y+dy])],{color:'#52616a',weight:1,interactive:false});line.addTo(map);caseLayers.push(line);}
-   const marker=L.marker([region.latitude,region.longitude],{icon:L.divIcon({className:'community-map-marker',html,iconSize:[136,106],iconAnchor:[68-dx,53-dy]}),title:label,keyboard:true,zIndexOffset:500});
+   const marker=L.marker([region.latitude,region.longitude],{icon:L.divIcon({className:'community-map-marker',html,iconSize:[136,112],iconAnchor:[68-dx,56-dy]}),title:label,keyboard:true,zIndexOffset:500});
    marker.on('click',()=>{if(!consumePick(region))selectCommunity(region.id);});marker.addTo(map);caseLayers.push(marker);
   }
   for(const report of reports.filter(r=>!r.cancelled&&validPosition(r))){
@@ -73,8 +75,8 @@ export function createTsunamiMap(){
    }catch{if(request===buildingRequest)$('tsunami-basemap-state').textContent=local('建物情報を取得できません。通信を確認してもう一度タップしてください。','Building information unavailable. Check your connection and tap again.');}
   });
   map.on('moveend zoomend',()=>{buildingRequest++;drawCases();});
-  import('./vector-basemap.mjs').then(async({addVectorBasemap})=>{const layer=await addVectorBasemap(map);vectorMap=layer.getMaplibreMap();import('./building-risk.mjs').then(({installBuildingRisk})=>installBuildingRisk(layer.getMaplibreMap())).catch(()=>{$('tsunami-map').dataset.buildingRisk='unavailable';});layer.getMaplibreMap().on('error',()=>{$('tsunami-basemap-state').textContent='背景地図を取得できません。圏外で使うには市全域の地図を保存してください。';});layer.getMaplibreMap().on('idle',()=>{$('tsunami-basemap-state').textContent='';});}).catch(()=>{$('tsunami-basemap-state').textContent='背景地図を読み込めませんでした';});
-  if(initialFocus)map.setView(initialFocus,15,{animate:false});else center();drawCases();locationControl=currentLocationControl({button:$('tsunami-fit'),isVisible:()=>!$('buildings').hidden,onFix:fix=>{
+  import('./vector-basemap.mjs').then(async({addVectorBasemap})=>{const layer=await addVectorBasemap(map);vectorMap=layer.getMaplibreMap();import('./building-risk.mjs').then(({installBuildingRisk})=>installBuildingRisk(layer.getMaplibreMap()).then(highlightRegisteredBuildings)).catch(()=>{$('tsunami-map').dataset.buildingRisk='unavailable';});layer.getMaplibreMap().on('error',()=>{$('tsunami-basemap-state').textContent='背景地図を取得できません。圏外で使うには市全域の地図を保存してください。';});layer.getMaplibreMap().on('idle',()=>{$('tsunami-basemap-state').textContent='';});}).catch(()=>{$('tsunami-basemap-state').textContent='背景地図を読み込めませんでした';});
+  if(initialFocus)map.setView(initialFocus,15,{animate:false});else center();drawCases();locationControl=currentLocationControl({getDemoLocation:()=>demoLocation,button:$('tsunami-fit'),isVisible:()=>!$('buildings').hidden,onFix:fix=>{
    if(!fix){myDot?.remove();myAccuracy?.remove();myDot=null;myAccuracy=null;return;}
    const point=[fix.latitude,fix.longitude];
    if(!myAccuracy)myAccuracy=L.circle(point,{className:'my-location-accuracy',radius:fix.accuracy,color:'#2675df',weight:1,opacity:.25,fillOpacity:.12,interactive:false}).addTo(map);else myAccuracy.setLatLng(point).setRadius(fix.accuracy);
@@ -119,5 +121,5 @@ export function createTsunamiMap(){
   }catch(error){if(epoch!==generation)return;clearResult();result=null;status('error');$('tsunami-status').dataset.status='error';}
   finally{clearInterval(ticker);if(epoch===generation){$('tsunami-height-form').setAttribute('aria-busy','false');}}
  };
- return {refreshLanguage,focusPerson(position){if(!validPosition(position))return;initialFocus=[position.latitude,position.longitude];if(!map)initialize();map.setView(initialFocus,Math.max(16,map.getZoom()),{animate:false});},setBuildingSelect(callback){selectBuilding=callback;},focusRegion(region){if(map)map.setView([region.latitude,region.longitude],16,{animate:false});},focusHome(){if(home){initialFocus=[home.latitude,home.longitude];if(map)map.setView(initialFocus,16,{animate:false});}},focusVenue(actual=false){initialFocus=actual?[35.6665,139.7495]:[35.0145,135.7625];if(map)map.setView(initialFocus,15,{animate:false});},setHome(value){home=value;},setCommunities(value,onSelect){communities=value;selectCommunity=onSelect||selectCommunity;drawCases();},setPeople(value,onSelect){people=value;selectPerson=onSelect||selectPerson;drawCases();},setReports(value,onSelect){reports=value;selectReport=onSelect||selectReport;drawCases();},setShowSafe(value){showSafe=value;drawCases();},pickLocation(callback,{language='ja'}={}){if(!map)initialize();pick=callback;picker.querySelector('p').textContent=language==='en'?'Select the incident location on the map':'通報する場所を地図上で選んでください';picker.querySelector('button').textContent=language==='en'?'Cancel':'中止';picker.hidden=false;$('tsunami-map').classList.add('selecting-location');},cancelPick:endPick,async show(){try{if(!map)initialize();locationControl?.resume();requestAnimationFrame(()=>{if(!$('buildings').hidden){const center=map.getCenter(),zoom=map.getZoom();map.invalidateSize({pan:false});map.setView(center,zoom,{animate:false});}});}catch(error){$('tsunami-basemap-state').textContent=error.message;}}};
+ return {refreshLanguage,setRegisteredBuildings(ids){if(JSON.stringify(ids)===JSON.stringify(registeredIds))return;registeredIds=ids;highlightRegisteredBuildings();},setDemoLocation(value){demoLocation=validPosition(value)?value:null;locationControl?.resume();},focusPerson(position){if(!validPosition(position))return;initialFocus=[position.latitude,position.longitude];if(!map)initialize();map.setView(initialFocus,Math.max(16,map.getZoom()),{animate:false});},setBuildingSelect(callback){selectBuilding=callback;},focusRegion(region){if(map)map.setView([region.latitude,region.longitude],16,{animate:false});},focusHome(){if(home){initialFocus=[home.latitude,home.longitude];if(map)map.setView(initialFocus,16,{animate:false});}},focusVenue(actual=false){initialFocus=actual?[35.6665,139.7495]:[35.0145,135.7625];if(map)map.setView(initialFocus,15,{animate:false});},setHome(value){home=value;},setCommunities(value,onSelect){communities=value;selectCommunity=onSelect||selectCommunity;drawCases();},setPeople(value,onSelect){people=value;selectPerson=onSelect||selectPerson;drawCases();},setReports(value,onSelect){reports=value;selectReport=onSelect||selectReport;drawCases();},setShowSafe(value){showSafe=value;drawCases();},pickLocation(callback,{language='ja'}={}){if(!map)initialize();pick=callback;picker.querySelector('p').textContent=language==='en'?'Select the incident location on the map':'通報する場所を地図上で選んでください';picker.querySelector('button').textContent=language==='en'?'Cancel':'中止';picker.hidden=false;$('tsunami-map').classList.add('selecting-location');},cancelPick:endPick,async show(){try{if(!map)initialize();locationControl?.resume();requestAnimationFrame(()=>{if(!$('buildings').hidden){const center=map.getCenter(),zoom=map.getZoom();map.invalidateSize({pan:false});map.setView(center,zoom,{animate:false});}});}catch(error){$('tsunami-basemap-state').textContent=error.message;}}};
 }

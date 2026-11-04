@@ -2,7 +2,7 @@ import {latestDemoHome,validateDemoHome} from './device-records.mjs';
 import {normalizePlace} from './places.mjs';
 import {demoObservationTimes} from './venue-observations.mjs';
 // Session-scoped demo homes never overwrite real resident/home or GPS records.
-export function venueWithHomes(venue,records=[]){return !venue||venue.positionMode==='ACTUAL'?venue:{...venue,placements:venue.placements.map(p=>{const home=latestDemoHome(records,venue.groupId,venue.sessionId,p.deviceId)||p.home;return home?{...p,home}:p;})};}
+export function venueWithHomes(venue,records=[]){if(venue?.scenario)venue={...venue,scenario:{...venue.scenario,communities:venue.scenario.communities.map(c=>({...c,nameJa:c.nameJa.replace(/（デモ）$/,''),nameEn:c.nameEn.replace(/ \(demo\)$/i,'')}))}};return !venue||venue.positionMode==='ACTUAL'?venue:{...venue,placements:venue.placements.map(p=>{const home=latestDemoHome(records,venue.groupId,venue.sessionId,p.deviceId)||p.home;return home?{...p,home}:p;})};}
 export const venuePlacements=venue=>[...(venue?.placements||[]),...(venue?.scenario?.people||[]).map((p,i)=>({...p,sessionId:venue.sessionId,memberId:p.deviceId,slotId:64+i,latitude:p.position?.latitude??p.home.latitude,longitude:p.position?.longitude??p.home.longitude,source:'SCENARIO'}))];
 export function scenarioAnswers(venue){return (venue?.scenario?.people||[]).filter(p=>['SAFE','SOS'].includes(p.safety)).map(p=>({groupId:venue.groupId,eventId:p.deviceId,incidentId:venue.incidentId,authorId:p.deviceId,authorName:p.name,sequence:1,createdAt:venue.startedAt,kind:'ANSWER',safety:p.safety}));}
 export function venuePlaces(venue){

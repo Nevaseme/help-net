@@ -43,7 +43,7 @@
     <string name="approved_safe_person">Safe resident</string>
     <string name="approved_rescued_person">Rescued resident</string>
     <string name="approved_registered_resident">Registered resident</string>
-    <string name="approved_show_safe">Show safe residents</string>
+    <string name="approved_show_safe">Show safe</string>
     <string name="approved_last_position">Last phone location</string>
     <string name="approved_position_unreceived">Location not received</string>
     <string name="approved_position_time">Updated %1$s · %2$d min ago</string>
@@ -163,7 +163,7 @@
     <string name="approved_waiting_start">Waiting for safety confirmation to start</string>
     <string name="approved_register_name_home">Register your name and home</string>
     <string name="approved_building_details">Building details</string>
-    <string name="approved_registered_people">Residents registered in this building</string>
+    <string name="approved_registered_people">No response / SOS</string>
     <string name="approved_no_registration">No registrations</string>
     <string name="approved_legend">Legend</string>
     <string name="approved_phone_safety">Phone safety status</string>
@@ -215,5 +215,7 @@
     <string name="approved_autostart_later_hint">You can return here from App settings → Sharing after a restart.</string>
     <string name="approved_autostart_fallback">Could not open the Autostart page directly. Search for Autostart in your phone settings, then enable PlanD Mk1.</string>
     <string name="approved_autostart_unavailable">Could not open settings. Open your phone settings and search for Autostart, then enable PlanD Mk1.</string>
+    <string name="approved_administrator">Administrator</string>
+    <string name="approved_unknown">Unknown</string>
 </resources>
 

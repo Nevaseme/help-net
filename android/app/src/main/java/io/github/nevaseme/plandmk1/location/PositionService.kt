@@ -1,5 +1,7 @@
 package io.github.nevaseme.plandmk1.location
 
+import io.github.nevaseme.plandmk1.ui.UiMessages
+
 import android.app.*
 import android.content.Intent
 import android.content.pm.ServiceInfo
@@ -24,7 +26,7 @@ class PositionService : Service() {
             else intent.getLongExtra("token", -1)
         if (recording != null && app.position.current(requested) && requested == token) return START_STICKY
         val notifications = getSystemService(NotificationManager::class.java)
-        if (Build.VERSION.SDK_INT >= 26) notifications.createNotificationChannel(NotificationChannel(CHANNEL, "位置記録", NotificationManager.IMPORTANCE_LOW))
+        if (Build.VERSION.SDK_INT >= 26) notifications.createNotificationChannel(NotificationChannel(CHANNEL, UiMessages.text(this,"位置記録"), NotificationManager.IMPORTANCE_LOW))
         try {
             if (Build.VERSION.SDK_INT >= 34) startForeground(NOTIFICATION, notification("位置を取得しています"), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION or ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
             else if (Build.VERSION.SDK_INT >= 29) startForeground(NOTIFICATION, notification("位置を取得しています"), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
@@ -94,8 +96,8 @@ class PositionService : Service() {
         val open = PendingIntent.getActivity(this, 51, Intent(this, MainActivity::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val stop = PendingIntent.getService(this, 52, Intent(this, PositionService::class.java).setAction(STOP), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         return NotificationCompat.Builder(this, CHANNEL).setSmallIcon(android.R.drawable.ic_menu_mylocation)
-            .setContentTitle("PlanD 位置記録中").setContentText(text).setContentIntent(open)
-            .setOngoing(true).setOnlyAlertOnce(true).addAction(0, "位置記録を停止", stop).build()
+            .setContentTitle(UiMessages.text(this,"PlanD 位置記録中")).setContentText(UiMessages.text(this,text)).setContentIntent(open)
+            .setOngoing(true).setOnlyAlertOnce(true).addAction(0, UiMessages.text(this,"位置記録を停止"), stop).build()
     }
     override fun onDestroy() {
         app.motion.stop(token); app.impactMonitoring.stop(token); app.drops.stop(token); recording?.stop(); scope.cancel(); app.position.detached(token)

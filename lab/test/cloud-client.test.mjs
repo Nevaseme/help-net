@@ -24,7 +24,7 @@ test('normal group sync refreshes municipality without requiring a membership re
 
 test('client declares extended response support and a required update never advances its cursor',async()=>{
  const {store,device,group}=await setup();
- const client=new CloudClient(store,device,{fetcher:async(_,options)=>{assert.equal(options.headers['X-PlanD-Records-Version'],'7');return json({error:{code:'client_update_required',message:'最新版へ更新してください'}},426);}});
+ const client=new CloudClient(store,device,{fetcher:async(_,options)=>{assert.equal(options.headers['X-PlanD-Records-Version'],'8');return json({error:{code:'client_update_required',message:'最新版へ更新してください'}},426);}});
  try{await store.update('meta','cloud-cursor:'+group,()=>7);await assert.rejects(client.pull({groupId:group,token:'secret'}),{status:426});assert.equal(await store.read('meta','cloud-cursor:'+group),7);}finally{store.close();}
 });
 test('registration retries the same persisted secret after a lost response and retains existing device identity',async()=>{

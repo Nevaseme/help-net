@@ -118,8 +118,9 @@ export class SyncEngine {
  async changed(){this.trimStoppedPosition();for(const peer of this.peers)await this.guard(()=>this.summary(peer));}
  async guard(fn){try{await fn();}catch(e){this.onError(e.message||'同期に失敗しました');}}
  async hasEew(){return (await this.store.quakeEvents?.(this.group)||[]).some(e=>e.action==='EEW');}
+ async hasAdminStart(){return (await this.store.quakeEvents?.(this.group)||[]).some(e=>e.action==='ADMIN_START');}
  async hasTrainingStart(){return (await this.store.quakeEvents?.(this.group)||[]).some(e=>e.action==='TRAINING_START');}
- async emit(peer,m){const msg={version:1,groupId:this.group,entries:[],...m};if(/^(QUAKE|RESPONSE|INCIDENT)_/.test(msg.type)){if(await this.hasTrainingStart())msg.version=Math.max(msg.version,9);else if((await this.store.roster?.(this.group))?.revision>0)msg.version=Math.max(msg.version,8);else if(await this.hasEew())msg.version=Math.max(msg.version,7);}const c=msg.response?.change;if(c?.status==='PLANNED'||['regionIds','cancelled','cancelReason'].some(key=>Object.hasOwn(c??{},key)))msg.version=10;if(c?.type==='INJURY')msg.version=17;if(msg.place?.locationReference)msg.version=msg.place.locationReference.searchReference?16:12;require(new TextEncoder().encode(JSON.stringify(msg)).length<=24000,'通信データが大きすぎます');if(this.peers.has(peer))await this.send(peer,msg);}
+ async emit(peer,m){const msg={version:1,groupId:this.group,entries:[],...m};if(/^(QUAKE|RESPONSE|INCIDENT)_/.test(msg.type)){if(await this.hasTrainingStart())msg.version=Math.max(msg.version,9);else if((await this.store.roster?.(this.group))?.revision>0)msg.version=Math.max(msg.version,8);else if(await this.hasEew())msg.version=Math.max(msg.version,7);}const c=msg.response?.change;if(c?.status==='PLANNED'||['regionIds','cancelled','cancelReason'].some(key=>Object.hasOwn(c??{},key)))msg.version=10;if(c?.type==='INJURY')msg.version=17;if(c?.type==='MATERIAL')msg.version=18;if(msg.place?.locationReference)msg.version=msg.place.locationReference.searchReference?16:12;if(/^(QUAKE|RESPONSE|INCIDENT)_/.test(msg.type)&&await this.hasAdminStart())msg.version=Math.max(19,msg.version);require(new TextEncoder().encode(JSON.stringify(msg)).length<=24000,'通信データが大きすぎます');if(this.peers.has(peer))await this.send(peer,msg);}
  trimStoppedPosition(){if(!this.allowOwnPosition())for(const key of this.pending.keys())if(key.endsWith('|POSITION|'+this.id))this.pending.delete(key);}
  async summary(peer){
   await this.journalSummary(peer,true);await this.journalSummary(peer,false);
@@ -142,10 +143,10 @@ export class SyncEngine {
    this.trimStoppedPosition();
    if(m.version===8&&!((await this.store.roster?.(this.group))?.revision>0))return;
    if([10,17].includes(m.version)&&typeof m.type==='string'&&m.type.startsWith('RESPONSE_')){await this.receiveJournal(peer,m);return;}
-   if([6,7,8,9].includes(m.version)&&typeof m.type==='string'&&(m.type.startsWith('QUAKE_')||m.type.startsWith('RESPONSE_'))){if(m.version===6&&m.quake?.action==='EEW'||m.version<9&&m.quake?.action==='TRAINING_START')return;await this.receiveJournal(peer,m);return;}
+   if([6,7,8,9,19].includes(m.version)&&typeof m.type==='string'&&(m.type.startsWith('QUAKE_')||m.type.startsWith('RESPONSE_'))){if(m.version<19&&m.quake?.action==='ADMIN_START'||m.version===6&&m.quake?.action==='EEW'||m.version<9&&m.quake?.action==='TRAINING_START')return;await this.receiveJournal(peer,m);return;}
    if(m.version===5&&typeof m.type==='string'&&(m.type.startsWith('POSITION_')||m.type.startsWith('MEMO_'))){await this.receiveLocal(peer,m);return;}
    if([4,12,16].includes(m.version)&&typeof m.type==='string'&&m.type.startsWith('PLACE_')){await this.receivePlace(peer,m);return;}
-   if([3,7,8,9].includes(m.version)&&typeof m.type==='string'&&m.type.startsWith('INCIDENT_')){if(m.type==='INCIDENT_RECORD'&&(m.version===7&&!await this.hasEew()||m.version===9&&!await this.hasTrainingStart()))return;await this.receiveIncident(peer,m);return;}
+   if([3,7,8,9,19].includes(m.version)&&typeof m.type==='string'&&m.type.startsWith('INCIDENT_')){if(m.type==='INCIDENT_RECORD'&&(m.version===7&&!await this.hasEew()||m.version===9&&!await this.hasTrainingStart()||m.version===19&&!await this.hasAdminStart()))return;await this.receiveIncident(peer,m);return;}
    const care=m.version===2&&typeof m.type==='string'&&m.type.startsWith('CARE_');if(!care&&m.version!==1)return;
    const type=care?m.type.slice(5):m.type, entries=m.entries??[];
    if(entries.some(e=>!e||!uuid.test(e.originId)||!Number.isSafeInteger(e.revision)||e.revision<1||(care&&e.revision!==1)))return;
@@ -183,6 +184,7 @@ export class SyncEngine {
   }else if(action==='RECORD'){
    const e=quake?m.quake:m.response;if(!e||e.groupId!==this.group)return;
    if(m.version===7&&!(quake&&e.action==='EEW')&&!await this.hasEew())return;
+   if(m.version===19&&!(quake&&e.action==='ADMIN_START')&&!await this.hasAdminStart())return;
    if(m.version===9&&!(quake&&e.action==='TRAINING_START')&&!await this.hasTrainingStart())return;
    const changed=await(quake?this.store.mergeQuake(e,this.id):this.store.mergeResponse(e));
    await this.guard(()=>emit(peer,'ACK',{entries:[{originId:e.eventId,revision:1}]}));

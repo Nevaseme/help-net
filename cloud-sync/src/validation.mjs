@@ -29,13 +29,13 @@ export function validateShape(collection,input,roster){
  try{return def.validate?def.validate(input):structuredClone(input);}catch(e){throw new ApiError(400,'invalid_record',e.message);}
 }
 export function validateContext(collection,record,identity,roster,history){
- if(collection==='quakes'&&['END','TRAINING_START'].includes(record.action)||collection==='incidents'&&record.kind==='END')requireValue(identity.role==='ADMIN','admin_required',403);
+ if(collection==='quakes'&&['END','TRAINING_START','ADMIN_START'].includes(record.action)||collection==='incidents'&&record.kind==='END')requireValue(identity.role==='ADMIN','admin_required',403);
  if(collection==='incidents'&&(record.kind==='START'||record.kind==='END'))throw new ApiError(400,'managed_incident_required','Upload managed REPORT/FORM/EEW/END; synthetic journal rows are derived locally.');
  try{
   if(collection==='incidents'){
    const events=history('quakes');
    requireValue(quakeStates(roster,events).some(s=>s.incidentIds.includes(record.incidentId)),'missing_incident',409);
-   const receipt=events.find(e=>e.action==='EEW'&&e.targetId===record.incidentId),report=events.find(e=>['REPORT','TRAINING_START'].includes(e.action)&&e.eventId===record.incidentId);
+   const receipt=events.find(e=>e.action==='EEW'&&e.targetId===record.incidentId),report=events.find(e=>['REPORT','TRAINING_START','ADMIN_START'].includes(e.action)&&e.eventId===record.incidentId);
    const startAuthor=receipt?record.incidentId:report?.actorDeviceId;
    requireValue(!(record.sequence===1&&record.authorId===startAuthor),'sequence_conflict',409);
    if(record.kind==='CARE'&&record.supersedes){

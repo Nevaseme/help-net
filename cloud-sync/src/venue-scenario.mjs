@@ -2,9 +2,9 @@ import catalogue from './venue-buildings.json' with {type:'json'};
 import {withDemoObservations} from '../../lab/web/venue-observations.mjs';
 
 export const demoCommunities=[
- {id:'demo-west',latitude:35.0145,longitude:135.759,nameJa:'御所南西町内会（デモ）',nameEn:'Gosho South West (demo)'},
- {id:'demo-central',latitude:35.0145,longitude:135.7622,nameJa:'御所南中央町内会（デモ）',nameEn:'Gosho South Central (demo)'},
- {id:'demo-east',latitude:35.0145,longitude:135.7657,nameJa:'御所南東町内会（デモ）',nameEn:'Gosho South East (demo)'}
+ {id:'demo-west',latitude:35.0145,longitude:135.759,nameJa:'御所南西町内会',nameEn:'Gosho South West'},
+ {id:'demo-central',latitude:35.0145,longitude:135.7622,nameJa:'御所南中央町内会',nameEn:'Gosho South Central'},
+ {id:'demo-east',latitude:35.0145,longitude:135.7657,nameJa:'御所南東町内会',nameEn:'Gosho South East'}
 ];
 import {communityLongitudeCuts,demoCommunityAt,demoPhonePoint} from './venue-layout.mjs';
 export {demoCommunityAt};

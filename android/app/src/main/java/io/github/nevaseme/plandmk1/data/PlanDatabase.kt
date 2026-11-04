@@ -186,7 +186,8 @@ class RoomRecordStore(private val db: PlanDatabase,private val localDeviceId:Str
             session.validate(checkNotNull(QuakeStore(db).roster(event.groupId)))
             session.placements.any {it.deviceId==event.authorId&&it.name==event.authorName}
         }==true
-        require(get(event.groupId, event.authorId) != null || venueMember) { "先に自分の情報を登録してください" }
+        val member=QuakeStore(db).roster(event.groupId)?.members?.find {event.authorId in it.deviceIds}
+        require(get(event.groupId, event.authorId) != null || venueMember || member?.activityName==event.authorName) { "先に自分の情報を登録してください" }
         appendIncident(event).also { answer ->
             if (answer.safety == Safety.SOS) saveSosMemo(answer.groupId, answer.incidentId, answer.authorId, answer.eventId, memo, answer.createdAt)
         }

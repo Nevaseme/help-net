@@ -1,11 +1,12 @@
 /** Local blue dot only. Never writes a home, safety position or shared record. */
-export function currentLocationControl({button,onFix,onCenter,onMessage,isVisible,geolocation=navigator.geolocation}){
- let watch=null,fix=null,centerNext=false,epoch=0;
+export function currentLocationControl({button,onFix,onCenter,onMessage,isVisible,getDemoLocation=()=>null,geolocation=navigator.geolocation}){
+ let watch=null,fix=null,centerNext=false,epoch=0,usingDemo=false;
  const en=()=>document.documentElement.lang==='en';
  const text=(ja,enText)=>en()?enText:ja;
  const clear=()=>{epoch++;if(watch!==null)geolocation?.clearWatch(watch);watch=null;centerNext=false;};
  function start(center=false){
   if(!isVisible()||document.hidden)return;
+  const assigned=getDemoLocation();if(!!assigned!==usingDemo){clear();fix=null;onFix(null);usingDemo=!!assigned;}if(assigned){clear();fix={latitude:assigned.latitude,longitude:assigned.longitude,accuracy:0,acquiredAt:Date.now()};onFix(fix);onMessage('');if(center)onCenter(fix);return;}
   centerNext||=center;
   if(!geolocation){onMessage(text('現在地を取得できません','Current location is unavailable'));return;}
   if(watch!==null){if(center&&fix&&Date.now()-fix.acquiredAt<30000){onCenter(fix);centerNext=false;}return;}
@@ -19,6 +20,8 @@ export function currentLocationControl({button,onFix,onCenter,onMessage,isVisibl
  }
  async function resume(){
   if(document.hidden||!isVisible()){clear();onFix(null);return;}
+  if(getDemoLocation()){start();return;}
+  if(usingDemo){clear();fix=null;onFix(null);usingDemo=false;}
   // Do not prompt every time the map opens; a deliberate button press requests permission.
   try{if((await navigator.permissions?.query({name:'geolocation'}))?.state==='granted')start();}catch{}
  }

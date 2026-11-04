@@ -1,5 +1,7 @@
 import {CloudClient} from './cloud-client.mjs';
-import {setText,setProperty} from './dom-state.mjs';
+import {setText as rawSetText,setProperty} from './dom-state.mjs';
+import {translateUI,bindStaticUiLanguage,observeUiLanguage} from './web1617-english.mjs';
+const setText=(element,text)=>rawSetText(element,translateUI(text));
 import {MUNICIPALITIES} from './municipalities.mjs';
 
 /** Reuses the existing registration/incident screens; only the connection controls differ. */
@@ -53,10 +55,11 @@ export async function attachCloudUi({store,id,getGroup,setGroup,refresh,tab,onJo
  $('group').readOnly=true;
  setProperty($('legacy-connection'),'hidden',true);
 
- document.title='Tasukeai — 安否と対応の共有';
+ bindStaticUiLanguage(host);observeUiLanguage(()=>controls());
+ document.title='Tasukeai';
 
  $('incident-state').nextElementSibling.textContent='グループの地震発生・安否・対応記録を共有します。速報を受信したAndroidからの開始情報も取得します。';
- $('incident-form').querySelector('p').textContent='グループの必要人数の報告が集まると開始します（参加者の3分の1、最低2人・最大10人）。終了は管理者が行います。';
+ $('incident-form').querySelector('p').textContent=translateUI('グループの必要人数の報告が集まると開始します（参加者の3分の1、最低2人・最大10人）。終了は管理者が行います。');
  $('group').parentElement.hidden=true;
  const client=new CloudClient(store,id);let stopped=false,busy=false,timer=null,generation=0,inFlight=null;
  const status=(text,summary)=>{setText($('cloud-status'),text);setText($('network'),summary||text);setText($('sharing'),text);};

@@ -282,3 +282,18 @@ body[data-page="response"] main{height:calc(100dvh - var(--header-height,64px) -
 :root[data-theme="dark"] .obs-icon.enclosed{background:#fff;border-radius:6px}:root[data-theme="dark"] .town-urgent strong{color:#ffb4ab}
 
 :root[data-theme="dark"] .map-safe-toggle input{background:#71889a}:root[data-theme="dark"] .map-safe-toggle input:checked{background:var(--primary)}
+
+/* A single compact toolbar; allow labels to wrap within their column, never a third row. */
+.map-toolbar,html[lang="en"] .map-toolbar{display:flex;flex-wrap:nowrap;min-height:60px;gap:4px;padding:4px 10px}
+.map-toolbar .map-safe-toggle,html[lang="en"] .map-safe-toggle{flex:0 1 auto;max-width:none;font-size:12px;white-space:nowrap;gap:4px}
+.map-toolbar .tsunami-inline-control{flex:none;gap:3px}
+.map-toolbar #map-unknown,html[lang="en"] #map-unknown{flex:1 1 72px;min-width:0;margin-left:auto;justify-content:flex-end;text-align:right;font-size:12px;white-space:normal;line-height:1.2}
+
+.community-map-label{height:112px;overflow:hidden}.registered-building-key{display:inline-block;width:22px;height:16px;border:2px solid #216879;border-radius:2px}
+
+.map-toolbar{padding-inline:8px}.map-toolbar #map-tsunami{padding-inline:4px}.map-toolbar #tsunami-height{width:36px}.map-toolbar #map-unknown{padding:0 0 0 2px;min-height:48px}.map-toolbar #map-unknown img:first-child{display:none}.map-toolbar #map-unknown span{word-break:normal;overflow-wrap:normal;min-width:52px}
+
+html[lang="en"] .map-toolbar #map-unknown{flex:0 0 73px;gap:0;word-break:normal;overflow-wrap:normal}html[lang="en"] .map-toolbar #map-unknown span{white-space:normal;word-break:normal;overflow-wrap:normal;flex:1 0 58px;min-width:58px}html[lang="en"] .map-toolbar #map-unknown img:last-child{width:12px;flex:0 0 12px}html[lang="en"] .map-toolbar .map-safe-toggle input{width:32px;min-width:32px}html[lang="en"] .map-toolbar{gap:3px;padding-inline:6px}
+
+html[lang="en"] .map-toolbar #map-unknown{display:block;position:relative;padding-right:12px;line-height:16px}html[lang="en"] .map-toolbar #map-unknown img:last-child{position:absolute;right:0;top:calc(50% - 6px);height:12px}
+html[lang="en"] .map-toolbar .map-safe-toggle input:checked::after{left:11px}

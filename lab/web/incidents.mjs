@@ -29,7 +29,8 @@ export function incidentOptions(rows){return rows.filter(e=>e.kind==='START').ma
 export async function appendScopedIncident(store,scope,kind,extra={}){
  const {groupId,incidentId,authorId}=scope;
  const own=await store.get(groupId,authorId),demo=await venueAuthor(store,groupId,incidentId,authorId);
- const name=demo||own?.name;if(!name)throw Error('先に登録してください');
+ const member=!demo&&!own&&['ANSWER','END'].includes(kind)?(await store.roster(groupId))?.members?.find(m=>m.deviceIds.includes(authorId)):null;
+ const name=demo||own?.name||member?.activityName;if(!name)throw Error('先に登録してください');
  return store.appendIncident({groupId,eventId:crypto.randomUUID(),incidentId,authorId,authorName:name,createdAt:Date.now(),kind,...extra});
 }
 

@@ -41,7 +41,7 @@ function updateVenueLocation(){
   venueLocationWrite=venueLocationWrite.catch(()=>{}).then(async()=>{if(group!==g||venueWatchSession!==v)return;const p=position.coords,old=(await store.positions(g)).find(r=>r.originId===id),acquiredAt=Math.round(position.timestamp);
    if(acquiredAt<(venue?.startedAt??0)||old&&acquiredAt<=old.acquiredAt)return;
    await store.savePosition({groupId:g,originId:id,revision:(old?.revision??0)+1,acquiredAt,latitude:p.latitude,longitude:p.longitude,accuracyMeters:p.accuracy});notice.hidden=true;
-   if(venueLocated!==v){venueLocated=v;tsunamiMap.setHome({latitude:p.latitude,longitude:p.longitude});tsunamiMap.focusHome();}
+   if(venueLocated!==v){venueLocated=v;tsunamiMap.setHome({latitude:p.latitude,longitude:p.longitude});}
    await refresh();cloudUi?.changed();
   }).catch(failed);
  },failed,{enableHighAccuracy:true,maximumAge:0,timeout:20000});
@@ -94,11 +94,11 @@ const link=new ConnectionFeedback(renderFeedback,()=>closeTransport());
 const placeUI=createPlaceUi({$,esc,time,store:()=>store,identity:()=>id,snapshot:()=>({group,incidentId,view,residents:records,rows:placeRows,venue}),saves,changed,visibleResidents:()=>designUi?.buildingResidents()||[],selectResident:person=>{selected=person;tab('residents');renderDetail();renderFeedback();}});
 function renderFeedback(){
  const s=link.state,own=records.some(r=>r.originId===id),busy=saves.busy;
- for(const key of ['profile','safety','care','incident']){const f=saves.get(key==='care'?careKey():key);const el=$(key+'-feedback');el.textContent=f.text;el.dataset.status=f.status;el.setAttribute('aria-busy',String(f.status==='pending'));}
+ for(const key of ['profile','safety','care','incident']){const f=saves.get(key==='care'?careKey():key);const el=$(key+'-feedback');el.textContent=t(f.text);el.dataset.status=f.status;el.setAttribute('aria-busy',String(f.status==='pending'));}
  for(const form of ['profile','care-form'])for(const el of $(form).querySelectorAll('input,textarea,select,button'))el.disabled=busy;
- $('safe').disabled=$('sos').disabled=busy||!own||!canAnswer();
- $('incident-select').disabled=busy;$('incident-open').disabled=busy||!own;
- for(const el of $('incident-form').querySelectorAll('input,button'))el.disabled=busy||!own;
+ $('safe').disabled=$('sos').disabled=busy||(!own&&!roster?.members?.some(m=>m.deviceIds.includes(id)))||!canAnswer();
+ $('incident-select').disabled=busy;$('incident-open').disabled=busy||(!own&&!roster);
+ for(const el of $('incident-form').querySelectorAll('input,button'))el.disabled=busy||(!own&&!roster);
  $('incident-end').disabled=busy||!canAnswer()||!canEnd();
  $('incident-end').hidden=!canAnswer()||!canEnd();
  const admin=!!roster&&memberFor(roster,id)?.role==='ADMIN';
@@ -109,8 +109,8 @@ function renderFeedback(){
  for(const el of trainingForm.querySelectorAll('input,button'))el.disabled=busy||running;
  $('training-start').textContent=running?'訓練を実施中':'訓練を開始する';
  $('care-save').disabled=busy||!canAnswer();
- $('profile-save').textContent=saves.get('profile').status==='pending'?'保存しています…':'登録情報を保存';
- $('care-save').textContent=saves.get(careKey()).status==='pending'?'保存しています…':'対応記録を保存';
+ $('profile-save').textContent=t(saves.get('profile').status==='pending'?'保存しています…':'登録情報を保存');
+ $('care-save').textContent=t(saves.get(careKey()).status==='pending'?'保存しています…':'対応記録を保存');
  if(!cloudMode){$('network').textContent=s.text;$('sharing').textContent=s.text;}
  $('connection-state').textContent=s.text;
  $('connection-error').textContent=s.error||'';
@@ -127,7 +127,7 @@ function renderFeedback(){
 }
 const message=text=>{$('message').textContent=text;};
 function task(fn){return Promise.resolve().then(fn).catch(e=>message(e.message||'操作できませんでした'));}
-function tab(name){if(name==='settings'){document.body.dataset.settingsView='profile';$('settings').querySelector('h2').textContent=t('自分の登録情報');}designUi?.closeSheets();tsunamiMap.cancelPick?.();activePage=name;document.body.dataset.page=name;for(const x of ['safety','residents','buildings','response','settings','property'])$(x).hidden=x!==name;document.querySelectorAll('[data-tab]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tab===name)));$('app-menu').close();$('menu-open').setAttribute('aria-expanded','false');window.scrollTo({top:0,behavior:'instant'});if(name==='buildings')tsunamiMap.show();if(name==='response')renderResponse();}
+function tab(name){if(name==='buildings'&&canAnswer()&&!view.answers[id])name='safety';if(name==='settings'){document.body.dataset.settingsView='profile';$('settings').querySelector('h2').textContent=t('自分の登録情報');}designUi?.closeSheets();tsunamiMap.cancelPick?.();activePage=name;document.body.dataset.page=name;for(const x of ['safety','residents','buildings','response','settings','property'])$(x).hidden=x!==name;document.querySelectorAll('[data-tab]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tab===name)));$('app-menu').close();$('menu-open').setAttribute('aria-expanded','false');window.scrollTo({top:0,behavior:'instant'});if(name==='buildings')tsunamiMap.show();if(name==='response')renderResponse();}
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{startupNavigationChosen=true;tab(b.dataset.tab);});
 wireSheetHandle($('app-menu'));
 $('menu-open').onclick=()=>{if($('app-menu').open){$('app-menu').close();return;}designUi?.closeSheets();$('app-menu').show();$('menu-close').focus({preventScroll:true});$('menu-open').setAttribute('aria-expanded','true');};
@@ -160,7 +160,7 @@ async function refresh({background=false}={}){
  const next=selection==='legacy'||options.some(v=>v.start.eventId===selection)?selection:'';
  if(next!==incidentId){incidentId=next;selected=null;$('note').value='';$('action').value='CHECKING';$('supersedes').value='';saves.clearOtherResults();}
  view=options.find(v=>v.start.eventId===incidentId)||null;
- venue=venueWithHomes(activeVenue(venueData,g,incidentId),extras[3]);const synthetic=venuePlaces(venue);if(synthetic.length){const ids=new Set(synthetic.map(r=>r.eventId));placeRows=[...placeRows.filter(r=>(venue.positionMode==='ACTUAL'||r.kind!=='HOME')&&!ids.has(r.eventId)),...synthetic];}
+ venue=venueWithHomes(activeVenue(venueData,g,incidentId),extras[3]);tsunamiMap.setDemoLocation(venue?.positionMode==='KYOTO'?venue.placements.find(p=>p.deviceId===id):null);const synthetic=venuePlaces(venue);if(synthetic.length){const ids=new Set(synthetic.map(r=>r.eventId));placeRows=[...placeRows.filter(r=>(venue.positionMode==='ACTUAL'||r.kind!=='HOME')&&!ids.has(r.eventId)),...synthetic];}
  if(venue&&view){const answers={...view.answers};for(const a of scenarioAnswers(venue))if(!answers[a.authorId])answers[a.authorId]=a;view={...view,answers,...(Number.isSafeInteger(venue.simulationStartedAt)?{start:{...view.start,createdAt:venue.simulationStartedAt}}:{})};}
  const displayRows=venue?venueResidents(venue):raw;
  records=incidentId==='legacy'?raw:displayRows.map(r=>({...r,safety:view?.answers[r.originId]?.safety||'UNREPORTED',updatedAt:view?.answers[r.originId]?.createdAt||0,impactAt:r.fictional?r.impactAt:latestImpact(extras[3],g,r.originId)}));
@@ -178,7 +178,7 @@ async function refresh({background=false}={}){
  if(venue&&lastVenueSession!==venue.sessionId){lastVenueSession=venue.sessionId;$('map-show-safe').checked=true;tsunamiMap.focusVenue?.(venue.positionMode==='ACTUAL');if(!view?.answers[id])tab('safety');}
  updateVenueLocation();
  if(activePage==='response')renderResponse();
- for(const section of ['safety','residents','buildings']){const panel=$(section+'-setup');panel.hidden=!!own;panel.querySelector('p').textContent=section==='residents'?'グループへの参加は保存済みです。この一覧には「自分の登録情報」を登録した人が表示されます。':'安否回答と建物登録には、活動名に加えて「自分の登録情報」の登録が必要です。';}
+ for(const section of ['safety','residents','buildings']){const panel=$(section+'-setup');panel.hidden=!!own||(section==='safety'&&!!roster?.members?.some(m=>m.deviceIds.includes(id)));panel.querySelector('p').textContent=section==='residents'?'グループへの参加は保存済みです。この一覧には「自分の登録情報」を登録した人が表示されます。':'安否回答と建物登録には、活動名に加えて「自分の登録情報」の登録が必要です。';}
  startGuide.hidden=!own||canAnswer();
  let startNote=$('safety-start-note');if(!startNote){startNote=document.createElement('p');startNote.id='safety-start-note';startNote.className='muted';startGuide.after(startNote);}startNote.hidden=startGuide.hidden;startNote.textContent=$('incident-state').textContent;
  document.querySelector('.incident-context > summary').textContent=view?`${view.start.training?'訓練':'地震'}：${view.start.title}${view.closed?'（終了）':''}`:'災害・訓練を選ぶ';
@@ -190,7 +190,7 @@ async function refresh({background=false}={}){
  const shown=records.filter(r=>$('filter').value==='ALL'||($('filter').value==='NONSAFE'?r.safety!=='SAFE':r.safety===$('filter').value)).sort((a,b)=>(a.safety==='SOS'?-1:0)-(b.safety==='SOS'?-1:0)||a.name.localeCompare(b.name,'ja'));
  $('list').innerHTML=shown.length?shown.map(r=>`<button class="resident" data-person="${esc(r.originId)}"><strong>${esc(r.name)}${r.originId===id?'（自分）':''}</strong> ${badge(r)}<small>登録住居 · ${esc(r.floor||'階数未登録')}</small><small>${esc(statusFor(r.originId))}</small><small>安否更新 ${esc(time(r.updatedAt))}</small></button>`).join(''):'<p>該当する住民情報がありません。</p>';
  for(const button of $('list').querySelectorAll('[data-person]'))button.onclick=()=>{selected=button.dataset.person;renderDetail();renderFeedback();$('detail').scrollIntoView({block:'start'});};
- renderDetail();placeUI.render();renderFeedback();if(designUi)await designUi.render();
+ if(activePage==='buildings'&&canAnswer()&&!view.answers[id])tab('safety');renderDetail();placeUI.render();renderFeedback();if(designUi)await designUi.render();
 }
 function renderDetail(){if(designUi)return designUi.renderPerson(selected);const r=records.find(r=>r.originId===selected);$('detail').hidden=!r;if(!r)return;
  $('detail-name').textContent=r.name;$('detail-info').textContent=`安否：${labels[r.safety]}\n登録住居：${r.latitude}, ${r.longitude}\n${placeUI.homeLabel(placeRows,r.originId)}\n階数：${r.floor||'未登録'}\n寝る部屋：${r.room||'未登録'}\n安否更新：${time(r.updatedAt)}`;
@@ -246,8 +246,8 @@ $('incident-select').onchange=()=>task(async()=>{if(saves.busy)return;await stor
 $('incident-open').onclick=()=>{$('incident-form').hidden=!$('incident-form').hidden;};
 trainingForm.onsubmit=e=>{e.preventDefault();if(saves.busy)return;task(async()=>{let eventId;await saves.run('incident',async()=>{const r=await store.roster(group);if(!r||memberFor(r,id)?.role!=='ADMIN')throw Error('訓練を開始できるのは管理者だけです');if($('training-fictional').checked){if(!cloudUi)throw Error('架空の位置を共有するにはインターネット接続が必要です');eventId=await cloudUi.startTraining($('training-title').value.trim(),$('training-area').value.trim());}else{eventId=crypto.randomUUID();await store.commandQuake({groupId:group,eventId,actorDeviceId:id,operatedAt:Date.now(),action:'TRAINING_START',training:true,title:$('training-title').value.trim(),area:$('training-area').value.trim()});}},async()=>{await store.update('meta','incident:'+group,()=>eventId);await changed();},'訓練の開始');await refresh();tab('safety');});};
 $('incident-form').onsubmit=e=>{e.preventDefault();if(saves.busy)return;task(async()=>{let created;await saves.run('incident',async()=>{
- const own=await store.get(group,id);if(!own)throw Error('先に登録してください');const eventId=crypto.randomUUID();
- created={groupId:group,eventId,incidentId:eventId,authorId:id,authorName:own.name,createdAt:Date.now(),sequence:1,kind:'START',title:$('incident-title').value.trim(),area:$('incident-area').value.trim(),training:$('incident-training').checked};if(await store.roster(group)){await store.commandQuake({groupId:group,eventId,actorDeviceId:id,operatedAt:created.createdAt,action:'REPORT',training:created.training,title:created.title,area:created.area});const states=quakeStates(await store.roster(group),await store.quakeEvents(group));created.eventId=states.find(s=>!s.closed&&s.formation.training===created.training)?.formation.incidentId||'';}else await store.mergeIncident(created);
+ const participants=await store.roster(group),member=participants?memberFor(participants,id):null,own=await store.get(group,id);if(!member&&!own)throw Error('グループに参加してください');const eventId=crypto.randomUUID();
+ created={groupId:group,eventId,incidentId:eventId,authorId:id,authorName:member?.activityName||own.name,createdAt:Date.now(),sequence:1,kind:'START',title:$('incident-title').value.trim(),area:$('incident-area').value.trim(),training:$('incident-training').checked};if(await store.roster(group)){await store.commandQuake({groupId:group,eventId,actorDeviceId:id,operatedAt:created.createdAt,action:'REPORT',training:created.training,title:created.title,area:created.area});const states=quakeStates(await store.roster(group),await store.quakeEvents(group));created.eventId=states.find(s=>!s.closed&&s.formation.training===created.training)?.formation.incidentId||'';}else await store.mergeIncident(created);
  },async()=>{await store.update('meta','incident:'+group,()=>created.eventId);$('incident-form').hidden=true;await changed();},'地震発生・安否確認の開始');await refresh();});};
 $('incident-end').onclick=()=>{const scope=incidentScope();return task(async()=>{await saves.run('incident',async()=>{const r=await store.roster(scope.groupId);if(r){const state=quakeStates(r,await store.quakeEvents(scope.groupId)).find(s=>s.incidentIds.includes(scope.incidentId));if(!state)throw Error('開始中の災害を選んでください');await store.commandQuake({groupId:scope.groupId,eventId:crypto.randomUUID(),actorDeviceId:scope.authorId,operatedAt:Date.now(),action:'END',training:state.formation.training,targetId:scope.incidentId});}else await appendScopedIncident(store,scope,'END');},changed,'安否確認の終了');await refresh();});};
 $('connect').onsubmit=e=>{e.preventDefault();task(connect);};for(const b of document.querySelectorAll('[data-stop]'))b.onclick=()=>stop();$('role').onchange=renderFeedback;
@@ -269,7 +269,7 @@ await task(async()=>{
  attachCityOffline({store,getGroup:()=>group,host:document.querySelector('.appearance-settings').parentElement});
  if($('cloud-map-preview'))$('cloud-map-preview').onclick=()=>tab('buildings');$('tsunami-back').onclick=()=>tab('settings');
  if($('cloud-map-preview'))$('cloud-map-preview').textContent='地図を見る';
- document.querySelector('footer').textContent='Tasukeai · PWA 1.6.38 · この端末に記録を保存';
+ document.querySelector('footer').textContent='Tasukeai · PWA 1.6.39 · この端末に記録を保存';
  await refresh();
  if(document.body.classList.contains('registration-needed'))openSettings('group');else if(!startupNavigationChosen)await afterJoining();
  if('serviceWorker'in navigator){await setupAppUpdates();$('offline').textContent=cloudMode?'オフライン起動の準備ができました。接続できるときに記録を共有します。':'オフライン起動の準備ができました。通信には同じWi-Fiと実験サーバーが必要です。';}

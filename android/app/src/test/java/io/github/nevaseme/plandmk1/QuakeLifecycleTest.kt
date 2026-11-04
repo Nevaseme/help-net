@@ -14,6 +14,15 @@ class QuakeLifecycleTest {
     private fun report(actor:String,time:Long=0)=QuakeEvent("trial",id(),actor,time,QuakeAction.REPORT,false,title="地震",area="試験地域")
     private fun trainingStart(actor:String=a,time:Long=0)=QuakeEvent("trial",id(),actor,time,QuakeAction.valueOf("TRAINING_START"),true,title="明示訓練",area="試験地域")
 
+    @Test fun administratorStartsEarthquakeAndMemberCannotBypassReportQuorum(){
+        val e=report(a).copy(action=QuakeAction.ADMIN_START)
+        validateQuakeCommand(roster,emptyList(),e)
+        assertFalse(quakeStates(roster,listOf(e)).single().formation.training)
+        assertThrows(IllegalArgumentException::class.java){e.copy(actorDeviceId=b).validate(roster)}
+        assertThrows(IllegalArgumentException::class.java){e.copy(training=true).validate(roster)}
+        assertThrows(IllegalArgumentException::class.java){validateQuakeCommand(roster,listOf(e),e.copy(eventId=id(),operatedAt=1))}
+        assertTrue(quakeStates(roster,listOf(report(a))).isEmpty())
+    }
     @Test fun administratorExplicitTrainingStartsWithoutChangingRealOrLegacyReportQuorum() {
         val start=trainingStart()
         validateQuakeCommand(roster,emptyList(),start)

@@ -22,7 +22,7 @@ class CloudHttpApi(private val client:OkHttpClient=OkHttpClient.Builder().callTi
     }
     private suspend fun request(base:String,path:String,token:String?=null,body:JsonElement?=null,after:Long?=null):String {
         val url=endpoint(base).toHttpUrl().newBuilder().addPathSegments("api/v1/$path").apply {after?.let {addQueryParameter("after",it.toString());addQueryParameter("limit","100")}}.build()
-        val builder=Request.Builder().url(url).header("Accept","application/json").header("X-PlanD-Records-Version","7")
+        val builder=Request.Builder().url(url).header("Accept","application/json").header("X-PlanD-Records-Version","8")
         if(token!=null)builder.header("Authorization","Bearer $token")
         if(body!=null)builder.post(body.toString().toRequestBody("application/json".toMediaType()))
         val call=client.newCall(builder.build())

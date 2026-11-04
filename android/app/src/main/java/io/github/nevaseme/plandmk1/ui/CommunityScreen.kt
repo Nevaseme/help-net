@@ -41,12 +41,15 @@ import java.util.UUID
  val codec=remember{Json{encodeDefaults=true;ignoreUnknownKeys=true}}
  val directory=remember(group,incidentId){File(context.filesDir,"community-reports/$group/${incidentId?:"none"}")}
  var reports by remember(group,incidentId){mutableStateOf<List<CommunityReport>>(emptyList())};var error by remember{mutableStateOf("")};var issuing by remember{mutableStateOf(false)};var injuryOpen by remember{mutableStateOf(false)};var reportsOpen by remember{mutableStateOf(false)}
+ var previewReport by remember {mutableStateOf<CommunityReport?>(null)}
  var exportData by remember{mutableStateOf("")}
  val export=rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/html")){uri->if(uri!=null){val text=exportData;scope.launch{runCatching{withContext(Dispatchers.IO){context.contentResolver.openOutputStream(uri)?.use{it.write(text.toByteArray())}?:error("Cannot open destination")}}.onFailure{error=it.message.orEmpty()}}}}
  val exportJson=rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")){uri->if(uri!=null){val text=exportData;scope.launch{runCatching{withContext(Dispatchers.IO){context.contentResolver.openOutputStream(uri)?.use{it.write(text.toByteArray())}?:error("Cannot open destination")}}.onFailure{error=it.message.orEmpty()}}}}
  LaunchedEffect(directory){reports=withContext(Dispatchers.IO){directory.listFiles()?.filter{it.extension=="json"}?.mapNotNull{runCatching{codec.decodeFromString<CommunityReport>(it.readText())}.getOrNull()}?.sortedByDescending{it.issuedAt}.orEmpty()}}
  ApprovedSheet(label("title"),onClose){
   Text(groupName,fontWeight=FontWeight.Bold,fontSize=18.sp)
+  TextButton(onClick={injuryOpen=!injuryOpen},modifier=Modifier.fillMaxWidth()){Text(if(en)"Record injuries" else "負傷情報を登録",Modifier.weight(1f));Text(if(injuryOpen)"−" else "+")}
+  if(injuryOpen)people.filter {it.id in accessibleIds}.forEach{p->var open by remember(p.id){mutableStateOf(false)};Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){Column(Modifier.weight(1f)){Text(p.name)};Box{OutlinedButton(onClick={open=true},enabled=editable){Text(label(communityInjury(changes,p.id).name))};DropdownMenu(open,{open=false}){InjuryState.entries.forEach{v->DropdownMenuItem(text={Text(label(v.name))},onClick={open=false;model.saveResponse(ResponseChange.Injury(ResponseTarget(TargetKind.PERSON,p.id),v),heads.filter{(it.change as? ResponseChange.Injury)?.target?.id==p.id}.map{it.eventId})})}}}}}
   NeighborhoodStatistics(rows)
   Text(if(en)"Reports by neighborhood" else "地域別の通報集計",fontWeight=FontWeight.Bold,fontSize=18.sp)
   val categories=listOf(null,"SOS","ROAD","BUILDING","OTHER")
@@ -84,11 +87,27 @@ import java.util.UUID
    HorizontalDivider();Text(label("materials"),fontWeight=FontWeight.Bold);if(r.materials.isEmpty())Text(label("none"),fontSize=14.sp)
    r.materials.forEach{m->Text("${m.name}: ${m.shortfall} ${m.unit}");if(m.conflict)Text(label("conflict"),fontSize=12.sp)}
   }}}
-  TextButton(onClick={injuryOpen=!injuryOpen},modifier=Modifier.fillMaxWidth()){Text(label("injury"),Modifier.weight(1f));Text(if(injuryOpen)"−" else "+")}
-  if(injuryOpen)people.filter {it.id in accessibleIds}.forEach{p->var open by remember(p.id){mutableStateOf(false)};Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){Column(Modifier.weight(1f)){Text(p.name)};Box{OutlinedButton(onClick={open=true},enabled=editable){Text(label(communityInjury(changes,p.id).name))};DropdownMenu(open,{open=false}){InjuryState.entries.forEach{v->DropdownMenuItem(text={Text(label(v.name))},onClick={open=false;model.saveResponse(ResponseChange.Injury(ResponseTarget(TargetKind.PERSON,p.id),v),heads.filter{(it.change as? ResponseChange.Injury)?.target?.id==p.id}.map{it.eventId})})}}}}}
-  Button(enabled=incidentId!=null&&!issuing,onClick={val currentId=incidentId?:return@Button;issuing=true;val report=CommunityReport(id=UUID.randomUUID().toString(),issuedAt=System.currentTimeMillis(),language=if(en)"en" else "ja",groupId=group,groupName=groupName,incidentId=currentId,demo=venue!=null,rows=rows,people=people.map {if(it.id in accessibleIds)it else it.copy(name="",buildingId=null)},sourceIds=(heads.map{it.eventId}+incident.answers.values.map{it.eventId}+care.map{it.eventId}).distinct().sorted());scope.launch{runCatching{withContext(Dispatchers.IO){check(directory.isDirectory||directory.mkdirs());val target=File(directory,report.id+".json");val temporary=File(directory,report.id+".tmp");temporary.writeText(codec.encodeToString(report));check(temporary.renameTo(target))};reports=listOf(report)+reports;reportsOpen=true}.onFailure{error=it.message.orEmpty()};issuing=false}},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){Text(label("issue"))}
+  Button(enabled=incidentId!=null&&!issuing,onClick={val currentId=incidentId?:return@Button;issuing=true;val report=CommunityReport(id=UUID.randomUUID().toString(),issuedAt=System.currentTimeMillis(),language=if(en)"en" else "ja",groupId=group,groupName=groupName,incidentId=currentId,demo=venue!=null,rows=rows,people=people.map {if(it.id in accessibleIds)it else it.copy(name="",buildingId=null)},sourceIds=(heads.map{it.eventId}+incident.answers.values.map{it.eventId}+care.map{it.eventId}).distinct().sorted());scope.launch{runCatching{withContext(Dispatchers.IO){check(directory.isDirectory||directory.mkdirs());val target=File(directory,report.id+".json");val temporary=File(directory,report.id+".tmp");temporary.writeText(codec.encodeToString(report));check(temporary.renameTo(target))};reports=listOf(report)+reports;reportsOpen=true;previewReport=report}.onFailure{error=it.message.orEmpty()};issuing=false}},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)){Text(label("issue"))}
   if(error.isNotBlank())Text(error,color=MaterialTheme.colorScheme.error)
   TextButton(onClick={reportsOpen=!reportsOpen},modifier=Modifier.fillMaxWidth()){Text("${label("saved")} (${reports.size})",Modifier.weight(1f));Text(if(reportsOpen)"−" else "+")}
-  if(reportsOpen)reports.forEach{r->Text(java.text.DateFormat.getDateTimeInstance().format(java.util.Date(r.issuedAt)));Row{TextButton(onClick={exportData=communityReportHtml(r);export.launch("Tasukeai-report-${r.id}.html")}){Text("HTML")};TextButton(onClick={exportData=codec.encodeToString(r);exportJson.launch("Tasukeai-report-${r.id}.json")}){Text("JSON")}}}
+  if(reportsOpen)reports.forEach{r->Text(java.text.DateFormat.getDateTimeInstance().format(java.util.Date(r.issuedAt)));Row{TextButton(onClick={previewReport=r}){Text(if(en)"View report" else "レポートを見る")};TextButton(onClick={exportData=communityReportHtml(r);export.launch("Tasukeai-report-${r.id}.html")}){Text("HTML")};TextButton(onClick={exportData=codec.encodeToString(r);exportJson.launch("Tasukeai-report-${r.id}.json")}){Text("JSON")}}}
+ }
+ previewReport?.let {r->CommunityReportPreview(r){previewReport=null}}
+
+}
+
+@Composable private fun CommunityReportPreview(report:CommunityReport,onClose:()->Unit){
+ val en=report.language=="en"
+ ApprovedSheet(if(en)"Issued report" else "発行済みレポート",onClose){
+  Text(report.groupName,fontWeight=FontWeight.Bold,fontSize=20.sp)
+  Text(java.text.DateFormat.getDateTimeInstance().format(java.util.Date(report.issuedAt)))
+  report.rows.forEach {row->
+   Text(if(en)row.nameEn else row.nameJa,fontWeight=FontWeight.Bold,fontSize=18.sp)
+   communityCounts(row).forEach {(key,value)->Row(Modifier.fillMaxWidth()){Text(communityLabel(key,en),Modifier.weight(1f));Text(value.toString(),fontWeight=FontWeight.Bold)}}
+   Text(communityLabel("materials",en),fontWeight=FontWeight.Bold)
+   if(row.materials.isEmpty())Text(communityLabel("none",en))
+   row.materials.forEach{Text("${it.name}: ${it.shortfall} ${it.unit}")}
+   HorizontalDivider()
+  }
  }
 }

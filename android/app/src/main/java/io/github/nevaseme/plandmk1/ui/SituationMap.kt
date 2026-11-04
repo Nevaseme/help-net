@@ -65,7 +65,7 @@ fun SituationMap(
     onCoverage: (Boolean) -> Unit = {},
     onReportPoint: ((MapPoint) -> Unit)? = null,
     reports:List<MapReport> = emptyList(),onReport: (String)->Unit = {}, initialZoom:Double=16.8,
-    neighborhoods:List<MapNeighborhood> = emptyList(),onNeighborhood:(String)->Unit={},
+    registeredBuildingIds:List<String> = emptyList(),neighborhoods:List<MapNeighborhood> = emptyList(),onNeighborhood:(String)->Unit={},
     currentLocation:io.github.nevaseme.plandmk1.location.PositionFix?=null,
 ) {
     val context = LocalContext.current
@@ -120,6 +120,12 @@ fun SituationMap(
         if(ready) controller?.style?.let {BuildingRiskOverlay.install(it,model,assessmentIntensity)}
     }
 
+    LaunchedEffect(ready,riskModel,registeredBuildingIds){if(ready)controller?.style?.let {style->
+        for(source in listOf("kyoto-risk","toranomon-risk")){if(style.getSource(source)==null)continue
+            val id="$source-registered";val layer=(style.getLayer(id) as? org.maplibre.android.style.layers.LineLayer)?:org.maplibre.android.style.layers.LineLayer(id,source).withSourceLayer("buildings").apply{minZoom=14f;setProperties(lineColor("#216879"),lineWidth(2f));style.addLayer(this)}
+            layer.setFilter(raw("""["in",["get","bid"],["literal",${org.json.JSONArray(registeredBuildingIds)}]]"""))
+        }
+    }}
     LaunchedEffect(ready,tsunamiResult) {
         if(ready)controller?.style?.let {style ->
             io.github.nevaseme.plandmk1.tsunami.TsunamiOverlay.update(style,tsunamiResult)
@@ -287,10 +293,12 @@ fun SituationMap(
             reportRendered.add(marker);reportMarkers[marker.id]=report.id
         }
     }
-    LaunchedEffect(ready,neighborhoods,neighborhoodEnglish) {
+    LaunchedEffect(ready,neighborhoods,neighborhoodEnglish,people,showSafe,zoom,latitude,longitude) {
         val map=controller?:return@LaunchedEffect
         if(!ready)return@LaunchedEffect
         neighborhoodRendered.forEach {map.removeMarker(it)};neighborhoodRendered.clear();neighborhoodMarkers.clear()
+        val d=context.resources.displayMetrics.density.toDouble()
+        val occupied=(people.filter {it.point!=null&&(showSafe||it.state !in setOf(MapSafety.SAFE,MapSafety.RESCUED))}.mapNotNull {it.point}+reports.map {it.point}).map {p->val q=map.projection.toScreenLocation(LatLng(p.latitude,p.longitude));LabelRect(q.x/d-32,q.y/d-44,64.0,88.0)}.toMutableList()
         neighborhoods.forEach {n->n.point?.let {point->
             val d=context.resources.displayMetrics.density
             val bitmap=Bitmap.createBitmap((148*d).roundToInt(),(100*d).roundToInt(),Bitmap.Config.ARGB_8888)
@@ -302,7 +310,11 @@ fun SituationMap(
             canvas.drawText("SOS ${n.row.sos} · ${if(neighborhoodEnglish)"No response" else "応答なし"} ${n.row.unreported}",8f,44f,paint)
             canvas.drawText("${if(neighborhoodEnglish)"Safe" else "無事"} ${n.row.safe} · ${if(neighborhoodEnglish)"Rescued" else "救助済み"} ${n.row.rescued}",8f,65f,paint)
             canvas.drawText("${if(neighborhoodEnglish)"High urgency" else "高緊急度"} ${n.activeHigh}",8f,86f,paint)
-            val marker=map.addMarker(MarkerOptions().position(LatLng(point.latitude,point.longitude)).icon(IconFactory.getInstance(context).fromBitmap(bitmap)))
+            val origin=map.projection.toScreenLocation(LatLng(point.latitude,point.longitude))
+            if(origin.x<0||origin.y<0||origin.x>view.width||origin.y>view.height){bitmap.recycle();return@let}
+            val rect=placeMapLabel(origin.x/d.toDouble(),origin.y/d.toDouble(),view.width/d.toDouble(),view.height/d.toDouble(),occupied);occupied+=rect
+            val placed=map.projection.fromScreenLocation(PointF(((rect.x+rect.w/2)*d).toFloat(),((rect.y+rect.h)*d).toFloat()))
+            val marker=map.addMarker(MarkerOptions().position(placed).icon(IconFactory.getInstance(context).fromBitmap(bitmap)))
             neighborhoodRendered.add(marker);neighborhoodMarkers[marker.id]=n.row.id
         }}
     }

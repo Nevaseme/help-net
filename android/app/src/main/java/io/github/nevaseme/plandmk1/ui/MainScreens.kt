@@ -40,11 +40,13 @@ import io.github.nevaseme.plandmk1.core.*
 
 @Composable fun SafetyScreen(model: PlanViewModel, own: Resident?, saving: Boolean, onProfile: () -> Unit, onIncident: () -> Unit) {
     val incident by model.incidentUi.collectAsStateWithLifecycle()
-    if (own == null || !incident.canEdit) {
+    val roster by model.roster.collectAsStateWithLifecycle()
+    val registered=own!=null||roster?.members?.any {model.localId in it.deviceIds}==true
+    if (!registered || !incident.canEdit) {
         Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
             Text(uiText("my_safety"), style = MaterialTheme.typography.headlineSmall)
-            Text(uiText(if (own == null) "register_name_home" else "waiting_start"))
-            Button(onClick = if (own == null) onProfile else onIncident) { Text(uiText(if (own == null) "register_profile" else "incident_management")) }
+            Text(uiText(if (!registered) "register_name_home" else "waiting_start"))
+            Button(onClick = if (!registered) onProfile else onIncident) { Text(uiText(if (!registered) "register_profile" else "incident_management")) }
         }
     } else {
         val first = incident.current?.answers?.containsKey(model.localId) != true
@@ -52,7 +54,7 @@ import io.github.nevaseme.plandmk1.core.*
         val answer = incident.current?.answers?.get(model.localId)
         val memo = memos.find { it.answerId == answer?.eventId && it.incidentId == answer?.incidentId && it.authorId==model.localId }?.text.orEmpty()
         key(incident.groupId, incident.selection, model.localId) {
-            AnswerPanel(first, when (own.safety) { Safety.SAFE -> MapSafety.SAFE; Safety.SOS -> MapSafety.SOS; else -> null }, memo, saving,
+            AnswerPanel(first, when (answer?.safety?:own?.safety) { Safety.SAFE -> MapSafety.SAFE; Safety.SOS -> MapSafety.SOS; else -> null }, memo, saving,
                 save = { state, text -> model.setSafety(if (state == MapSafety.SAFE) Safety.SAFE else Safety.SOS, text) },
                 saveMemo = answer?.takeIf { it.safety == Safety.SOS }?.let { current -> { text -> model.saveSosMemo(current.eventId, text) } },
                 feedback = { OperationFeedback(model, "safety") })
@@ -146,8 +148,8 @@ import io.github.nevaseme.plandmk1.core.*
         val app=LocalContext.current.applicationContext as PlanDApplication
         val source=remember(app){app.positionSourceFactory()}
         HomeLocationPicker(center,onPick,onCancelPick) {source().let {MapPoint(it.latitude,it.longitude)}}
-    } else SituationScreen(visiblePeople, homes.filter {home->visiblePeople.any {it.home?.id==home.id&&it.registeredPlaceVisible}}, center, now, neighborhoods=neighborhoods,ownNeighborhoodId=ownNeighborhood,onPersonResponse=onPersonResponse, initialZoom=if(venue!=null)14.5 else 16.8, canRescue = own != null && incident.canEdit && !saving,
-        buildingCounts=buildingResidentCounts(residents,places,care,roster),
+    } else SituationScreen(visiblePeople, homes.filter {home->visiblePeople.any {it.home?.id==home.id&&it.registeredPlaceVisible}}, center, now, assignedLocation=venue?.takeIf {it.positionMode=="KYOTO"}?.placements?.find {it.deviceId==model.localId}?.let {p->p.latitude?.let {lat->p.longitude?.let {lon->MapPoint(lat,lon)}}}, neighborhoods=neighborhoods,ownNeighborhoodId=ownNeighborhood,onPersonResponse=onPersonResponse, initialZoom=if(venue!=null)14.5 else 16.8, canRescue = own != null && incident.canEdit && !saving,
+        buildingCounts=buildingResidentCounts(residents,places,care,roster),registeredBuildingIds=homes.filter {h->(buildingResidentCounts(residents,places,care,roster)[h.id]?.total?:0)>0}.mapNotNull {it.plateauId},
         canUndo = { p -> canRevokeRescue(roster,group,model.localId)&&currentCareEvents(care.filter { it.subjectId == p.id },roster).any { it.action == CareAction.RESCUED } },
         onRescue = { model.saveCare(it.id, CareAction.RESCUED, "本人の救助完了を確認") },
         onUndo = { p -> model.revokeRescues(p.id) },
@@ -159,9 +161,10 @@ import io.github.nevaseme.plandmk1.core.*
 @Composable fun AppInformation() {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
         Text("PlanD Mk1", style = MaterialTheme.typography.headlineMedium)
-        Text("バージョン ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.labelLarge)
+        Text((if(LocalUiLanguage.current=="en")"Version " else "バージョン ")+BuildConfig.VERSION_NAME, style = MaterialTheme.typography.labelLarge)
+        Text(if(LocalUiLanguage.current=="en")"Building assessment: JMA instrumental intensity 6.2. Damage rates are estimates for buildings of the same structural type and age." else "建物評価の想定計測震度：6.2。同じ構造・年代の建物に対する全壊率の試算です。")
         HorizontalDivider()
-        Text("地図：OpenFreeMap / OpenMapTiles / OpenStreetMap", style = MaterialTheme.typography.bodySmall)
-        Text("衝撃アイコン：Font Awesome Free Burst / Fonticons, Inc. / CC BY 4.0", style = MaterialTheme.typography.bodySmall)
+        Text((if(LocalUiLanguage.current=="en")"Map: " else "地図：")+"OpenFreeMap / OpenMapTiles / OpenStreetMap", style = MaterialTheme.typography.bodySmall)
+        Text((if(LocalUiLanguage.current=="en")"Impact icon: " else "衝撃アイコン：")+"Font Awesome Free Burst / Fonticons, Inc. / CC BY 4.0", style = MaterialTheme.typography.bodySmall)
     }
 }

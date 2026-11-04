@@ -1,5 +1,7 @@
 package io.github.nevaseme.plandmk1.sharing
 
+import io.github.nevaseme.plandmk1.ui.UiMessages
+
 import android.app.*
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
@@ -49,7 +51,7 @@ class SharingService : Service() {
     override fun onCreate() {
         super.onCreate()
         if (Build.VERSION.SDK_INT >= 26) getSystemService(NotificationManager::class.java)
-            .createNotificationChannel(NotificationChannel(CHANNEL, "安否情報の共有", NotificationManager.IMPORTANCE_LOW))
+            .createNotificationChannel(NotificationChannel(CHANNEL, UiMessages.text(this,"安否情報の共有"), NotificationManager.IMPORTANCE_LOW))
         ContextCompat.registerReceiver(this, radios, IntentFilter().apply {
             addAction(BluetoothAdapter.ACTION_STATE_CHANGED); addAction(WifiManager.WIFI_STATE_CHANGED_ACTION)
         }, ContextCompat.RECEIVER_EXPORTED)
@@ -149,9 +151,9 @@ class SharingService : Service() {
         val stop = PendingIntent.getService(this, 1, Intent(this, SharingService::class.java).setAction(STOP),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         return NotificationCompat.Builder(this, CHANNEL)
-            .setSmallIcon(android.R.drawable.stat_notify_sync).setContentTitle("PlanD Mk1・共有中")
-            .setContentText(if (state.starting) "共有を開始しています…" else if(automatic) "接続 ${state.connected.size} 台・同じグループの端末と自動共有します" else "接続 ${state.connected.size} 台・接続済みの相手とは画面を消しても共有します")
-            .setContentIntent(open).addAction(0, "共有停止", stop).setOngoing(true).setOnlyAlertOnce(true)
+            .setSmallIcon(android.R.drawable.stat_notify_sync).setContentTitle(UiMessages.text(this,"PlanD Mk1・共有中"))
+            .setContentText(UiMessages.text(this,if (state.starting) "共有を開始しています…" else if(automatic) "接続 ${state.connected.size} 台・同じグループの端末と自動共有します" else "接続 ${state.connected.size} 台・接続済みの相手とは画面を消しても共有します"))
+            .setContentIntent(open).addAction(0, UiMessages.text(this,"共有停止"), stop).setOngoing(true).setOnlyAlertOnce(true)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE).setCategory(NotificationCompat.CATEGORY_SERVICE).build()
     }
     override fun onDestroy() {

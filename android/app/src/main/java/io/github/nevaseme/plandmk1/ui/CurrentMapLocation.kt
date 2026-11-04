@@ -29,7 +29,7 @@ class CurrentMapLocation {
 }
 
 /** Visible-map preview only: never persists or shares a location. */
-@Composable fun rememberCurrentMapLocation(enabled:Boolean,camera:SituationCamera):CurrentMapLocation {
+@Composable fun rememberCurrentMapLocation(enabled:Boolean,camera:SituationCamera,assigned:MapPoint?=null):CurrentMapLocation {
     val context=LocalContext.current
     val owner=LocalLifecycleOwner.current
     val english by rememberUpdatedState(LocalUiLanguage.current=="en")
@@ -39,12 +39,12 @@ class CurrentMapLocation {
     fun allowed()=listOf(Manifest.permission.ACCESS_FINE_LOCATION,Manifest.permission.ACCESS_COARSE_LOCATION).any {ContextCompat.checkSelfPermission(context,it)==PackageManager.PERMISSION_GRANTED}
     fun feedback(denied:Boolean=false){android.widget.Toast.makeText(context,if(denied) {if(english)"Allow location access to show your location" else "現在地を表示するには位置情報を許可してください"}else {if(english)"Unable to find your location. Turn on location services and try again." else "現在地を取得できません。位置情報をオンにして再試行してください"},android.widget.Toast.LENGTH_LONG).show()}
     suspend fun acquire():PositionFix?=try {withTimeoutOrNull(15000){AndroidPositionSource(context).acquire()}}catch(e:CancellationException){throw e}catch(_:Exception){null}
-    fun locate(){centering?.cancel();centering=scope.launch {val fix=acquire();if(fix!=null){state.fix=fix;camera.move(MapPoint(fix.latitude,fix.longitude))}else feedback()}}
+    fun locate(){centering?.cancel();if(assigned!=null){state.fix=PositionFix(assigned.latitude,assigned.longitude,0.0,System.currentTimeMillis());camera.move(assigned);return};centering=scope.launch {val fix=acquire();if(fix!=null){state.fix=fix;camera.move(MapPoint(fix.latitude,fix.longitude))}else feedback()}}
     val permission=rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {if(allowed()){state.request++;locate()}else feedback(true)}
-    SideEffect {state.locate={if(allowed())locate()else permission.launch(arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION,Manifest.permission.ACCESS_FINE_LOCATION))};camera.cancelLocationCenter={centering?.cancel()}}
-    LaunchedEffect(enabled,state.request){
+    SideEffect {state.locate={if(assigned!=null||allowed())locate()else permission.launch(arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION,Manifest.permission.ACCESS_FINE_LOCATION))};camera.cancelLocationCenter={centering?.cancel()}}
+    LaunchedEffect(enabled,state.request,assigned){
         if(enabled)owner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED){
-            try {while(isActive){if(allowed()){acquire()?.let {state.fix=it}}else state.fix=null
+            try {while(isActive){if(assigned!=null)state.fix=PositionFix(assigned.latitude,assigned.longitude,0.0,System.currentTimeMillis())else if(allowed()){acquire()?.let {state.fix=it}}else state.fix=null
                 if(state.fix?.let {System.currentTimeMillis()-it.acquiredAt>120000}==true)state.fix=null
                 delay(15000)}}finally{state.fix=null;centering?.cancel()}
         }else {state.fix=null;centering?.cancel()}

@@ -75,17 +75,18 @@ class SyncEngine(
         if(message.version==11||message.version==13||message.version==14||message.version==15) {guarded {relay?.receive(peer,bytes)};return}
         if(message.version==8 && store.rosterRevision(groupId)<=0)return
         if(message.version in listOf(10,17,18) && message.type.startsWith("RESPONSE_")){guarded {receiveJournal(peer,message)};return}
-        if(message.version in setOf(6,7,8,9)&&(message.type.startsWith("QUAKE_")||message.type.startsWith("RESPONSE_"))) {
+        if(message.version in setOf(6,7,8,9,19)&&(message.type.startsWith("QUAKE_")||message.type.startsWith("RESPONSE_"))) {
             if(message.version==6 && message.quake?.action==QuakeAction.EEW)return
-            if(message.version!=9 && message.quake?.action==QuakeAction.TRAINING_START)return
+            if(message.version<9 && message.quake?.action==QuakeAction.TRAINING_START)return
+            if(message.version<19 && message.quake?.action==QuakeAction.ADMIN_START)return
             guarded {receiveJournal(peer,message)};return
         }
         if(message.version==5&&(message.type.startsWith("POSITION_")||message.type.startsWith("MEMO_"))) {guarded {receiveLocal(peer,message)};return}
         if(message.version in listOf(4,12,16)&&message.type.startsWith("PLACE_")) {guarded {receivePlace(peer,message)};return}
-        if (message.version in setOf(3,7,8,9) && message.type.startsWith("INCIDENT_")) {
+        if (message.version in setOf(3,7,8,9,19) && message.type.startsWith("INCIDENT_")) {
             guarded {
                 // Do not persist/forward newer incidents until their protocol boundary is durable.
-                if(message.type=="INCIDENT_RECORD" && ((message.version==7&&!hasEew())||(message.version==9&&!hasTrainingStart())))return@guarded
+                if(message.type=="INCIDENT_RECORD" && ((message.version==7&&!hasEew())||(message.version==9&&!hasTrainingStart())||(message.version==19&&!hasAdminStart())))return@guarded
                 receiveIncident(peer,message)
             }; return
         }
@@ -166,6 +167,7 @@ class SyncEngine(
             } }
             "RECORD"->{
                 if(message.version==7 && !(quake&&message.quake?.action==QuakeAction.EEW) && !hasEew())return
+                if(message.version==19 && !(quake&&message.quake?.action==QuakeAction.ADMIN_START) && !hasAdminStart())return
                 if(message.version==9 && !(quake&&message.quake?.action==QuakeAction.TRAINING_START) && !hasTrainingStart())return
                 val id:String;val changed:Boolean
                 if(quake){val event=message.quake?:return;if(event.groupId!=groupId)return;id=event.eventId;changed=store.mergeQuake(event)}
@@ -283,12 +285,13 @@ class SyncEngine(
         }
     }
     private suspend fun hasEew()=store.quakeEvents(groupId).any {it.action==QuakeAction.EEW}
+    private suspend fun hasAdminStart()=store.quakeEvents(groupId).any {it.action==QuakeAction.ADMIN_START}
     private suspend fun hasTrainingStart()=store.quakeEvents(groupId).any {it.action==QuakeAction.TRAINING_START}
     private suspend fun emit(peer: String, message: WireMessage) {
         if(message.position?.originId==localId&&!allowOwnPosition())return
         // Old peers must not accept a START without its formation and administrator END.
         val managed=message.type.startsWith("QUAKE_")||message.type.startsWith("RESPONSE_")||message.type.startsWith("INCIDENT_")
-        val minimum=if(!managed)message.version else if(hasTrainingStart())9 else if(store.rosterRevision(groupId)>0)8 else if(hasEew())7 else message.version
+        val minimum=if(!managed)message.version else if(hasAdminStart())19 else if(hasTrainingStart())9 else if(store.rosterRevision(groupId)>0)8 else if(hasEew())7 else message.version
         // Preserve a v9 request while its proof is still missing; never downgrade it to roster-v8.
         val extended=when(val change=message.response?.change){
             is ResponseChange.Report->change.cancelled||change.cancelReason.isNotEmpty()||change.regionIds.isNotEmpty()

@@ -66,7 +66,7 @@ fun activeHighReports(changes:List<ResponseChange>,regionId:String):Int =
 }
 
 fun communityNamesFor(venue:io.github.nevaseme.plandmk1.demo.VenueSession?,groupName:String):List<CommunityName> =
-    venue?.scenario?.communities?.map {CommunityName(it.id,it.nameJa,it.nameEn)}?.let {if(venue.positionMode=="ACTUAL")it+CommunityName("venue","会場参加者","Venue participants")else it}?:listOf(CommunityName("group",groupName,groupName))
+    venue?.scenario?.communities?.map {CommunityName(it.id,it.nameJa.removeSuffix("（デモ）"),it.nameEn.removeSuffix(" (demo)"))}?.let {if(venue.positionMode=="ACTUAL")it+CommunityName("venue","会場参加者","Venue participants")else it}?:listOf(CommunityName("group",groupName,groupName))
 
 fun communityPeopleFor(residents:List<Resident>,care:List<CareEvent>,venue:io.github.nevaseme.plandmk1.demo.VenueSession?,roster:MemberRoster?=null):List<CommunityPerson> = residents.map {p->
     val scenarioPerson=venue?.scenario?.people?.find {it.deviceId==p.originId}

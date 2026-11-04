@@ -2,7 +2,7 @@ package io.github.nevaseme.plandmk1.core
 
 import kotlinx.serialization.Serializable
 
-@Serializable enum class QuakeAction { REPORT, CANCEL, FORM, END, EEW, TRAINING_START }
+@Serializable enum class QuakeAction { REPORT, CANCEL, FORM, END, EEW, TRAINING_START, ADMIN_START }
 @Serializable data class QuakeEvent(
     val groupId:String, val eventId:String, val actorDeviceId:String, val operatedAt:Long,
     val action:QuakeAction, val training:Boolean, val targetId:String?=null,
@@ -27,6 +27,7 @@ import kotlinx.serialization.Serializable
         when(action) {
             QuakeAction.EEW -> {requireNotNull(eew).validate();require(!training && targetId==eew.incidentId() && operatedAt==eew.receivedAt && reportIds.isEmpty() && title.isEmpty() && area.isEmpty())}
             QuakeAction.TRAINING_START -> require(training && roster.memberForDevice(actorDeviceId).role==MemberRole.ADMIN && targetId==null && reportIds.isEmpty() && title.isNotBlank() && title.length<=80 && area.isNotBlank() && area.length<=120)
+            QuakeAction.ADMIN_START -> require(!training && roster.memberForDevice(actorDeviceId).role==MemberRole.ADMIN && targetId==null && reportIds.isEmpty() && title.isNotBlank() && title.length<=80 && area.isNotBlank() && area.length<=120)
             QuakeAction.REPORT -> require(targetId==null && reportIds.isEmpty() && title.isNotBlank() && title.length<=80 && area.isNotBlank() && area.length<=120)
             QuakeAction.CANCEL,QuakeAction.END -> require(targetId!=null && targetId!=eventId && reportIds.isEmpty() && title.isEmpty() && area.isEmpty())
             QuakeAction.FORM -> require(targetId!=null && targetId!=eventId && reportIds.isNotEmpty() && title.isEmpty() && area.isEmpty())
@@ -58,10 +59,10 @@ private fun quakePeriods(roster:MemberRoster,events:List<QuakeEvent>):List<Quake
         val end=relevant.filter {it.action==QuakeAction.END && !it.training && roster.memberForDevice(it.actorDeviceId).role==MemberRole.ADMIN && (it.targetId==first.targetId || first.targetId in it.endedIncidentIds)}.minOfOrNull {it.operatedAt}
         first.copy(operatedAt=minOf(first.operatedAt,end?:Long.MAX_VALUE))
     }
-    val trainingStarts=relevant.filter {it.action==QuakeAction.TRAINING_START}
+    val trainingStarts=relevant.filter {it.action in setOf(QuakeAction.TRAINING_START,QuakeAction.ADMIN_START)}
     val reports=(reportsFor(roster,relevant)+receipts+trainingStarts).sortedWith(compareBy<QuakeEvent> {it.operatedAt}.thenBy {it.eventId})
     val byId=reports.associateBy {it.eventId}
-    val forms=(relevant.mapNotNull {proof(roster,relevant,it)}+receipts.map {QuakeFormation(roster.groupId,requireNotNull(it.targetId),it.operatedAt,false,listOf(it.eventId))}+trainingStarts.map {QuakeFormation(roster.groupId,it.eventId,it.operatedAt,true,listOf(it.eventId))}).sortedWith(compareBy<QuakeFormation> {it.firstReportedAt}.thenBy {it.incidentId}.thenBy {it.reportIds.joinToString()})
+    val forms=(relevant.mapNotNull {proof(roster,relevant,it)}+receipts.map {QuakeFormation(roster.groupId,requireNotNull(it.targetId),it.operatedAt,false,listOf(it.eventId))}+trainingStarts.map {QuakeFormation(roster.groupId,it.eventId,it.operatedAt,it.training,listOf(it.eventId))}).sortedWith(compareBy<QuakeFormation> {it.firstReportedAt}.thenBy {it.incidentId}.thenBy {it.reportIds.joinToString()})
     return listOf(false,true).flatMap {training->
         val periods=mutableListOf<QuakePeriod>();var after=-1L
         while(true) {
@@ -101,6 +102,7 @@ fun validateQuakeCommand(roster:MemberRoster,events:List<QuakeEvent>,event:Quake
     event.validate(roster)
     when(event.action) {
         QuakeAction.REPORT,QuakeAction.EEW -> Unit
+        QuakeAction.ADMIN_START -> require(quakeStates(roster,events).none {!it.closed&&!it.formation.training}) {"開始中の地震を終了してから開始してください"}
         QuakeAction.TRAINING_START -> require(quakeStates(roster,events).none {!it.closed&&it.formation.training}) {"開始中の訓練を終了してから新しい訓練を開始してください"}
         QuakeAction.CANCEL -> {
             val report=requireNotNull(events.find {it.eventId==event.targetId && it.groupId==event.groupId && it.action==QuakeAction.REPORT}) {"取り消す報告がありません"}

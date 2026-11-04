@@ -89,3 +89,11 @@ test('home search provenance requires v5 and never acknowledges an old client',a
   assert.equal((await handle(new Request(path,{headers:{...headers,'X-PlanD-Records-Version':'5'}}),env)).status,200);
  }
 });
+
+test('administrator start requires v8 before writes or cursor acknowledgement',async()=>{
+ const url=`https://sync.test/api/v1/groups/${crypto.randomUUID()}/records`,rows=[{collection:'quakes',record:{action:'ADMIN_START'}}];let writes=0;
+ const env={GROUPS:{getByName:()=>({dispatch:async op=>{if(op==='push')writes++;return {status:200,body:{records:rows,nextCursor:1,acks:[{status:'stored'}]}};}})}};
+ for(const version of ['1','7','8'])for(const method of ['GET','POST']){
+  const r=await handle(new Request(url,{method,headers:{Authorization:`Bearer ${'a'.repeat(64)}`,'Content-Type':'application/json','X-PlanD-Records-Version':version},...(method==='POST'?{body:JSON.stringify({records:rows})}:{})}),env);assert.equal(r.status,version==='8'?200:426);const body=await r.json();if(version!=='8'){assert.equal(body.nextCursor,undefined);assert.equal(body.acks,undefined);}
+ }assert.equal(writes,1);
+});

@@ -1,6 +1,8 @@
+import {menuEnglish} from './menu-english.mjs';
 // Approved terminology: docs/superpowers/plans/2026-10-30-english-ui-glossary.csv
 // Context-specific labels and composed messages are handled by language.mjs.
 export const englishUI = {
+  ...menuEnglish,
   "京都モードは京都、現在地モードは虎ノ門ヒルズ周辺の地図・住所を自動で準備します。": "Maps and addresses are prepared automatically: Kyoto for assigned locations, Toranomon Hills for actual locations.",
   "活動地域は通常の地図保存と住所検索に使います。会場デモの地図は位置モードから自動で準備します。": "The group area is used for everyday maps and address search. Demo maps are prepared automatically for the selected location mode.",
   "地震発生": "Earthquake",
@@ -14,7 +16,7 @@ export const englishUI = {
   "住民一覧": "Resident list",
   "全員": "All",
   "すべて": "All",
-  "無事を表示": "Show people marked safe",
+  "無事を表示": "Show safe",
   "凡例": "Map legend",
   "スマホの安否": "Safety status",
   "表示の中心に戻る": "Recenter map",
@@ -563,7 +565,7 @@ Object.assign(englishUI, {
   "訓練・地震": "Drills and earthquakes"
 });
 
-export function translateUI(key){return globalThis.document?.documentElement.lang==='en'?(englishUI[key]||key):key;}
+export function translateUI(key){return globalThis.document?.documentElement.lang==='en'?(englishUI[key]||translateDynamicUI(key)):key;}
 export function observeUiLanguage(callback){if(!globalThis.MutationObserver||!globalThis.document)return ()=>{};let previous=document.documentElement.lang;const observer=new MutationObserver(()=>{const next=document.documentElement.lang;if(next!==previous){previous=next;callback();}});observer.observe(document.documentElement,{attributes:true,attributeFilter:['lang']});return ()=>observer.disconnect();}
 // Capture only explicitly known UI text before a component adds user content.
 export function bindStaticUiLanguage(root){const nodes=[],walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);while(walker.nextNode()){const node=walker.currentNode,key=node.textContent.trim();if(englishUI[key]&&!node.parentElement?.closest('input,textarea,script,style'))nodes.push([node,key]);}const render=()=>{for(const [node,key]of nodes)if(node.isConnected)node.textContent=translateUI(key);};observeUiLanguage(render);render();return render;}
@@ -578,3 +580,12 @@ Object.assign(englishUI, {
  '自分の登録情報を開く':'Open my information',
  '約':'About '
 });
+
+export function translateDynamicUI(key){
+ const saved=key.match(/^(.+)をこの端末に保存しました（(.+)）$/);if(saved)return `Saved on this device (${saved[2]})`;
+ const failed=key.match(/^保存できませんでした：(.+)。入力を確認して再試行してください。$/);if(failed)return `Could not save: ${englishUI[failed[1]]||failed[1]}. Check your input and try again.`;
+
+ const rules=[[/^(?:会場)?デモ(?:開催|実施)中 · (\d+)人$/,'Demo in progress · $1 participants'],[/^活動地域：(.+)$/,'Activity area: $1'],[/^有効期限：(.+)$/,'Expires: $1'],[/^(.*) · 管理者$/,'$1 · Administrator']];
+ for(const [pattern,replacement]of rules)if(pattern.test(key))return key.replace(pattern,replacement);
+ return key;
+}

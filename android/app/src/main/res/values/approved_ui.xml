@@ -163,7 +163,7 @@
     <string name="approved_waiting_start">安否確認の開始を待っています</string>
     <string name="approved_register_name_home">名前と住居を登録してください</string>
     <string name="approved_building_details">建物の詳細</string>
-    <string name="approved_registered_people">この建物に登録されている人</string>
+    <string name="approved_registered_people">応答なし・SOS</string>
     <string name="approved_no_registration">登録はありません</string>
     <string name="approved_legend">凡例</string>
     <string name="approved_phone_safety">スマホの安否</string>
@@ -215,6 +215,8 @@
     <string name="approved_autostart_later_hint">あとから「アプリ設定」→「再起動後の安否共有」でも確認できます。</string>
     <string name="approved_autostart_fallback">設定画面を直接開けませんでした。端末の設定で「自動起動」を検索し、PlanD Mk1をオンにしてください。</string>
     <string name="approved_autostart_unavailable">設定画面を開けませんでした。端末の設定を開いて「自動起動」を検索し、PlanD Mk1をオンにしてください。</string>
+    <string name="approved_administrator">管理者画面</string>
+    <string name="approved_unknown">不明</string>
 </resources>
 
 

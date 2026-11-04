@@ -45,9 +45,10 @@ export function validateQuake(r,input){
  check((e.action==='EEW')===(e.eew!=null));
  check(integer(e.rosterRevision??0)&&((e.rosterRevision??0)===0||e.action==='FORM'));
  if(e.action==='EEW'){const p=e.eew={startsNewPeriod:false,...e.eew};check(typeof p.startsNewPeriod==='boolean'&&['wolfx','p2pquake'].includes(p.source)&&/^[0-9]{14}$/.test(p.eventId)&&integer(p.issuedAt)&&integer(p.receivedAt)&&p.receivedAt-p.issuedAt<=180000);check(!e.training&&e.operatedAt===p.receivedAt&&e.targetId===eewIncidentId(p)&&!e.reportIds.length&&!e.title&&!e.area);}
- else if(e.action==='REPORT'||e.action==='TRAINING_START')check(e.targetId===null&&!e.reportIds.length&&nonempty(e.title)&&e.title.length<=80&&nonempty(e.area)&&e.area.length<=120);
+ else if(['REPORT','TRAINING_START','ADMIN_START'].includes(e.action))check(e.targetId===null&&!e.reportIds.length&&nonempty(e.title)&&e.title.length<=80&&nonempty(e.area)&&e.area.length<=120);
  else {check(['CANCEL','FORM','END'].includes(e.action)&&e.targetId!==null&&e.targetId!==e.eventId&&!e.title&&!e.area);check(e.action==='FORM'?e.reportIds.length>0:e.reportIds.length===0);}
  if(e.action==='END')check(memberFor(r,e.actorDeviceId).role==='ADMIN','終了できるのは管理者だけです');
+ if(e.action==='ADMIN_START')check(!e.training&&memberFor(r,e.actorDeviceId).role==='ADMIN','地震を開始できるのは管理者だけです');
  if(e.action==='TRAINING_START')check(e.training&&memberFor(r,e.actorDeviceId).role==='ADMIN','訓練を開始できるのは管理者だけです');
  return e;
 }
@@ -71,9 +72,9 @@ function quakePeriods(r,events){
   const end=Math.min(Infinity,...relevant.filter(e=>e.action==='END'&&!e.training&&(e.targetId===id||e.endedIncidentIds.includes(id))).map(e=>e.operatedAt));
   return {...first,operatedAt:Math.min(first.operatedAt,end)};
  });
- const trainingStarts=relevant.filter(e=>e.action==='TRAINING_START');
+ const trainingStarts=relevant.filter(e=>['TRAINING_START','ADMIN_START'].includes(e.action));
  const reports=[...relevant.filter(e=>e.action==='REPORT'),...trainingStarts,...receipts].sort(compare),byId=new Map(reports.map(e=>[e.eventId,e]));
- const forms=[...relevant.map(e=>proof(r,relevant,e)).filter(Boolean),...trainingStarts.map(e=>({groupId:r.groupId,incidentId:e.eventId,firstReportedAt:e.operatedAt,training:true,reportIds:[e.eventId]})),...receipts.map(e=>({groupId:r.groupId,incidentId:e.targetId,firstReportedAt:e.operatedAt,training:false,reportIds:[e.eventId]}))].sort((a,b)=>a.firstReportedAt-b.firstReportedAt||(a.incidentId<b.incidentId?-1:a.incidentId>b.incidentId?1:0)||a.reportIds.join().localeCompare(b.reportIds.join()));
+ const forms=[...relevant.map(e=>proof(r,relevant,e)).filter(Boolean),...trainingStarts.map(e=>({groupId:r.groupId,incidentId:e.eventId,firstReportedAt:e.operatedAt,training:e.training,reportIds:[e.eventId]})),...receipts.map(e=>({groupId:r.groupId,incidentId:e.targetId,firstReportedAt:e.operatedAt,training:false,reportIds:[e.eventId]}))].sort((a,b)=>a.firstReportedAt-b.firstReportedAt||(a.incidentId<b.incidentId?-1:a.incidentId>b.incidentId?1:0)||a.reportIds.join().localeCompare(b.reportIds.join()));
  const periods=[];
  for(const training of [false,true]){
   let after=-1;
@@ -106,6 +107,7 @@ export function validateQuakeCommand(r,events,input){
   check(report&&report.training===e.training&&memberFor(r,report.actorDeviceId).memberId===memberFor(r,e.actorDeviceId).memberId,'自分の報告だけ取り消せます');
   check(!quakePeriods(r,events).some(p=>p.forms.length&&p.reports.some(x=>x.eventId===report.eventId)),'成立した報告は取り消せません');
  }else if(e.action==='FORM')check(formationCandidates(r,events).some(f=>sameRecord(f,proof(r,events,e))),'成立に必要な報告がありません');
+ else if(e.action==='ADMIN_START')check(!states.some(s=>!s.formation.training&&!s.closed),'開始中の地震を終了してから開始してください');
  else if(e.action==='TRAINING_START')check(!states.some(s=>s.formation.training&&!s.closed),'開始中の訓練を終了してから新しい訓練を始めてください');
  else if(e.action==='END')check(states.some(s=>s.incidentIds.includes(e.targetId)&&e.endedIncidentIds.every(id=>s.incidentIds.includes(id))&&s.formation.training===e.training&&!s.closed),'開始中の災害を指定してください');
  return e;

@@ -52,7 +52,7 @@ import androidx.compose.ui.unit.sp
     }
 }
 
-@Composable fun ApprovedMenu(groupLabel:String,onClose:()->Unit,onNavigate:(Int)->Unit,onSettings:()->Unit) {
+@Composable fun ApprovedMenu(groupLabel:String,onClose:()->Unit,onNavigate:(Int)->Unit,onSettings:()->Unit,administrator:Boolean=false) {
     ApprovedSheet(uiText("menu"),onClose) {
         Column {
             ApprovedMenuRow(uiText("my_registration"),"person",{onNavigate(3)},uiText("registration_summary"))
@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.sp
             HorizontalDivider()
             ApprovedMenuRow(uiText("training_incidents"),"list",{onNavigate(6)})
             HorizontalDivider()
+            if(administrator){ApprovedMenuRow(menuText("管理者画面"),"settings",{onNavigate(12)});HorizontalDivider()}
             ApprovedMenuRow(uiText("menu_app"),"settings",onSettings)
         }
     }

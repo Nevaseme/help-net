@@ -78,11 +78,13 @@ private fun PlanAppContent(model: PlanViewModel) {
     var reportTarget by remember {mutableStateOf<ResponseTarget?>(null)}
     // A group switch arrives before its incident flow. Do not navigate using
     // the previous group's unanswered incident while the new one is loading.
+    var picking by rememberSaveable { mutableStateOf(false) }
+    val uiLanguage=LocalUiLanguage.current
     val firstAnswer = incident.groupId == group && mainDestination(incident.canEdit, incident.current?.answers?.containsKey(model.localId) == true) == MainDestination.ANSWER
     var awaitingSavedAnswer by rememberSaveable(group, incident.selection) { mutableStateOf(firstAnswer) }
     val saveStates by model.saveStates.collectAsStateWithLifecycle()
     var previousSafetyPhase by remember { mutableStateOf(saveStates["safety"]?.phase) }
-    LaunchedEffect(group,incident.groupId,incident.selection) { if(firstAnswer){tab=0;lastMain=0;awaitingSavedAnswer=true} }
+    LaunchedEffect(group,incident.groupId,incident.selection,firstAnswer,tab,picking) { if(firstAnswer&&tab==1&&!picking){tab=0;lastMain=0;awaitingSavedAnswer=true} }
     LaunchedEffect(firstAnswer, saveStates["safety"]?.phase) {
         if (!firstAnswer && awaitingSavedAnswer) { tab = 1; lastMain = 1; awaitingSavedAnswer = false }
         else if (previousSafetyPhase == SavePhase.SAVING && saveStates["safety"]?.phase == SavePhase.SAVED && tab == 0) { tab = 1; lastMain = 1 }
@@ -92,7 +94,6 @@ private fun PlanAppContent(model: PlanViewModel) {
     var menuOpen by rememberSaveable { mutableStateOf(false) }
     var communicationDetails by rememberSaveable(group) { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    var picking by rememberSaveable { mutableStateOf(false) }
     var detailId by rememberSaveable(group,incident.selection) { mutableStateOf<String?>(null) }
     var buildingId by rememberSaveable(group,incident.selection) {mutableStateOf<String?>(null)}
     val snackbar = remember { SnackbarHostState() }
@@ -173,7 +174,7 @@ private fun PlanAppContent(model: PlanViewModel) {
         }
     }
     LaunchedEffect(message) {
-        message?.let { snackbar.showSnackbar(it); if (model.message.value == it) model.message.value = null }
+        message?.let { snackbar.showSnackbar(UiMessages.text(it,uiLanguage)); if (model.message.value == it) model.message.value = null }
     }
     fun navigate(destination: Int) {
         incidentDetails=false
@@ -192,7 +193,7 @@ private fun PlanAppContent(model: PlanViewModel) {
         Scaffold(
             topBar = { Column(Modifier.background(MaterialTheme.colorScheme.surface).statusBarsPadding()) {
                 ApprovedHeader(
-                    title=when {picking->"住居の位置を選択";tab in listOf(0,1,8,10)->if(incident.current!=null)uiText(if(incident.current!!.start.training)"training" else "earthquake")else "";else->uiText(when(tab){2->"home_building";3->"my_registration";4->"group_sharing";5->"offline_map";6->"training_incidents";9->"position_history";11->"home";else->"app_information"})},
+                    title=when {picking->menuText("住居の位置を選択");tab in listOf(0,1,8,10)->if(incident.current!=null)uiText(if(incident.current!!.start.training)"training" else "earthquake")else "";else->uiText(when(tab){2->"home_building";3->"my_registration";4->"group_sharing";5->"offline_map";6->"training_incidents";12->"administrator";9->"position_history";11->"home";else->"app_information"})},
                     date=null,
                     back=picking||tab !in listOf(0,1,8,10),
                     onNavigate={if(picking||tab !in listOf(0,1,8,10))goBack() else {val opening=!menuOpen;languageSettings=false;incidentDetails=false;responseSummary=false;detailId=null;buildingId=null;menuOpen=opening}},
@@ -200,11 +201,11 @@ private fun PlanAppContent(model: PlanViewModel) {
                     noInternet=!internet,
                     onDetails=if(tab in listOf(0,1,8,10)&&!picking&&incident.current!=null){{incidentDetails=true}}else null)
             } },
-            bottomBar = { if(tab in listOf(0,1,8,10) && !picking) Column(Modifier.background(MaterialTheme.colorScheme.surface).navigationBarsPadding()){ApprovedTabs(tab){tab=it;lastMain=it;languageSettings=false;responseSummary=false;incidentDetails=false;menuOpen=false}} },
+            bottomBar = { if(tab in listOf(0,1,8,10) && !picking) Column(Modifier.background(MaterialTheme.colorScheme.surface).navigationBarsPadding()){ApprovedTabs(tab){val next=if(firstAnswer&&it==1)0 else it;tab=next;lastMain=next;languageSettings=false;responseSummary=false;incidentDetails=false;menuOpen=false}} },
             snackbarHost = { SnackbarHost(snackbar) },
         ) { padding ->
             Box(Modifier.fillMaxSize().padding(padding)) {
-                val mapVisible = tab == 1 && !picking
+                val mapVisible = tab == 1 && !picking && !firstAnswer
                 // Retain pan/filter across tabs, but a different group or venue starts its own map.
                 key(group,activeVenue?.sessionId) { RetainedMapContent(mapVisible) {
                     MapScreen(model, residents, own, false,
@@ -213,6 +214,7 @@ private fun PlanAppContent(model: PlanViewModel) {
                 } }
                 if (!mapVisible) screenState.SaveableStateProvider("$group:$tab") {
                     when {
+                        firstAnswer&&tab==1&&!picking -> SafetyScreen(model,own,saving,onProfile={navigate(3)},onIncident={navigate(6)})
                         else -> when(tab) {
                         0 -> SafetyScreen(model, own, saving, onProfile={navigate(3)}, onIncident={navigate(6)})
                         1, 8 -> MapScreen(model, residents, own, picking,
@@ -226,55 +228,56 @@ private fun PlanAppContent(model: PlanViewModel) {
                         4 -> LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
                         if(!communicationDetails)item { CloudSharingPanel(model,own?.name.orEmpty(),onCommunication={communicationDetails=true}) }
                         if(communicationDetails) {
-                        item { TextButton(onClick={communicationDetails=false}) {Text("グループに戻る")} }
+                        item { TextButton(onClick={communicationDetails=false}) {Text(menuText("グループに戻る"))} }
                         item { CloudCommunicationDetails(model) }
-                        item { SectionTitle("近くの端末と共有") }
-                        item { StatusFeedback(when {
+                        item { SectionTitle(menuText("近くの端末と共有")) }
+                        item { StatusFeedback(menuText(when {
                             nearby.starting -> "共有を開始しています…"
                             nearby.verifications.isNotEmpty() -> "接続コードを確認してください"
                             nearby.connected.isNotEmpty() -> "接続済み・自動同期中（" + nearby.connected.size + " 台）"
                             nearby.active -> "共有中・接続相手を探しています"
                             else -> "共有停止中"
-                        }, busy = nearby.starting) }
+                        }), busy = nearby.starting) }
                         item {
-                            if (nearby.active || nearby.starting) OutlinedButton(onClick = model::stopSharing, modifier = Modifier.fillMaxWidth()) { Text("共有停止") }
-                            else Button(onClick = ::start, enabled = own != null && !saving, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) { Text("共有開始") }
+                            if (nearby.active || nearby.starting) OutlinedButton(onClick = model::stopSharing, modifier = Modifier.fillMaxWidth()) { Text(menuText("共有停止")) }
+                            else Button(onClick = ::start, enabled = own != null && !saving, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) { Text(menuText("共有開始")) }
                         }
                         nearby.error?.let { error -> item {
-                            InfoCard(error, true)
+                            InfoCard(menuText(error), true)
                             if (nearby.showPlayServicesSettings) TextButton(onClick = {
                                 context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.parse("package:com.google.android.gms")))
-                            }) { Text("Google Playの権限設定を開く") }
-                            TextButton(onClick = { context.startActivity(Intent(Settings.ACTION_WIRELESS_SETTINGS)) }) { Text("通信設定を開く") }
-                            TextButton(onClick = { context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.parse("package:${context.packageName}"))) }) { Text("アプリの権限設定を開く") }
+                            }) { Text(menuText("Google Playの権限設定を開く")) }
+                            TextButton(onClick = { context.startActivity(Intent(Settings.ACTION_WIRELESS_SETTINGS)) }) { Text(menuText("通信設定を開く")) }
+                            TextButton(onClick = { context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.parse("package:${context.packageName}"))) }) { Text(menuText("アプリの権限設定を開く")) }
                         } }
-                        if (nearby.active && nearby.peers.isEmpty()) item { Text("近くの端末を探しています…") }
+                        if (nearby.active && nearby.peers.isEmpty()) item { Text(menuText("近くの端末を探しています…")) }
                         items(nearby.peers, key = { it.id }) { peer ->
                             OutlinedCard { Column(Modifier.fillMaxWidth().padding(12.dp)) {
                                 NamedEntity("接続相手の名前", samplePersonName(group,peer.name))
                                 when (peer.id) {
-                                    in nearby.connected -> Text("接続済み・自動同期中")
-                                    in nearby.connecting -> Text("接続確認中…")
-                                    else -> TextButton(onClick = { model.sharing.connect(peer) }) { Text("接続する") }
+                                    in nearby.connected -> Text(menuText("接続済み・自動同期中"))
+                                    in nearby.connecting -> Text(menuText("接続確認中…"))
+                                    else -> TextButton(onClick = { model.sharing.connect(peer) }) { Text(menuText("接続する")) }
                                 }
                             } }
                         }
-                        item { Text("相手が受け取った情報：${nearby.receiptCount}件", style = MaterialTheme.typography.bodySmall) }
+                        item { Text(menuText("相手が受け取った情報：${nearby.receiptCount}件"), style = MaterialTheme.typography.bodySmall) }
                         }
                         }
                         5 -> OfflineMapScreen(model,own)
+                        12 -> if(model.canStartTraining())Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)){IncidentActions(model,own!=null,administrator=true);IncidentSelector(model)}
                         6 -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),verticalArrangement=Arrangement.spacedBy(20.dp)) {
                             IncidentActions(model,own!=null)
                             if(roster==null)OutlinedButton(onClick={navigate(4)}){Text(uiText("group_sharing"))}
                             HorizontalDivider()
                             IncidentSelector(model)
-                            if(own==null) Button(onClick={navigate(3)}){Text("自分の情報を登録")}
+                            if(own==null) Button(onClick={navigate(3)}){Text(menuText("自分の情報を登録"))}
                         }
                         else -> AppInformation()
                     }
                     }
                 }
-                if(menuOpen) ApprovedMenu(groupLabel,{menuOpen=false},::navigate,{menuOpen=false;languageSettings=true})
+                if(menuOpen) ApprovedMenu(groupLabel,{menuOpen=false},::navigate,{menuOpen=false;languageSettings=true},administrator=model.canStartTraining())
                 if(languageSettings) LanguageSettings(onClose={languageSettings=false},onNavigate={languageSettings=false;navigate(it);appSettingsChild=true},
                     onAutostart=if(autostart.vendor!=null){{languageSettings=false;autostartRequested=true}}else null)
                 if(incidentDetails)incident.current?.let {current->
@@ -298,14 +301,14 @@ private fun PlanAppContent(model: PlanViewModel) {
         requested=autostartRequested,onRequestHandled={autostartRequested=false})
     nearby.verifications.firstOrNull()?.let { verification ->
         AlertDialog(onDismissRequest = { model.sharing.verify(verification.id, false) },
-            title = { Text("接続コードの確認") },
+            title = { Text(menuText("接続コードの確認")) },
             text = { Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("相手：${samplePersonName(group,verification.name)}")
+                Text(menuText("相手：${samplePersonName(group,verification.name)}"))
                 Text(verification.code, style = MaterialTheme.typography.headlineLarge)
-                Text("相手の端末とコードを照合")
+                Text(menuText("相手の端末とコードを照合"))
             } },
-            confirmButton = { TextButton(onClick = { model.sharing.verify(verification.id, true) }) { Text("一致している・接続") } },
-            dismissButton = { TextButton(onClick = { model.sharing.verify(verification.id, false) }) { Text("接続しない") } })
+            confirmButton = { TextButton(onClick = { model.sharing.verify(verification.id, true) }) { Text(menuText("一致している・接続")) } },
+            dismissButton = { TextButton(onClick = { model.sharing.verify(verification.id, false) }) { Text(menuText("接続しない")) } })
     }
     buildingId?.let {id->key(group,incident.selection,id){BuildingDetail(model,id,{buildingId=null;detailId=it.originId},{buildingId=null}, registration = tab == 2)}}
     residents.find { it.originId == detailId }?.let { resident ->
@@ -358,26 +361,26 @@ private fun SettingsScreen(model: PlanViewModel, own: Resident?, group: String, 
     val point by model.pickedPoint.collectAsStateWithLifecycle()
     LaunchedEffect(point) { point?.let { lat = "%.6f".format(java.util.Locale.US, it.latitude); lon = "%.6f".format(java.util.Locale.US, it.longitude); model.pickedPoint.value = null; address="";pickedReference=null;floor="";room="" } }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        item { SectionTitle("自分の情報") }
-        item { OutlinedTextField(name, { name = it }, label = { Text("自分の名前") }, singleLine = true, enabled = !saving, modifier = Modifier.fillMaxWidth()) }
-        item { SectionTitle("住居・寝室") }
+        item { SectionTitle(menuText("自分の情報")) }
+        item { OutlinedTextField(name, { name = it }, label = { Text(menuText("自分の名前")) }, singleLine = true, enabled = !saving, modifier = Modifier.fillMaxWidth()) }
+        item { SectionTitle(menuText("住居・寝室")) }
         item {AddressSearchField(query,{query=it},{if(query.isNotBlank())openHome(true)},Modifier.fillMaxWidth(),enabled=!saving&&!searchingHome)}
-        item {Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){Button(enabled=!saving&&!searchingHome&&query.isNotBlank(),onClick={openHome(true)},modifier=Modifier.weight(1f)){Text(if(searchingHome)"検索中…" else "住所を検索")};OutlinedButton(enabled=!saving&&!searchingHome,onClick={openHome(false)},modifier=Modifier.weight(1f)){Text("地図で選ぶ")}}}
+        item {Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){Button(enabled=!saving&&!searchingHome&&query.isNotBlank(),onClick={openHome(true)},modifier=Modifier.weight(1f)){Text(menuText(if(searchingHome)"検索中…" else "住所を検索"))};OutlinedButton(enabled=!saving&&!searchingHome,onClick={openHome(false)},modifier=Modifier.weight(1f)){Text(menuText("地図で選ぶ"))}}}
         if(homeSearchError.isNotBlank())item {Text(homeSearchError)}
-        items(homeCandidates,key={it.id}){candidate->TextButton(onClick={selectHomeCandidate(candidate)}){Text(candidate.address+if(candidate.precision in listOf("town","block","area"))" 付近" else "")}}
-        if(address.isNotBlank())item {Text("選択した住居",style=MaterialTheme.typography.labelLarge);Text(address)}
-        item {TextButton(onClick={keyboard?.hide();focus.clearFocus();onBuildings()}){Text("登録済みの建物・部屋から選ぶ")}}
+        items(homeCandidates,key={it.id}){candidate->TextButton(onClick={selectHomeCandidate(candidate)}){Text(menuText(candidate.address+if(candidate.precision in listOf("town","block","area"))" 付近" else ""))}}
+        if(address.isNotBlank())item {Text(menuText("選択した住居"),style=MaterialTheme.typography.labelLarge);Text(address)}
+        item {TextButton(onClick={keyboard?.hide();focus.clearFocus();onBuildings()}){Text(menuText("登録済みの建物・部屋から選ぶ"))}}
         item { TextButton(onClick={coordinates=!coordinates}) {Text(uiText("coordinates"))} }
         if(coordinates) {
-        item { OutlinedTextField(lat, { lat = it;pickedReference=null;address="";floor="";room="" }, label = { Text("緯度") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text), singleLine = true, enabled = !saving, modifier = Modifier.fillMaxWidth()) }
-        item { OutlinedTextField(lon, { lon = it;pickedReference=null;address="";floor="";room="" }, label = { Text("経度") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text), singleLine = true, enabled = !saving, modifier = Modifier.fillMaxWidth()) }
+        item { OutlinedTextField(lat, { lat = it;pickedReference=null;address="";floor="";room="" }, label = { Text(menuText("緯度")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text), singleLine = true, enabled = !saving, modifier = Modifier.fillMaxWidth()) }
+        item { OutlinedTextField(lon, { lon = it;pickedReference=null;address="";floor="";room="" }, label = { Text(menuText("経度")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text), singleLine = true, enabled = !saving, modifier = Modifier.fillMaxWidth()) }
         }
-        item { OutlinedTextField(floor, { floor = it }, label = { Text("階数（例：2階）") }, singleLine = true, enabled = !saving, modifier = Modifier.fillMaxWidth()) }
-        item { OutlinedTextField(room, { room = it }, label = { Text("寝る部屋・場所の説明") }, minLines = 2, enabled = !saving, modifier = Modifier.fillMaxWidth()) }
+        item { OutlinedTextField(floor, { floor = it }, label = { Text(menuText("階数（例：2階）")) }, singleLine = true, enabled = !saving, modifier = Modifier.fillMaxWidth()) }
+        item { OutlinedTextField(room, { room = it }, label = { Text(menuText("寝る部屋・場所の説明")) }, minLines = 2, enabled = !saving, modifier = Modifier.fillMaxWidth()) }
         item { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             OperationFeedback(model, "profile")
             Button(onClick = { model.saveProfile(group, name, lat, lon, floor, room, address,pickedReference?.copy(address=address.trim().ifBlank{"地図で選択した住居"})) }, enabled = !saving,
-                modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) { Text(if (saving) "保存しています…" else "登録情報を保存") }
+                modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) { Text(menuText(if (saving) "保存しています…" else "登録情報を保存")) }
         } }
 
     }
@@ -395,20 +398,20 @@ private fun OfflineMapScreen(model:PlanViewModel,own:Resident?) {
     LaunchedEffect(city?.code){model.maps.selectCity(city?.code)}
     LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
         item {OutlinedCard {Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-            Text(city?.let {"${it.name}全域の地図"}?:"オフライン地図",style=MaterialTheme.typography.titleLarge)
-            if(city==null)Text("グループの活動地域が未設定です。管理者が「グループ」から市を設定してください。")
+            Text(menuText(city?.let {"${it.name}全域の地図"}?:"オフライン地図"),style=MaterialTheme.typography.titleLarge)
+            if(city==null)Text(menuText("グループの活動地域が未設定です。管理者が「グループ」から市を設定してください。"))
             else {
-                Text(when {offline.busy->"保存状態を確認中…";offline.complete->"保存済み・圏外で利用可能";offline.downloading->"保存中：${offline.resources} / ${offline.expected} 項目";offline.exists->"保存は未完了です";else->"市全域の道路・地名を保存します"})
-                if(!offline.exists)Text(if(city.code=="26100")"背景地図 約39MB・住所と建物データはアプリに収録済み" else "背景地図 約8MB・住所データはアプリに収録済み")
-                if(offline.bytes>0)Text("保存容量：%.1f MB".format(offline.bytes/1048576.0))
-                offline.error?.let {Text(it,color=MaterialTheme.colorScheme.error)}
-                if(offline.downloading)OutlinedButton(onClick=model.maps::pause){Text("一時停止")}
-                else if(!offline.busy&&!offline.complete)Button(onClick={if(offline.exists)model.maps.resume() else model.maps.downloadCity(city.code)}){Text(if(offline.exists)"保存を再開" else "市全域をダウンロード")}
-                if(offline.exists&&!offline.busy)TextButton(onClick={deleteConfirm=true}){Text("保存地図を削除")}
+                Text(menuText(when {offline.busy->"保存状態を確認中…";offline.complete->"保存済み・圏外で利用可能";offline.downloading->"保存中：${offline.resources} / ${offline.expected} 項目";offline.exists->"保存は未完了です";else->"市全域の道路・地名を保存します"}))
+                if(!offline.exists)Text(menuText(if(city.code=="26100")"背景地図 約39MB・住所と建物データはアプリに収録済み" else "背景地図 約8MB・住所データはアプリに収録済み"))
+                if(offline.bytes>0)Text(menuText("保存容量：%.1f MB".format(offline.bytes/1048576.0)))
+                offline.error?.let {Text(menuText(it),color=MaterialTheme.colorScheme.error)}
+                if(offline.downloading)OutlinedButton(onClick=model.maps::pause){Text(menuText("一時停止"))}
+                else if(!offline.busy&&!offline.complete)Button(onClick={if(offline.exists)model.maps.resume() else model.maps.downloadCity(city.code)}){Text(menuText(if(offline.exists)"保存を再開" else "市全域をダウンロード"))}
+                if(offline.exists&&!offline.busy)TextButton(onClick={deleteConfirm=true}){Text(menuText("保存地図を削除"))}
             }
         }}}
     }
-    if(deleteConfirm)AlertDialog(onDismissRequest={deleteConfirm=false},title={Text("保存地図を削除しますか？")},text={Text("登録情報・安否・建物の記録は残ります。")},confirmButton={TextButton(onClick={deleteConfirm=false;model.maps.delete()}){Text("地図を削除")}},dismissButton={TextButton(onClick={deleteConfirm=false}){Text("キャンセル")}})
+    if(deleteConfirm)AlertDialog(onDismissRequest={deleteConfirm=false},title={Text(menuText("保存地図を削除しますか？"))},text={Text(menuText("登録情報・安否・建物の記録は残ります。"))},confirmButton={TextButton(onClick={deleteConfirm=false;model.maps.delete()}){Text(menuText("地図を削除"))}},dismissButton={TextButton(onClick={deleteConfirm=false}){Text(menuText("キャンセル"))}})
 }
 
 fun formatTime(time: Long): String = if(time == 0L) "今回未回答" else DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(time))

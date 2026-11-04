@@ -163,8 +163,9 @@ class PlanViewModel(application: Application) : AndroidViewModel(application) {
         val targetGroup=group.value;val incident=incidentUi.value.takeIf { it.groupId==targetGroup }?.selection.orEmpty()
         viewModelScope.launch {
             saveOperations.complete("safety", if (safety == Safety.SOS) "SOS" else "無事", persist = {
-                val own=checkNotNull(ownForOperation(targetGroup)) { "先に設定で自分の情報を登録してください" }
-                app.store.answerWithMemo(IncidentEvent(targetGroup,java.util.UUID.randomUUID().toString(),incident,localId,own.name,1,System.currentTimeMillis(),IncidentKind.ANSWER,safety=safety), if (safety == Safety.SOS) memo else "",app.cloud.venue(targetGroup))
+                val authorName=ownForOperation(targetGroup)?.name ?: app.quakes.roster(targetGroup)?.members?.find {localId in it.deviceIds}?.activityName
+                check(!authorName.isNullOrBlank()) { "先にグループへ参加してください" }
+                app.store.answerWithMemo(IncidentEvent(targetGroup,java.util.UUID.randomUUID().toString(),incident,localId,authorName,1,System.currentTimeMillis(),IncidentKind.ANSWER,safety=safety), if (safety == Safety.SOS) memo else "",app.cloud.venue(targetGroup))
             }, publish = { position.refresh(); app.recordsChanged() })
         }
     }
@@ -185,24 +186,24 @@ class PlanViewModel(application: Application) : AndroidViewModel(application) {
         try { app.installation.selectIncident(group.value,id);saveOperations.clearOtherResults() }
         catch(e: Exception) { message.value=e.localizedMessage }
     }
-    fun startIncident(title: String, area: String, training: Boolean) {
+    fun startIncident(title: String, area: String, training: Boolean, administratorStart:Boolean=false) {
         if(!saveOperations.begin("incident"))return
         val g=group.value;val id=java.util.UUID.randomUUID().toString()
         var selected:String?=null
         viewModelScope.launch { saveOperations.complete("incident",if(training) "訓練開始" else "地震報告",persist={
-            val own=checkNotNull(ownForOperation(g)) { "先に自分の情報を登録してください" }
+            val own=ownForOperation(g)
             // Re-read durable authority when saving; a stale UI must never grant training permission.
             val participants=app.quakes.roster(g)
-            if(training) {
+            if(training||administratorStart) {
                 checkNotNull(participants) { "訓練を開始するには管理者の参加者設定が必要です" }
                 check(participants.memberForDevice(localId).role==MemberRole.ADMIN) { "訓練を開始できるのは管理者だけです" }
             }
             if(participants!=null) {
-                val action=if(training) QuakeAction.TRAINING_START else QuakeAction.REPORT
+                val action=if(administratorStart)QuakeAction.ADMIN_START else if(training) QuakeAction.TRAINING_START else QuakeAction.REPORT
                 val states=app.quakes.command(QuakeEvent(g,id,localId,System.currentTimeMillis(),action,training,title=title.trim(),area=area.trim()))
                 selected=states.lastOrNull {!it.closed&&it.formation.training==training}?.formation?.incidentId
             }else{
-                app.store.mergeIncident(IncidentEvent(g,id,id,localId,own.name,1,System.currentTimeMillis(),IncidentKind.START,title.trim(),area.trim(),training));selected=id
+                app.store.mergeIncident(IncidentEvent(g,id,id,localId,checkNotNull(own).name,1,System.currentTimeMillis(),IncidentKind.START,title.trim(),area.trim(),training));selected=id
             }
         },publish={ selected?.let {app.installation.selectIncident(g,it)};saveOperations.clearOtherResults();app.recordsChanged() }) }
     }
@@ -210,10 +211,10 @@ class PlanViewModel(application: Application) : AndroidViewModel(application) {
         if(!saveOperations.begin("incident"))return
         val g=group.value;val current=incidentUi.value.takeIf { it.groupId==g }?.current
         viewModelScope.launch { saveOperations.complete("incident","安否確認の終了",persist={
-            val own=checkNotNull(ownForOperation(g))
+            val own=ownForOperation(g)
             val selected=checkNotNull(current) { "開始中の災害を選んでください" }
             if(app.quakes.roster(g)!=null)app.quakes.command(QuakeEvent(g,java.util.UUID.randomUUID().toString(),localId,System.currentTimeMillis(),QuakeAction.END,selected.start.training,targetId=selected.start.eventId))
-            else app.store.appendIncident(IncidentEvent(g,java.util.UUID.randomUUID().toString(),selected.start.eventId,localId,own.name,1,System.currentTimeMillis(),IncidentKind.END))
+            else app.store.appendIncident(IncidentEvent(g,java.util.UUID.randomUUID().toString(),selected.start.eventId,localId,checkNotNull(own).name,1,System.currentTimeMillis(),IncidentKind.END))
         },publish={ app.recordsChanged() }) }
     }
 

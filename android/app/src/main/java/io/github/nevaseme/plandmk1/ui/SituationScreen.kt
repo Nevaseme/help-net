@@ -63,7 +63,7 @@ fun positionDescription(person: MapPerson, now: Long): String = when {
 @Composable
 fun SituationScreen(
     people: List<MapPerson>, homes: List<MapHome>, center: MapPoint, now: Long,
-    preview: Boolean = false, canRescue: Boolean = true,
+    preview: Boolean = false, canRescue: Boolean = true, assignedLocation:MapPoint?=null,
     canUndo: (MapPerson) -> Boolean = { true },
     onRescue: (MapPerson) -> Unit = {}, onUndo: (MapPerson) -> Unit = {},
     history: @Composable (MapPerson) -> Unit = {},
@@ -75,7 +75,7 @@ fun SituationScreen(
     reports:List<MapReport> = emptyList(),onReport:(String)->Unit = {},
     statisticsLabel:String=uiText("group_label"), initialZoom:Double=16.8,
     neighborhoods:List<MapNeighborhood> = emptyList(), ownNeighborhoodId:String?=null, onPersonResponse:((String)->Unit)?=null,
-    buildingCounts:Map<String,BuildingResidentCounts> = emptyMap(),
+    buildingCounts:Map<String,BuildingResidentCounts> = emptyMap(),registeredBuildingIds:List<String> = emptyList(),
 ) {
     var neighborhoodId by rememberSaveable {mutableStateOf<String?>(null)}
     val statistics=neighborhoods.map {it.row}.ifEmpty { listOf(io.github.nevaseme.plandmk1.core.CommunityRow("group",statisticsLabel,statisticsLabel,total=people.size,sos=people.count {it.state==MapSafety.SOS},unreported=people.count {it.state==MapSafety.UNANSWERED},safe=people.count {it.state==MapSafety.SAFE},rescued=people.count {it.state==MapSafety.RESCUED})) }
@@ -96,7 +96,7 @@ fun SituationScreen(
     var extraHome by remember { mutableStateOf<MapHome?>(null) }
     var failed by remember { mutableStateOf(false) }
     val camera = remember { SituationCamera() }
-    val currentLocation=rememberCurrentMapLocation(!preview&&!listOnly&&LocalMapVisible.current,camera)
+    val currentLocation=rememberCurrentMapLocation(!preview&&!listOnly&&LocalMapVisible.current,camera,assignedLocation)
     val unknown = people.filterNot { it.hasPosition(now) }
     LaunchedEffect(openList) { if (openList) { sheet = "all"; listFilter = null; areaIds = null } }
     val close = { sheet = null; onListClosed() }
@@ -121,7 +121,7 @@ fun SituationScreen(
             if (rows.isEmpty()) item { Text(uiText("no_people"), Modifier.padding(vertical = 20.dp)) }
         }
     } else Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) {
-        FlowRow(Modifier.fillMaxWidth().heightIn(min=60.dp).padding(horizontal=12.dp),horizontalArrangement=Arrangement.SpaceBetween,verticalArrangement=Arrangement.Center) {
+        Row(Modifier.fillMaxWidth().heightIn(min=60.dp).padding(horizontal=10.dp),horizontalArrangement=Arrangement.spacedBy(4.dp),verticalAlignment=Alignment.CenterVertically) {
             Row(verticalAlignment=Alignment.CenterVertically) {
                 Text(uiText("show_safe"),fontWeight=FontWeight.Bold,fontSize=12.sp)
                 ApprovedSwitch(showSafe,{showSafe=it},uiText("show_safe"))
@@ -135,8 +135,8 @@ fun SituationScreen(
                     decorationBox={inner->Box(Modifier.fillMaxWidth().heightIn(min=48.dp).padding(vertical=4.dp).border(1.dp,if(tsunamiHeight.isNotBlank() && io.github.nevaseme.plandmk1.tsunami.TsunamiPrecomputedHeight.parse(tsunamiHeight)==null)MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline,RoundedCornerShape(6.dp)).padding(horizontal=4.dp),contentAlignment=Alignment.Center){inner()}})
                 Text("m",fontSize=13.sp)
             }
-            TextButton(onClick={sheet="unknown";listFilter=null;areaIds=null},contentPadding=PaddingValues(horizontal=2.dp)) {
-                Text(uiText("unknown_location"),color=MaterialTheme.colorScheme.onSurface,fontWeight=FontWeight.Bold,fontSize=12.sp)
+            TextButton(onClick={sheet="unknown";listFilter=null;areaIds=null},contentPadding=PaddingValues(horizontal=2.dp),modifier=Modifier.weight(1f)) {
+                Text(uiText("unknown_location"),color=MaterialTheme.colorScheme.onSurface,fontWeight=FontWeight.Bold,fontSize=12.sp,maxLines=2,textAlign=androidx.compose.ui.text.style.TextAlign.End,modifier=Modifier.weight(1f))
                 Text(" ›",color=MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
@@ -145,7 +145,7 @@ fun SituationScreen(
                 onPerson = { selectedId = it.id; sheet = "person" },
                 onHome = { extraHome = it; homePersonId = null; homeId = it.id; sheet = "home" },
                 onOverlapping = { areaIds = it.map(MapPerson::id); listFilter = null; sheet = "overlap" }, onError = { failed = true }, modifier = Modifier.fillMaxSize(),
-                assessmentIntensity=assessmentIntensity,onReportPoint=if(choosingReport){{point->choosingReport=false;onAddReport?.invoke(point)}}else null,reports=reports,onReport=onReport)
+                registeredBuildingIds=registeredBuildingIds,assessmentIntensity=assessmentIntensity,onReportPoint=if(choosingReport){{point->choosingReport=false;onAddReport?.invoke(point)}}else null,reports=reports,onReport=onReport)
             if(onAddReport!=null)Button(onClick={choosingReport=!choosingReport},modifier=Modifier.align(Alignment.BottomEnd).padding(end=14.dp,bottom=96.dp).heightIn(min=48.dp),shape=RoundedCornerShape(10.dp),contentPadding=PaddingValues(horizontal=15.dp,vertical=10.dp)){Text(uiText(if(choosingReport)"cancel" else "report_add"),fontSize=14.sp,fontWeight=FontWeight(750))}
             if(choosingReport)Surface(Modifier.align(Alignment.TopCenter).padding(top=80.dp,start=12.dp,end=12.dp),shape=RoundedCornerShape(10.dp)){Text(uiText("choose_report_point"),Modifier.padding(12.dp))}
             Surface(Modifier.align(Alignment.TopEnd).padding(12.dp), shape = RoundedCornerShape(14.dp), shadowElevation = 3.dp, color = MaterialTheme.colorScheme.surface) {
@@ -156,7 +156,7 @@ fun SituationScreen(
                 }
             }
             Surface(Modifier.align(Alignment.BottomStart).padding(start = 12.dp, bottom = 32.dp), shape = RoundedCornerShape(20.dp), shadowElevation = 2.dp, color = MaterialTheme.colorScheme.surface) {
-                TextButton(onClick = { sheet = "legend" }) { Text("凡例", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface); Text(" ›") }
+                TextButton(onClick = { sheet = "legend" }) { Text(uiText("legend"), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface); Text(" ›") }
             }
             Surface(Modifier.align(Alignment.BottomEnd).padding(end = 12.dp, bottom = 36.dp), shape = CircleShape, shadowElevation = 2.dp, color = MaterialTheme.colorScheme.surface) {
                 IconButton(onClick = { currentLocation.locate() }) { PlanIcon("target", if(tsunamiEnglish)"My location" else "現在地") }
@@ -193,10 +193,11 @@ fun SituationScreen(
                     DetailHeading(uiText("legend"), null, close)
                     Text(uiText("phone_safety"), style = MaterialTheme.typography.titleMedium)
                     MapSafety.entries.forEach { state -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) { StateSymbol(state); Text(safetyText(state)) } }
+                    Row(horizontalArrangement=Arrangement.spacedBy(12.dp)){Box(Modifier.size(22.dp,16.dp).border(2.dp,Color(0xFF216879)));Text(if(tsunamiEnglish)"Buildings with registered residents" else "住民登録のある建物")}
                     if(!preview) TsunamiLegend()
-                    Text(if(preview)"建物の強さ" else "全壊率（想定震度 $assessmentIntensity）", style = MaterialTheme.typography.titleMedium)
+                    Text(if(tsunamiEnglish)"Building damage risk" else if(preview)"建物の強さ" else "全壊率", style = MaterialTheme.typography.titleMedium)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf(0xFFFBE8C5 to if(preview)"強い" else "低 <10%", 0xFFF2AE5D to if(preview)"中間" else "中 <40%", 0xFFC5672E to if(preview)"弱い" else "高 ≥40%", 0xFFD4D7DC to "不明").forEach { (color, text) ->
+                        listOf(0xFFFBE8C5 to if(tsunamiEnglish)"Low <10%" else "低 <10%", 0xFFF2AE5D to if(tsunamiEnglish)"Medium <40%" else "中 <40%", 0xFFC5672E to if(tsunamiEnglish)"High ≥40%" else "高 ≥40%", 0xFFD4D7DC to if(tsunamiEnglish)"Unknown" else "不明").forEach { (color, text) ->
                             Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) { Box(Modifier.fillMaxWidth().height(22.dp).background(Color(color), RoundedCornerShape(4.dp))); Text(text, fontSize = 12.sp) }
                         }
                     }
@@ -296,7 +297,7 @@ fun filteredPeople(people:List<MapPerson>,filter:String?,now:Long)=when(filter){
     val unknown=if(english)"Unknown" else "不明"
     if(home.attributesUnavailable)Text(if(LocalUiLanguage.current=="en")"Building information is unavailable" else "建物情報を読み込めません",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.error)
     if(showYear&&home.assessmentIntensity!=null) {
-        Text("想定震度 ${home.assessmentIntensity}・全壊率 ${home.fullDamagePercent?.let {String.format(Locale.JAPAN,"%.1f%%",it)} ?: "不明"}",style=MaterialTheme.typography.titleMedium)
+        Text((if(LocalUiLanguage.current=="en")"Damage risk: " else "全壊率 ")+ (home.fullDamagePercent?.let {String.format(Locale.JAPAN,"%.1f%%",it)} ?: uiText("unknown")),style=MaterialTheme.typography.titleMedium)
         if(home.assessmentAssumed)Text("16階以上は被害率0とする仮定を適用",style=MaterialTheme.typography.bodySmall)
 
     }
@@ -308,7 +309,7 @@ fun filteredPeople(people:List<MapPerson>,filter:String?,now:Long)=when(filter){
         }
     }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        listOf((if(english)if(showYear)"Built / age" else "Age" else if(showYear)"建築年・築年数" else "築年数") to (home.built?.let { (if(showYear)if(english)"$it · " else "${it}年・" else "")+if(english)"${java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)-it} years" else "築${java.util.Calendar.getInstance().get(java.util.Calendar.YEAR) - it}年" } ?: unknown), (if(english)"Structure" else "建材・構造") to home.material, (if(english)"Floors" else "階数") to (home.floors?.let { if(english)"$it floors" else "${it}階建" } ?: unknown)).forEach { (label, value) ->
+        listOf((if(english)if(showYear)"Built / age" else "Building age" else if(showYear)"建築年・築年数" else "築年数") to (home.built?.let { (if(showYear)if(english)"$it · " else "${it}年・" else "")+if(english)"${java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)-it} years" else "築${java.util.Calendar.getInstance().get(java.util.Calendar.YEAR) - it}年" } ?: unknown), (if(english)"Structure" else "建材・構造") to home.material, (if(english)"Floors" else "階数") to (home.floors?.let { if(english)"$it floors" else "${it}階建" } ?: unknown)).forEach { (label, value) ->
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) { Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant); Text(value, style = MaterialTheme.typography.titleSmall) }
         }
     }
