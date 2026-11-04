@@ -4,6 +4,22 @@ import {personPresentation,responseCases,isResolvedCase,reportEditSources,visibl
 import {indexedDB} from 'fake-indexeddb';
 import {Store} from '../web/sync.mjs';
 import {managedIncidentOptions} from '../web/managed-records.mjs';
+import * as personUi from '../web/web1617-ui.mjs';
+
+test('residence floors get localized units without changing free-text descriptions',()=>{
+ assert.equal(typeof personUi.residenceFloorLabel,'function');
+ for(const [input,ja,en] of [
+  ['2','2階','Floor 2'],['2階','2階','Floor 2'],['２','2階','Floor 2'],
+  ['B1','地下1階','Floor -1'],['地下2階','地下2階','Floor -2'],['-1','地下1階','Floor -1'],
+  ['','', ''],['  ','',''],['屋上','屋上','屋上'],['Floor 2','Floor 2','Floor 2'],
+  ['2階の奥','2階の奥','2階の奥'],['2147483648','2147483648','2147483648'],
+  ['-2147483648','地下2147483648階','Floor -2147483648']
+ ]){
+  assert.equal(personUi.residenceFloorLabel(input,'ja'),ja,input);
+  assert.equal(personUi.residenceFloorLabel(input,'en'),en,input);
+  assert.equal(personUi.residenceFloorLabel(input,'ja'),ja,input);
+ }
+});
 const person={originId:'other',name:'Private name',safety:'UNREPORTED',updatedAt:0};
 test('unanswered person remains anonymous before three minutes; known position does not expose a home',()=>{
  const view={start:{createdAt:1000}};

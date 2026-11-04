@@ -108,7 +108,8 @@ import io.github.nevaseme.plandmk1.core.*
             }catch(e:kotlinx.coroutines.CancellationException){throw e}catch(_:Exception){home.copy(attributesUnavailable=true)}
         }
     }
-    val people = remember(residents, places, care, positions, memos, incident, now,venue,deviceRecords,homes) {
+    val language = LocalUiLanguage.current
+    val people = remember(residents, places, care, positions, memos, incident, now,venue,deviceRecords,homes,language) {
         val locations = positions.filter {venue?.positionMode!="ACTUAL"||it.acquiredAt>=venue!!.startedAt}.associateBy { it.originId }
         val notes = memos.associateBy { it.answerId }
         residents.map { person ->
@@ -116,7 +117,7 @@ import io.github.nevaseme.plandmk1.core.*
             val scenarioPerson=venue?.scenario?.people?.find {it.deviceId==person.originId}
             val simulated=venue?.observationTimes(person.originId)
             val base=residentMapPerson(person, places, care, locations[person.originId],
-                if (answer?.safety == Safety.SOS) notes[answer.eventId]?.takeIf {it.authorId==person.originId&&it.incidentId==answer.incidentId}?.text?:scenarioPerson?.note.orEmpty() else scenarioPerson?.note.orEmpty()).copy(impactAt=if(scenarioPerson!=null)simulated?.first else latestImpact(deviceRecords,group,person.originId,now),enclosedAt=simulated?.second)
+                if (answer?.safety == Safety.SOS) notes[answer.eventId]?.takeIf {it.authorId==person.originId&&it.incidentId==answer.incidentId}?.text?:scenarioPerson?.note.orEmpty() else scenarioPerson?.note.orEmpty(), language=language).copy(impactAt=if(scenarioPerson!=null)simulated?.first else latestImpact(deviceRecords,group,person.originId,now),enclosedAt=simulated?.second)
             val placement=venue?.allPlacements()?.find {it.deviceId==person.originId}
             val enriched=base.copy(home=base.home?.let {home->homes.find {it.id==home.id}?:home})
             projectPersonPrivacy(if(placement==null)enriched else if(venue?.positionMode=="ACTUAL"&&placement.source!="SCENARIO")enriched.copy(name=placement.name,home=null,demo=true) else enriched.copy(name=placement.name,home=enriched.home.takeIf {placement.home!=null},bedroom=base.bedroom.takeIf {placement.home!=null}.orEmpty(),point=MapPoint(checkNotNull(placement.latitude),checkNotNull(placement.longitude)),acquiredAt=incident.current?.start?.createdAt,accuracy=null,demo=true,fictional=placement.source=="SCENARIO"),incident.current?.start?.createdAt,now)

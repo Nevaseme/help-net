@@ -43,6 +43,16 @@ const words = {...englishUI,'津波':'Tsunami','建物の全壊率':'Building da
  '通報の取消・復元は現在の共有形式に未対応です。':'Canceling and restoring reports is not supported by the current shared record format.'
 };
 
+// Format the floor without rewriting the saved profile or free-text room description.
+export function residenceFloorLabel(floor, language='ja') {
+ const value=String(floor??'').trim(),normalized=value.normalize('NFKC');
+ const level=normalized.match(/^(-?\d+)(?:階)?$/),basement=normalized.match(/^(?:B|地下)(\d+)(?:階)?$/i);
+ if(!level&&!basement)return value;
+ const number=level?Number(level[1]):-Number(basement[1]);
+ if(!Number.isSafeInteger(number)||number<-2147483648||number>2147483647)return value;
+ return language==='en'?`Floor ${number}`:number<0?`地下${-number}階`:`${number}階`;
+}
+
 /** Phone positions are separate records; home coordinates must never substitute for them. */
 export function personPresentation(person, events, view, ownId, now=Date.now(), position=null) {
  const rescued=currentEvents(events.filter(e=>e.subjectId===person.originId)).some(e=>e.action==='RESCUED' && e.createdAt >= (person.updatedAt||0));
@@ -196,7 +206,7 @@ document.querySelector('[data-menu="settings"]').onclick=()=>{$('app-menu').clos
   for(const b of filterBar.querySelectorAll('button'))b.onclick=()=>{unknownOnly=false;$('filter').value=b.dataset.personFilter;renderPeople();};
   setHtml(locationNote,`<img src="/nav-user.svg" alt="">${h('位置不明')} ${presented.filter(p=>p.unknownLocation).length}`);
   const shown=presented.filter(p=>!unknownOnly||p.unknownLocation).filter(p=>$('filter').value==='ALL'||($('filter').value==='NONSAFE'?!['SAFE','RESCUED'].includes(p.status):$('filter').value==='SAFE'?['SAFE','RESCUED'].includes(p.status):p.status===$('filter').value));
-  setHtml($('list'),shown.length?shown.map(p=>`<button class="resident person-row" data-person="${escape(p.p.originId)}" ${p.showDetails===false?'disabled aria-disabled="true"':''}>${icon(p.status)}<span><strong>${escape(p.disclosed&&p.name===p.p.name?p.name:t(p.name))}</strong><small>${statusName(p.status)} · ${h(p.unknownLocation?'位置不明':'最後の端末位置')}${!p.unknownLocation?' · '+escape(elapsed(positionFor(p.p.originId).acquiredAt)):''}</small>${p.showObservations?`<small class="person-observations">${[p.p.impactAt?h('衝撃を検知'):'',p.p.enclosedAt?h('閉所を検知'):''].filter(Boolean).join(' · ')}</small>`:''}${p.showHome&&(p.p.floor||p.p.room)?`<small>${h('寝室')}：${escape([p.p.floor,p.p.room].filter(Boolean).join(' · '))}</small>`:''}</span>${p.showDetails===false?'':chevron}</button>`).join(''):`<p class="empty-state">${h('対象の記録はありません。')}</p>`);
+  setHtml($('list'),shown.length?shown.map(p=>`<button class="resident person-row" data-person="${escape(p.p.originId)}" ${p.showDetails===false?'disabled aria-disabled="true"':''}>${icon(p.status)}<span><strong>${escape(p.disclosed&&p.name===p.p.name?p.name:t(p.name))}</strong><small>${statusName(p.status)} · ${h(p.unknownLocation?'位置不明':'最後の端末位置')}${!p.unknownLocation?' · '+escape(elapsed(positionFor(p.p.originId).acquiredAt)):''}</small>${p.showObservations?`<small class="person-observations">${[p.p.impactAt?h('衝撃を検知'):'',p.p.enclosedAt?h('閉所を検知'):''].filter(Boolean).join(' · ')}</small>`:''}${p.showHome&&(p.p.floor||p.p.room)?`<small>${h('寝室')}：${escape([residenceFloorLabel(p.p.floor,language),p.p.room].filter(Boolean).join(' · '))}</small>`:''}</span>${p.showDetails===false?'':chevron}</button>`).join(''):`<p class="empty-state">${h('対象の記録はありません。')}</p>`);
   for(const b of $('list').querySelectorAll('button'))b.onclick=()=>{selectPerson(b.dataset.person);renderPerson(b.dataset.person,true);};
  }
  function renderPerson(id,open=false){const s=snapshot(),p=visiblePeople(s).find(p=>p.originId===id);detail.hidden=!p;if(!p){personSheet.close();return;}
@@ -211,7 +221,7 @@ document.querySelector('[data-menu="settings"]').onclick=()=>{$('app-menu').clos
   const time=pos?.acquiredAt?new Date(pos.acquiredAt).toLocaleTimeString(language==='en'?'en-GB':'ja-JP',{hour:'2-digit',minute:'2-digit'}):null;
   const positionText=!pos?h('位置不明'):`${local('最後のスマホ位置','Last phone location')}　${time?escape(time)+local('取得',' captured')+'・'+escape(elapsed(pos.acquiredAt)):h('日時不明')}${pos.source!=='DEMO_ASSIGNED'&&Number.isFinite(pos.accuracyMeters)?'・'+local('精度 約','Accuracy ~')+escape(pos.accuracyMeters)+'m':''}`;
   const sample=s.venue?.scenario?.people?.find(x=>x.deviceId===id),memo=v.disclosed?(memos.find(m=>m.answerId===s.view?.answers[id]?.eventId)?.text||sample?.note||''):'';
-  const bedroom=[p.floor?(language==='en'?'Floor '+p.floor:/階$/.test(p.floor)?p.floor:p.floor+'階'):'',p.room].filter(Boolean).join('・')||t('未登録');
+  const bedroom=[residenceFloorLabel(p.floor,language),p.room].filter(Boolean).join('・')||t('未登録');
   const pin='<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7m0 10a3 3 0 1 1 0-6 3 3 0 0 1 0 6"/></svg>';
   const bed='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 4v17m20-10v10M2 17h20M2 9h6v8m0-6h11a3 3 0 0 1 3 3v3H8Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';
   setHtml($('detail-info'),`<p class="person-position">${pin}<span>${positionText}</span></p>${memo?`<p class="sos-note">${escape(memo)}</p>`:''}${v.showHome?`<section class="person-home"><h3>${local('普段の住居・寝室','Usual home and sleeping area')}</h3><div class="person-address"><strong>${escape(p.homeAddress||homeBuilding?.label||t('未登録'))}</strong>${homeBuilding?`<button id="person-home-building" class="text-button">${local('建物を見る','View building')}${chevron}</button>`:''}</div><div class="person-bedroom">${bed}<strong>${escape(bedroom)}</strong></div><dl id="person-home-attributes" class="building-attributes" data-status="${homeData?.pending?'loading':homeData?.status==='error'?'error':'ready'}"><div><dt>${local('築年数','Building age')}</dt><dd>${age!==null?local('築'+age+'年',age+' years'):unknown}</dd></div><div><dt>${local('建材・構造','Structure')}</dt><dd>${escape(material)}</dd></div><div><dt>${local('階数','Storeys')}</dt><dd>${attrs.floors?escape(attrs.floors)+local('階建',''):unknown}</dd></div></dl>${homeData?.status==='error'?`<button id="person-attributes-retry" class="text-button">${local('再読み込み','Retry')}</button>`:''}</section><section class="person-daytime"><h3>${h('普段昼間いる場所')}</h3><p>${escape(p.daytimePlace||sample?.daytimePlace||t('未登録'))}</p></section>`:!v.disclosed?`<p class="notice">${h('応答がない人の詳細は、安否確認の開始から3分後に表示します。')}</p>`:''}${v.showObservations?`<section class="person-observation-section"><h3>${local('検知情報','Detected events')}</h3><div class="observations">${p.impactAt?observationCard('impact',p.impactAt):''}${p.enclosedAt?observationCard('enclosed',p.enclosedAt):''}</div></section>`:''}`);

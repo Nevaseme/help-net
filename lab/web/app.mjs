@@ -269,7 +269,7 @@ await task(async()=>{
  attachCityOffline({store,getGroup:()=>group,host:document.querySelector('.appearance-settings').parentElement});
  if($('cloud-map-preview'))$('cloud-map-preview').onclick=()=>tab('buildings');$('tsunami-back').onclick=()=>tab('settings');
  if($('cloud-map-preview'))$('cloud-map-preview').textContent='地図を見る';
- document.querySelector('footer').textContent='Tasukeai · PWA 1.6.34 · この端末に記録を保存';
+ document.querySelector('footer').textContent='Tasukeai · PWA 1.6.35 · この端末に記録を保存';
  await refresh();
  if(document.body.classList.contains('registration-needed'))openSettings('group');else if(!startupNavigationChosen)await afterJoining();
  if('serviceWorker'in navigator){await setupAppUpdates();$('offline').textContent=cloudMode?'オフライン起動の準備ができました。接続できるときに記録を共有します。':'オフライン起動の準備ができました。通信には同じWi-Fiと実験サーバーが必要です。';}

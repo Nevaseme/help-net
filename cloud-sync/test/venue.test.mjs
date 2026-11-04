@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import {Journal} from '../src/journal.mjs';
 import {handle} from '../src/http.mjs';
+import venueBuildings from '../src/venue-buildings.json' with {type:'json'};
 
 const id=()=>crypto.randomUUID(),token=()=>id().replaceAll('-','')+id().replaceAll('-','');
 const password='fictional-demo-password';
@@ -35,13 +36,27 @@ test('venue creates persistent fictional scenario without consuming audience ide
  const replay=await f.call(`/groups/${g}/venue`,input,admin.token);assert.deepEqual(replay.body.venue.scenario,scenario);
  assert.equal(f.get(g).history('responses').filter(r=>r.change.type==='REPORT').length,3);
 });
-test('Kyoto participants receive real building identities and town addresses',async t=>{
+test('Kyoto participants receive reviewed building addresses with public provenance',async t=>{
  const f=fixture(t),admin=await setup(f),g=admin.groupId;
  const start=await f.call(`/groups/${g}/venue`,{requestId:id(),password,areaId:'kyoto-gosho-south'},admin.token);
  const p=start.body.venue.placements[0];
  assert.ok(p.home?.plateauId?.startsWith('bldg_'));
  assert.match(p.home.address,/京都/);assert.equal(p.latitude,p.home.latitude);
+ assert.equal(p.home.addressPrecision,'verified-building-address');
+ assert.equal(p.home.address.includes('付近'),false);assert.match(p.home.address,/\d/);
+ assert.ok(p.home.addressEvidence.sources.every(s=>s.url.startsWith('https://')));
+ assert.equal(p.home.addressEvidence.cadastralBoundaryVerified,false);
  assert.equal(f.get(g).history('residents').length,0,'real homes remain untouched');
+});
+
+test('sixty-four simulated placements share twelve reviewed real buildings without invented room numbers',()=>{
+ assert.equal(venueBuildings.homes.length,64);
+ assert.equal(new Set(venueBuildings.homes.map(h=>h.plateauId)).size,12);
+ assert.equal(new Set(venueBuildings.homes.map(h=>h.latitude+':'+h.longitude)).size,64);
+ for(const home of venueBuildings.homes){
+  assert.equal(home.floor,'');assert.equal(home.room,'');
+  assert.ok(home.addressEvidence.osmCoverage>=0.75&&home.addressEvidence.plateauCoverage>=0.75);
+ }
 });
 
 test('home edits update the building but never move the assigned phone/SOS location',async t=>{

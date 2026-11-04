@@ -26,6 +26,8 @@ for(const entry of await readdir(web,{withFileTypes:true})){
  }
  if(entry.name.endsWith('.mjs'))await copyFile(join(web,entry.name),join(root,'dist/shared',entry.name));
 }
+await copyFile(join(root,'src/venue-buildings.json'),join(root,'dist/public/demo-building-addresses.json'));
+await copyFile(join(root,'../tools/building_analysis/venue-address-evidence.json'),join(root,'dist/public/demo-building-address-sources.json'));
 for(const entry of await readdir(join(root,'src'))){
  if(entry==='venue-buildings.json'){await copyFile(join(root,'src',entry),join(root,'dist/src',entry));continue;}
  if(!entry.endsWith('.mjs'))continue;

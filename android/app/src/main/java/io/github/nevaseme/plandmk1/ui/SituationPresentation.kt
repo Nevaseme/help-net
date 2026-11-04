@@ -180,8 +180,18 @@ fun publicRecordAuthor(authorId: String, people: List<Resident>, care: List<Care
         }
     } ?: "メンバー"
 
+// Format only recognized floor numbers; room and floor descriptions remain user text.
+fun residenceFloorLabel(floor: String, language: String = "ja"): String {
+    val value = java.text.Normalizer.normalize(floor.trim(), java.text.Normalizer.Form.NFKC)
+    val number = Regex("^(-?\\d+)(?:階)?$").matchEntire(value)?.groupValues?.get(1)?.toLongOrNull()
+        ?: Regex("^(?:B|地下)(\\d+)(?:階)?$", RegexOption.IGNORE_CASE).matchEntire(value)?.groupValues?.get(1)?.toLongOrNull()?.let { -it }
+        ?: return floor.trim()
+    if (number !in Int.MIN_VALUE.toLong()..Int.MAX_VALUE.toLong()) return floor.trim()
+    return if (language == "en") "Floor $number" else if (number < 0) "地下${-number}階" else "${number}階"
+}
+
 // The old schema stores home coordinates, not measured phone positions.
-fun residentMapPerson(person: Resident, places: List<PlaceEvent>, care: List<CareEvent>, position: PhonePosition? = null, memo: String = ""): MapPerson {
+fun residentMapPerson(person: Resident, places: List<PlaceEvent>, care: List<CareEvent>, position: PhonePosition? = null, memo: String = "", language: String = "ja"): MapPerson {
     val building = validHome(places, person.originId)?.buildingId?.let { id -> placeBuildings(places).find { it.buildingId == id } }
     val home = building?.let { MapHome(it.buildingId!!, it.displayLabel(), MapPoint(it.latitude!!, it.longitude!!)) }
         ?: MapHome("home:${person.originId}", "登録住居", MapPoint(person.latitude, person.longitude))
@@ -189,5 +199,5 @@ fun residentMapPerson(person: Resident, places: List<PlaceEvent>, care: List<Car
     return MapPerson(person.originId, person.displayName(), residentMapState(person, care),
         point = measured?.let { MapPoint(it.latitude, it.longitude) }, acquiredAt = measured?.acquiredAt,
         accuracy = measured?.accuracyMeters?.let { ceil(it).toInt() }, memo = memo, home = home,
-        bedroom = listOf(person.floor, person.room).filter { it.isNotBlank() }.joinToString("・").ifBlank { "未登録" })
+        bedroom = listOf(residenceFloorLabel(person.floor, language), person.room).filter { it.isNotBlank() }.joinToString("・").ifBlank { if (language == "en") "Not registered" else "未登録" })
 }

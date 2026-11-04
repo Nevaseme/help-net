@@ -10,13 +10,15 @@ import {buildingsAt} from '../web/building-picker.mjs';
 
 const assets=new URL('../../android/app/src/main/assets/kyoto-building-assessment/',import.meta.url);
 const catalogue=JSON.parse(await readFile(new URL('../../cloud-sync/src/venue-buildings.json',import.meta.url)));
-const source=JSON.parse(gunzipSync(await readFile(new URL('52354610.json.gzip',assets))));
+const sources=await Promise.all([...new Set(['52354610.json.gzip',...catalogue.homes.map(h=>h.attributeSource.asset)])].map(async asset=>JSON.parse(gunzipSync(await readFile(new URL(asset,assets))))));
+const source={buildings:sources.flatMap(s=>s.buildings)};
 const placeFor=h=>({buildingId:h.buildingId,label:h.address,latitude:h.latitude,longitude:h.longitude,locationReference:{plateauId:h.plateauId,dataset:'plateau-26100-kyoto-shi-2025'}});
 
 test('registered building details preserve read errors, exact identity, and source missingness',async t=>{
  const originalFetch=globalThis.fetch;
  t.after(()=>{globalThis.fetch=originalFetch;});
- const home=catalogue.homes.find(h=>h.plateauId==='bldg_f383d3d7-a2dd-4a17-bf4d-02fd0ce0c27f');
+ // Preserve the old registered-home regression independently of new-demo allocation.
+ const home={buildingId:'f383d3d7-a2dd-4a17-bf4d-02fd0ce0c27f',plateauId:'bldg_f383d3d7-a2dd-4a17-bf4d-02fd0ce0c27f',address:'京都府京都市中京区少将井御旅町付近',latitude:35.015627382769296,longitude:135.76033315936462};
  globalThis.fetch=async()=>new Response('',{status:503});
  await assert.rejects(buildingAtRegisteredPlace(placeFor(home)),/取得/);
  const packagedFetch=async url=>{
@@ -44,7 +46,7 @@ test('registered building details preserve read errors, exact identity, and sour
  assert.deepEqual(absent.attributes,{});
  const unlinked=await buildingAtRegisteredPlace({...placeFor(home),locationReference:{plateauId:null}});
  assert.equal(unlinked.attributesStatus,'unlinked');
- const missing=await buildingAtRegisteredPlace(placeFor(catalogue.homes[0]));
+ const missing=await buildingAtRegisteredPlace(placeFor(catalogue.homes.find(h=>h.attributes.year===null)));
  assert.equal(missing.attributesStatus,'source-missing');
  assert.equal(missing.attributes.year,null);
 
@@ -60,5 +62,6 @@ test('registered building details preserve read errors, exact identity, and sour
   assert.deepEqual(details.attributes,original.attributes);
   years+=Number(!!details.attributes.year);floors+=Number(!!details.attributes.floors);structures+=Number(!!details.attributes.structureCode);
  }
- assert.deepEqual({years,floors,structures},{years:10,floors:11,structures:10});
+ const expected=scenario.people.map(p=>source.buildings.find(b=>b.id===p.home.plateauId).attributes);
+ assert.deepEqual({years,floors,structures},{years:expected.filter(a=>a.year).length,floors:expected.filter(a=>a.floors).length,structures:expected.filter(a=>a.structureCode).length});
 });
