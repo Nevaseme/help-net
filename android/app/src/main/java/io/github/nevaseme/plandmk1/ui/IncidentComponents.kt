@@ -14,6 +14,7 @@ import io.github.nevaseme.plandmk1.PlanViewModel
 
 @Composable fun IncidentSelector(model: PlanViewModel) {
     val state by model.incidentUi.collectAsStateWithLifecycle()
+    val roster by model.roster.collectAsStateWithLifecycle()
     val saving by model.saving.collectAsStateWithLifecycle()
     var expanded by rememberSaveable { mutableStateOf(false) }
     val current=state.current
@@ -25,7 +26,7 @@ import io.github.nevaseme.plandmk1.PlanViewModel
         Column(Modifier.verticalScroll(rememberScrollState())) {
             if(state.options.isEmpty())Text("安否確認はまだありません")
             state.options.forEach { option -> TextButton(onClick={model.selectIncident(option.start.eventId);expanded=false}) {
-                Text("${if(option.start.training) "訓練" else "地震"}：${sampleIncidentTitle(option.start.groupId,option.start.title)}\n対象地域：${sampleAreaName(option.start.groupId,option.start.area)}\n開始した人：${publicRecordAuthor(option.start.authorId,state.residents,state.care)}\n開始日時：${formatTime(option.start.createdAt)}${if(option.closed) "（終了）" else ""}")
+                Text("${if(option.start.training) "訓練" else "地震"}：${sampleIncidentTitle(option.start.groupId,option.start.title)}\n対象地域：${sampleAreaName(option.start.groupId,option.start.area)}\n開始した人：${publicRecordAuthor(option.start.authorId,state.residents,state.care,roster)}\n開始日時：${formatTime(option.start.createdAt)}${if(option.closed) "（終了）" else ""}")
             } }
             TextButton(onClick={model.selectIncident("legacy");expanded=false}) { Text("過去の情報（災害未分類・閲覧のみ）") }
         }

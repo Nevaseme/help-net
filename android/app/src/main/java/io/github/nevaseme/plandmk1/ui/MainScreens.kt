@@ -148,7 +148,7 @@ import io.github.nevaseme.plandmk1.core.*
         buildingCounts=buildingResidentCounts(residents,places,care,roster),
         canUndo = { p -> canRevokeRescue(roster,group,model.localId)&&currentCareEvents(care.filter { it.subjectId == p.id },roster).any { it.action == CareAction.RESCUED } },
         onRescue = { model.saveCare(it.id, CareAction.RESCUED, "本人の救助完了を確認") },
-        onUndo = { p -> if(canRevokeRescue(roster,group,model.localId))currentCareEvents(care.filter { it.subjectId == p.id },roster).filter { it.action == CareAction.RESCUED }.maxByOrNull {it.createdAt}?.let { model.saveCare(p.id, CareAction.REVOKED, "救助完了の記録を訂正", it.eventId) } },
+        onUndo = { p -> model.revokeRescues(p.id) },
         history = { p -> residents.find { it.originId == p.id }?.let { CareHistoryAndEditor(model, it, care, own != null && incident.canEdit, saving) } },
         feedback = { p -> OperationFeedback(model, model.careSaveKey(p.id)) },
         openList = openList, onListClosed = onListClosed, listOnly = listOnly,onAddReport=onAddReport.takeIf {incident.canEdit},reports=reports,onReport=onReport,statisticsLabel=cloud.takeIf {it.groupId==group}?.groupName?.takeIf {it.isNotBlank()}?:uiText("group_label"))

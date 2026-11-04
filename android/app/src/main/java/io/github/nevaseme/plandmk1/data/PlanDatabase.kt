@@ -239,6 +239,20 @@ class RoomRecordStore(private val db: PlanDatabase,private val localDeviceId:Str
         val sequence=Math.addExact(rows.filter { it.incidentId==event.incidentId && it.authorId==event.authorId }.maxOfOrNull { it.sequence } ?: 0,1)
         event.copy(sequence=sequence).also { mergeIncident(it) }
     }
+    /** One transaction keeps concurrent rescue heads from being only partly revoked. */
+    suspend fun revokeRescues(groupId:String,incidentId:String,subjectId:String,authorId:String,authorName:String,createdAt:Long):List<CareEvent> = db.withTransaction {
+        requireActiveManagedIncident(groupId,incidentId)
+        val quakeStore=QuakeStore(db)
+        val roster=quakeStore.roster(groupId)
+        val quakes=quakeStore.events(groupId)
+        val canonical=canonicalIncidentId(roster,quakes,incidentId)
+        val view=managedIncidentOptions(incidents(groupId),roster,quakes).find {it.start.eventId==canonical}
+        require(view!=null&&!view.closed) {"開始中の災害を選んでください"}
+        rescueRecordsToRevoke(view.care,roster,groupId,subjectId,authorId).map {previous->
+            appendIncident(IncidentEvent(groupId,java.util.UUID.randomUUID().toString(),incidentId,authorId,authorName,1,createdAt,
+                IncidentKind.CARE,subjectId=subjectId,action=CareAction.REVOKED,note="救助完了の記録を訂正",supersedes=previous.eventId)).care()
+        }
+    }
     fun observeEvents(groupId: String) = db.careEvents().observe(groupId).map { it.map(CareEventRow::record) }
     override suspend fun events(groupId: String) = db.careEvents().all(groupId).map(CareEventRow::record)
     override suspend fun getEvent(groupId: String, eventId: String) = db.careEvents().get(groupId, eventId)?.record()

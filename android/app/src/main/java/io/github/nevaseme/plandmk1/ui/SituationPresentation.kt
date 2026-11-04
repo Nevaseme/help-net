@@ -187,9 +187,9 @@ fun residentMapState(person: Resident, care: List<CareEvent>,roster:MemberRoster
     }
 }
 
-fun publicRecordAuthor(authorId: String, people: List<Resident>, care: List<CareEvent>): String =
+fun publicRecordAuthor(authorId: String, people: List<Resident>, care: List<CareEvent>,roster:MemberRoster?=null): String =
     people.find { it.originId == authorId }?.let { person ->
-        when (residentMapState(person, care)) {
+        when (residentMapState(person, care,roster)) {
             MapSafety.SOS, MapSafety.UNANSWERED -> person.displayName()
             MapSafety.SAFE, MapSafety.RESCUED -> "メンバー"
         }

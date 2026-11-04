@@ -29,4 +29,22 @@ class AdminRescueCorrectionTest {
         assertEquals(serialized,Json.encodeToString(history.first()))
         assertEquals(2,history.size)
     }
+    @Test fun oneUndoRevokesAllConcurrentRescueHeadsAndKeepsOtherPeopleAndHistory() {
+        val second=rescue.copy(eventId="rescue-2",authorId="other-rescuer",createdAt=21)
+        val other=rescue.copy(eventId="other-person-rescue",subjectId="other-person")
+        val history=listOf(rescue,second,other)
+        val before=Json.encodeToString(history)
+        val targets=rescueRecordsToRevoke(history,roster,"g","person","admin")
+        assertEquals(setOf("rescue","rescue-2"),targets.map {it.eventId}.toSet())
+        val corrections=targets.mapIndexed {i,e->revoke.copy(eventId="revoke-$i",supersedes=e.eventId)}
+        val combined=history+corrections
+        val resident=Resident("g","person",1,10,"Name",35.0,135.0,"2","Room",Safety.SOS)
+        assertEquals(MapSafety.SOS,residentMapState(resident,combined,roster))
+        assertTrue(rescueRecordsToRevoke(combined,roster,"g","person","admin").isEmpty())
+        assertEquals(listOf(other),currentCareEvents(combined,roster).filter {it.action==CareAction.RESCUED})
+        assertEquals(before,Json.encodeToString(history))
+        assertEquals("Name",publicRecordAuthor("person",listOf(resident),combined,roster))
+        assertFalse(careSummary(combined,"person",roster).contains("本人の救助完了"))
+        assertThrows(IllegalArgumentException::class.java){rescueRecordsToRevoke(history,roster,"g","person","leader")}
+    }
 }

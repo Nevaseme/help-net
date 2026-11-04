@@ -140,7 +140,7 @@ fun homeLabel(rows: List<PlaceEvent>,person: String): String {
         Text(if(LocalUiLanguage.current=="en")"Total residents: ${counts.total}" else "登録住民：${counts.total}人")
         Text("${safetyText(MapSafety.SAFE)} ${counts.safe} · ${safetyText(MapSafety.UNANSWERED)} ${counts.unanswered}\nSOS ${counts.sos} · ${safetyText(MapSafety.RESCUED)} ${counts.rescued}")
         Text("この建物に登録されている人",style=MaterialTheme.typography.titleMedium)
-        BuildingPeople(rows,buildingId,visibleResidents,model.localId,onResident,care)
+        BuildingPeople(rows,buildingId,visibleResidents,model.localId,onResident,care,roster)
         key(incident.selection,buildingId) {BuildingCareEditor(model,buildingId,rows,incident.selection,own!=null&&incident.canEdit,saving)}
     }},confirmButton={TextButton(enabled=!saving,onClick=onClose){Text("閉じる")}})
     if(editing)BuildingForm(model,building,own){editing=false}
@@ -150,6 +150,7 @@ fun homeLabel(rows: List<PlaceEvent>,person: String): String {
     }},confirmButton={TextButton(enabled=!saving,onClick={model.registerUnit(buildingId,unitName,editingUnit){newUnit=false;unitName=""}}){Text("住戸を保存")}},dismissButton={TextButton(enabled=!saving,onClick={newUnit=false}){Text("閉じる")}})
 }
 @Composable private fun BuildingCareEditor(model: PlanViewModel,buildingId: String,rows: List<PlaceEvent>,incident: String,canEdit: Boolean,saving: Boolean) {
+    val roster by model.roster.collectAsStateWithLifecycle()
     val people by model.residents.collectAsStateWithLifecycle()
     val care by model.careEvents.collectAsStateWithLifecycle()
     var action by rememberSaveable {mutableStateOf(BuildingAction.CHECKING)}
@@ -160,7 +161,7 @@ fun homeLabel(rows: List<PlaceEvent>,person: String): String {
     if(history.isEmpty())Text("この災害の建物対応記録はありません")
     history.forEach {e->
         Text(e.action!!.label()+if(e.eventId !in heads)"（訂正前）" else "",style=MaterialTheme.typography.titleSmall)
-        Text("記録した人：${publicRecordAuthor(e.authorId,people,care)}\n記録日時：${formatTime(e.createdAt)}\n確認範囲：${e.scope}\n未確認事項：${e.unresolved}\n${e.note}")
+        Text("記録した人：${publicRecordAuthor(e.authorId,people,care,roster)}\n記録日時：${formatTime(e.createdAt)}\n確認範囲：${e.scope}\n未確認事項：${e.unresolved}\n${e.note}")
         if(canEdit&&e.authorId==model.localId&&e.eventId in heads)TextButton(enabled=!saving,onClick={supersedes=e.eventId;action=e.action;scope=e.scope;unresolved=e.unresolved;note=e.note}){Text("この建物記録を訂正")}
         HorizontalDivider()
     }

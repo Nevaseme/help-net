@@ -250,6 +250,20 @@ class PlanViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun revokeRescues(subjectId:String) {
+        val key=careSaveKey(subjectId)
+        if(!saveOperations.begin(key))return
+        val targetGroup=group.value
+        val incident=incidentUi.value.takeIf {it.groupId==targetGroup}?.selection.orEmpty()
+        viewModelScope.launch {
+            saveOperations.complete(key,"救助の取り消し",persist={
+                val own=checkNotNull(ownForOperation(targetGroup)) {"先に自分の情報を登録してください"}
+                checkNotNull(personForOperation(targetGroup,subjectId)) {"対象住民が見つかりません"}
+                app.store.revokeRescues(targetGroup,incident,subjectId,localId,own.name,System.currentTimeMillis())
+            },publish={app.recordsChanged()})
+        }
+    }
+
     fun placeSaveKey(kind: PlaceKind,target: String="")="place:${group.value}:${if(kind==PlaceKind.CARE)incidentUi.value.selection else ""}:$kind:$target"
     private fun savePlace(kind: PlaceKind,target: String="",make: (PlaceEvent)->PlaceEvent,onSaved: (PlaceEvent)->Unit={}) {
         val key=placeSaveKey(kind,target);if(!saveOperations.begin(key))return
