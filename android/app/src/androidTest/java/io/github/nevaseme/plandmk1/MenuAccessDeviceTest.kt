@@ -42,7 +42,7 @@ class MenuAccessDeviceTest {
    assertNull(app.store.all(group).find{it.originId==me})
    compose.waitForIdle();capture("admin-start-en")
    shellComposeContent{PlanDMk1Theme{PlanApp(model)}}
-   compose.onNodeWithContentDescription("Open menu").performClick()
+   compose.onNodeWithContentDescription("Back").performClick()
    compose.onAllNodesWithText("Map",substring=false).onFirst().performClick()
    compose.onNodeWithText("Tell us your current status").assertIsDisplayed()
    compose.onNodeWithText("Show safe").assertDoesNotExist()
