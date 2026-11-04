@@ -199,15 +199,25 @@ class CloudController(private val app:PlanDApplication) {
         }}
     }
     fun joinVenue(endpoint:String,venueName:String,password:String,name:String)=register(endpoint,name,venueName=venueName,venuePassword=password)
-    fun startVenue(password:String,privateTraining:Boolean=false,title:String="",area:String="",positionMode:String="KYOTO",onStarted:()->Unit={}) {
+    fun startVenue(password:String,privateTraining:Boolean=false,title:String="",area:String="",positionMode:String="KYOTO",elapsedMinutes:Int=if(privateTraining)0 else 3,onStarted:()->Unit={}) {
         val session=settings.session(group)?:run {mutable.value=mutable.value.copy(error="架空の位置を共有するにはグループへの接続が必要です");return}
         if(session.role!=MemberRole.ADMIN||!beginOperation("訓練を開始しています…"))return
         scope.launch {var started=false;lock.withLock {
-            try {val body=withContext(Dispatchers.IO){api.startVenue(session,settings.venueStart(session.groupId),password,privateTraining,title,area,positionMode)}
+            try {val body=withContext(Dispatchers.IO){api.startVenue(session,settings.venueStart(session.groupId),password,privateTraining,title,area,positionMode,elapsedMinutes)}
                 rememberVenue(body);settings.setVenueOnboarding(session.groupId,checkNotNull(body.venue).sessionId);settings.finishVenueStart(session.groupId);venueAdminPasswordDraft.value="";started=true
             }catch(e:CancellationException){throw e}catch(e:Exception){mutable.value=mutable.value.copy(error=safeError(e))}
             finally {mutable.value=mutable.value.copy(busy=false)}
         };if(started){sync();onStarted()}}
+    }
+    fun setVenueClock(minutes:Int) {
+        val session=settings.session(group)?:return
+        val venue=mutable.value.venue?:return
+        if(session.role!=MemberRole.ADMIN||!beginOperation("デモの経過時間を変更しています…"))return
+        scope.launch {lock.withLock {
+            try {val body=withContext(Dispatchers.IO){api.setVenueClock(session,venue.sessionId,minutes)};rememberVenue(body)}
+            catch(e:CancellationException){throw e}catch(e:Exception){mutable.value=mutable.value.copy(error=safeError(e))}
+            finally {mutable.value=mutable.value.copy(busy=false)}
+        }}
     }
     fun setMunicipality(code:String) {
         val session=settings.session(group)?:return

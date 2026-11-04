@@ -1,7 +1,18 @@
-// Display-only aliases for the 12 verified Kyoto demo catalogue addresses.
+// Display-only aliases for 12 verified buildings and 11 legacy approximate demo labels.
 // Town readings: Japan Post; provenance and scope: docs/demo-address-display.md.
 // This is deliberately not a general address translator or normalizer.
 export const DEMO_ADDRESS_LABELS = Object.freeze({
+  "京都府京都市中京区三本木五丁目東洞院通竹屋町付近": "Near Sanbongi Gochome, Higashinotoin-dori Takeyamachi, Nakagyo-ku, Kyoto",
+  "京都府京都市中京区亀屋町付近": "Near Kameya-cho, Nakagyo-ku, Kyoto",
+  "京都府京都市中京区塀之内町付近": "Near Heinouchi-cho, Nakagyo-ku, Kyoto",
+  "京都府京都市中京区壺屋町付近": "Near Tsuboya-cho, Nakagyo-ku, Kyoto",
+  "京都府京都市中京区天守町付近": "Near Tenshu-cho, Nakagyo-ku, Kyoto",
+  "京都府京都市中京区少将井御旅町付近": "Near Shoshoi Otabicho, Nakagyo-ku, Kyoto",
+  "京都府京都市中京区巴町付近": "Near Tomoe-cho, Nakagyo-ku, Kyoto",
+  "京都府京都市中京区松屋町付近": "Near Matsuya-cho, Nakagyo-ku, Kyoto",
+  "京都府京都市中京区楠町付近": "Near Kusunoki-cho, Nakagyo-ku, Kyoto",
+  "京都府京都市中京区真如堂町付近": "Near Shinnyodo-cho, Nakagyo-ku, Kyoto",
+  "京都府京都市中京区鍵屋町付近": "Near Kagiya-cho, Nakagyo-ku, Kyoto",
   '京都府京都市中京区少将井町245-1': '245-1 Shoshoicho, Nakagyo-ku, Kyoto, Kyoto Prefecture',
   '京都府京都市中京区御池之町301': '301 Oikenocho, Nakagyo-ku, Kyoto, Kyoto Prefecture',
   '京都府京都市中京区御池之町302': '302 Oikenocho, Nakagyo-ku, Kyoto, Kyoto Prefecture',

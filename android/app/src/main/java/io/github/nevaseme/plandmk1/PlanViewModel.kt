@@ -41,7 +41,8 @@ class PlanViewModel(application: Application) : AndroidViewModel(application) {
             val demo=authorityState.third?.takeIf {it.active(g,preferred)}
             val projectedJournal=journal+demo?.scenarioJournal().orEmpty()
             val projectedOptions=if(demo!=null)managedIncidentOptions(projectedJournal,authorityState.first,authorityState.second)else options
-            val state=projectIncidentUi(g,displayed,care,projectedJournal,preferred,projectedOptions)
+            val clockOptions=projectedOptions.map {v->demo?.projectClock(v)?:v}
+            val state=projectIncidentUi(g,displayed,care,projectedJournal,preferred,clockOptions)
             if(preferred==null&&state.selection.isNotEmpty()) {
                 try {app.installation.selectIncident(g,state.selection)}
                 catch(e: Exception) {message.value=e.localizedMessage;return@combine projectIncidentUi(g,residents,care,journal,"",options)}

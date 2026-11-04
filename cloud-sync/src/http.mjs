@@ -41,10 +41,10 @@ export async function handle(request,env){
    return json(result.body,result.status);
   }
   const create=url.pathname==='/api/v1/groups'&&request.method==='POST';
-  const match=/^\/api\/v1\/groups\/([^/]+)\/(join|invitations|roster|records|nearby|relay-keys|municipality|access)$/.exec(url.pathname);
+  const match=/^\/api\/v1\/groups\/([^/]+)\/(join|invitations|roster|records|nearby|relay-keys|municipality|access|venue-clock)$/.exec(url.pathname);
   requireValue(create||match,'not_found',404);
   const action=create?'create':match[2];
-  requireValue((['roster','nearby'].includes(action)&&request.method==='GET')||(['records','relay-keys'].includes(action)&&['GET','POST'].includes(request.method))||(['create','join','invitations','municipality','access'].includes(action)&&request.method==='POST'),'method_not_allowed',405);
+  requireValue((['roster','nearby'].includes(action)&&request.method==='GET')||(['records','relay-keys'].includes(action)&&['GET','POST'].includes(request.method))||(['create','join','invitations','municipality','access','venue-clock'].includes(action)&&request.method==='POST'),'method_not_allowed',405);
   if(['create','join'].includes(action)){
    const result=await env.SIGNUP_LIMITER.limit({key:request.headers.get('CF-Connecting-IP')??'local'});requireValue(result.success,'rate_limited',429);
   }
@@ -52,7 +52,7 @@ export async function handle(request,env){
   const groupId=create?payload?.requestId:match[1];requireValue(uuid(groupId));
   const token=request.headers.get('authorization')?.match(/^Bearer ([a-f0-9]{64})$/)?.[1]??'';
   if(!['create','join'].includes(action))requireValue(token,'unauthorized',401);
-  const operation=action==='municipality'?'setMunicipality':action==='records'?(request.method==='GET'?'pull':'push'):action==='relay-keys'?(request.method==='GET'?'relayKeys':'registerRelayKey'):action==='invitations'?'invite':action;
+  const operation=action==='venue-clock'?'setVenueClock':action==='municipality'?'setMunicipality':action==='records'?(request.method==='GET'?'pull':'push'):action==='relay-keys'?(request.method==='GET'?'relayKeys':'registerRelayKey'):action==='invitations'?'invite':action;
   const args=operation==='create'?{...payload,groupId}:operation==='pull'?{after:Number(url.searchParams.get('after')??0),limit:Number(url.searchParams.get('limit')??100)}:payload;
   if(operation==='push'){requireResponseV2(request,payload?.records);requireAddressV3(request,payload?.records);requireDeviceV4(request,payload?.records);requireHomeV5(request,payload?.records);requireInjuryV6(request,payload?.records);requireMaterialV7(request,payload?.records);}
   const result=await env.GROUPS.getByName(groupId).dispatch(operation,token,args);

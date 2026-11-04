@@ -5,6 +5,7 @@ import catalogue from './venue-buildings.json' with {type:'json'};
 import {latestDemoHome} from '../../lab/web/device-records.mjs';
 import {withDemoObservations} from '../../lab/web/venue-observations.mjs';
 
+import {demoCommunityAt,demoPhonePoint} from './venue-layout.mjs';
 const enc=new TextEncoder();
 const hex=bytes=>Array.from(new Uint8Array(bytes),v=>v.toString(16).padStart(2,'0')).join('');
 const sha=async text=>hex(await crypto.subtle.digest('SHA-256',enc.encode(text)));
@@ -16,7 +17,7 @@ async function passwordHash(password,salt){
 }
 const area={id:'kyoto-gosho-south',name:'御所南〜烏丸御池',south:35.011,north:35.018,west:135.758,east:135.767};
 function slots(){
- const points=catalogue.homes.map(home=>({latitude:home.latitude,longitude:home.longitude,home}));
+ const counts=new Map();const points=catalogue.homes.map(home=>{const region=demoCommunityAt(home.longitude),slot=counts.get(region)||0;counts.set(region,slot+1);return {...demoPhonePoint(region,24+slot),home};});
  for(let n=points.length-1;n>0;n--){const r=crypto.getRandomValues(new Uint32Array(1))[0]%(n+1);[points[n],points[r]]=[points[r],points[n]];}
  return points;
 }
@@ -30,7 +31,7 @@ export const venueMethods={
  venueSnapshot(){
   const config=this.venueConfig();if(!config)return null;
   const closed=this.history('quakes').some(e=>e.action==='END'&&(e.targetId===config.sessionId||e.endedIncidentIds?.includes(config.sessionId)));
-  return {version:1,mode:'VENUE_DEMO',positionMode:config.positionMode??'KYOTO',startedAt:config.startedAt??0,groupId:this.meta('groupId'),sessionId:config.sessionId,incidentId:config.sessionId,areaId:config.areaId,areaName:config.positionMode==='ACTUAL'?'参加者の現在地':area.name,closed,
+  return {version:1,mode:'VENUE_DEMO',positionMode:config.positionMode??'KYOTO',startedAt:config.startedAt??0,simulationStartedAt:config.simulationStartedAt??null,groupId:this.meta('groupId'),sessionId:config.sessionId,incidentId:config.sessionId,areaId:config.areaId,areaName:config.positionMode==='ACTUAL'?'参加者の現在地':area.name,closed,
    scenario:withDemoObservations(config.scenario)??null,recoveryAvailable:!config.privateTraining,inactiveMemberIds:this.inactiveMembers(),placements:this.s.all('SELECT p.body FROM venue_participants p LEFT JOIN device_access a ON a.device_id=p.device_id WHERE p.session_id=? AND COALESCE(a.revoked,0)=0 ORDER BY p.device_id',config.sessionId).map(r=>{const p=JSON.parse(r.body);if(config.positionMode==='ACTUAL')return p;const home=latestDemoHome(this.history('deviceRecords'),this.meta('groupId'),config.sessionId,p.deviceId)??p.home??config.slots[p.slotId]?.home??catalogue.homes[p.slotId];return {...p,home};})};
  },
  assignVenue(deviceId,memberId,name){
@@ -41,11 +42,19 @@ export const venueMethods={
   const placement={sessionId:config.sessionId,deviceId,memberId,name,slotId:count,...(config.positionMode==='ACTUAL'?{latitude:null,longitude:null,source:'DEVICE_LOCATION'}:{...config.slots[count],source:'DEMO_ASSIGNED'})};
   this.s.run('INSERT INTO venue_participants(session_id,device_id,body) VALUES (?,?,?)',config.sessionId,deviceId,JSON.stringify(placement));return placement;
  },
+ async setVenueClock(token,input){
+  const actor=await this.identity(token);requireValue(actor.role==='ADMIN','admin_required',403);
+  requireValue(Number.isInteger(input?.minutes)&&input.minutes>=0&&input.minutes<=1440,'invalid_demo_minutes',400,'0〜1440分で指定してください。');
+  const config=this.venueConfig();requireValue(config&&!this.venueSnapshot().closed&&input.sessionId===config.sessionId,'venue_changed',409);
+  config.simulationStartedAt=this.now()-input.minutes*60000;
+  this.s.run('UPDATE metadata SET value=? WHERE key=?',JSON.stringify(config),'venue');await this.s.flush();return this.snapshot();
+ },
  async authorizeVenue(token){const actor=await this.identity(token);requireValue(actor.role==='ADMIN','admin_required',403);return {groupName:this.meta('groupName')};},
  async configureVenue(token,input){
   const actor=await this.identity(token);requireValue(actor.role==='ADMIN','admin_required',403);
   requireValue(input&&uuid(input.requestId)&&input.areaId===area.id);
   const privateTraining=input.privateTraining===true;
+  const elapsedMinutes=input.elapsedMinutes??(privateTraining?0:3);requireValue(Number.isInteger(elapsedMinutes)&&elapsedMinutes>=0&&elapsedMinutes<=1440,'invalid_demo_minutes',400);
   requireValue(input.positionMode===undefined||['KYOTO','ACTUAL'].includes(input.positionMode),'invalid_position_mode',400);
   if(!privateTraining)validateDemoPassword(input.password);
   if(privateTraining)requireValue(typeof input.title==='string'&&input.title.trim().length>0&&input.title.length<=80&&typeof input.area==='string'&&input.area.trim().length>0&&input.area.length<=120);
@@ -53,7 +62,7 @@ export const venueMethods={
   this.s.transaction(()=>{
    const previous=this.venueConfig();if(previous?.sessionId===input.requestId)return;
    requireValue(!previous||this.venueSnapshot().closed,'venue_already_active',409,'現在の会場デモを終了してから、新しいデモを開始してください。');
-   const config={sessionId:input.requestId,areaId:input.areaId,privateTraining,positionMode:input.positionMode??'KYOTO',startedAt:this.now(),salt,passwordHash:hash,slots:slots(),scenario:privateTraining?null:createVenueScenario(input.requestId)};
+   const config={sessionId:input.requestId,areaId:input.areaId,privateTraining,positionMode:input.positionMode??'KYOTO',startedAt:this.now(),simulationStartedAt:this.now()-elapsedMinutes*60000,salt,passwordHash:hash,slots:slots(),scenario:privateTraining?null:createVenueScenario(input.requestId)};
    this.s.run('INSERT INTO metadata(key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value','venue',JSON.stringify(config));
    this.append(actor,{collection:'quakes',record:{groupId:this.meta('groupId'),eventId:input.requestId,actorDeviceId:actor.deviceId,operatedAt:this.now(),action:'TRAINING_START',training:true,title:privateTraining?input.title.trim():'会場デモ',area:privateTraining?input.area.trim():config.positionMode==='ACTUAL'?'参加者の現在地':area.name}});
    if(config.scenario)seedVenueScenario(this,actor,config);

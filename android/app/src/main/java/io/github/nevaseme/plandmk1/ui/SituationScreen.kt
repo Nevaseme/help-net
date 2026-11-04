@@ -82,7 +82,8 @@ fun SituationScreen(
     var choosingReport by rememberSaveable {mutableStateOf(false)}
     var showSafe by rememberSaveable { mutableStateOf(true) }
     var tsunami by rememberSaveable { mutableStateOf(false) }
-    var tsunamiStatus by remember {mutableStateOf("津波の高さを入力してください")}
+    val tsunamiEnglish=LocalUiLanguage.current=="en"
+    var tsunamiStatus by remember(tsunamiEnglish) {mutableStateOf(tsunamiText("enter",tsunamiEnglish))}
     var tsunamiHeight by rememberSaveable {mutableStateOf("")}
     val keyboard=LocalSoftwareKeyboardController.current
     var tsunamiResult by remember { mutableStateOf<io.github.nevaseme.plandmk1.tsunami.TsunamiComputedResult?>(null) }
@@ -95,6 +96,7 @@ fun SituationScreen(
     var extraHome by remember { mutableStateOf<MapHome?>(null) }
     var failed by remember { mutableStateOf(false) }
     val camera = remember { SituationCamera() }
+    val currentLocation=rememberCurrentMapLocation(!preview&&!listOnly&&LocalMapVisible.current,camera)
     val unknown = people.filterNot { it.hasPosition(now) }
     LaunchedEffect(openList) { if (openList) { sheet = "all"; listFilter = null; areaIds = null } }
     val close = { sheet = null; onListClosed() }
@@ -125,11 +127,11 @@ fun SituationScreen(
                 ApprovedSwitch(showSafe,{showSafe=it},uiText("show_safe"))
             }
             if(!preview) Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp)) {
-                FilterChip(selected=tsunami,onClick={tsunami=!tsunami},label={Text("津波",fontSize=13.sp)},modifier=Modifier.heightIn(min=48.dp),colors=FilterChipDefaults.filterChipColors(selectedContainerColor=Color(0x2E155EEF),selectedLabelColor=MaterialTheme.colorScheme.primary))
+                FilterChip(selected=tsunami,onClick={tsunami=!tsunami},label={Text(tsunamiText("title",tsunamiEnglish),fontSize=13.sp)},modifier=Modifier.heightIn(min=48.dp),colors=FilterChipDefaults.filterChipColors(selectedContainerColor=Color(0x2E155EEF),selectedLabelColor=MaterialTheme.colorScheme.primary))
                 BasicTextField(value=tsunamiHeight,onValueChange={tsunamiHeight=it},singleLine=true,
                     textStyle=MaterialTheme.typography.bodyMedium.copy(color=MaterialTheme.colorScheme.onSurface,textAlign=androidx.compose.ui.text.style.TextAlign.Center),
                     keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number,imeAction=ImeAction.Done),keyboardActions=KeyboardActions(onDone={keyboard?.hide()}),
-                    modifier=Modifier.width(44.dp).heightIn(min=48.dp).semantics {contentDescription="津波の高さ（m）";stateDescription=tsunamiStatus},
+                    modifier=Modifier.width(44.dp).heightIn(min=48.dp).semantics {contentDescription=tsunamiText("height",tsunamiEnglish);stateDescription=tsunamiStatus},
                     decorationBox={inner->Box(Modifier.fillMaxWidth().heightIn(min=48.dp).padding(vertical=4.dp).border(1.dp,if(tsunamiHeight.isNotBlank() && io.github.nevaseme.plandmk1.tsunami.TsunamiPrecomputedHeight.parse(tsunamiHeight)==null)MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline,RoundedCornerShape(6.dp)).padding(horizontal=4.dp),contentAlignment=Alignment.Center){inner()}})
                 Text("m",fontSize=13.sp)
             }
@@ -139,7 +141,7 @@ fun SituationScreen(
             }
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {
-            SituationMap(people, homes, center, showSafe, now, preview, camera, initialZoom=initialZoom, tsunamiResult=tsunamiResult,neighborhoods=neighborhoods.filter {it.row.id!=ownNeighborhoodId},onNeighborhood={neighborhoodId=it;sheet="neighborhood"},
+            SituationMap(people, homes, center, showSafe, now, preview, camera, initialZoom=initialZoom, currentLocation=currentLocation.fix, tsunamiResult=tsunamiResult,neighborhoods=neighborhoods.filter {it.row.id!=ownNeighborhoodId},onNeighborhood={neighborhoodId=it;sheet="neighborhood"},
                 onPerson = { selectedId = it.id; sheet = "person" },
                 onHome = { extraHome = it; homePersonId = null; homeId = it.id; sheet = "home" },
                 onOverlapping = { areaIds = it.map(MapPerson::id); listFilter = null; sheet = "overlap" }, onError = { failed = true }, modifier = Modifier.fillMaxSize(),
@@ -157,7 +159,7 @@ fun SituationScreen(
                 TextButton(onClick = { sheet = "legend" }) { Text("凡例", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface); Text(" ›") }
             }
             Surface(Modifier.align(Alignment.BottomEnd).padding(end = 12.dp, bottom = 36.dp), shape = CircleShape, shadowElevation = 2.dp, color = MaterialTheme.colorScheme.surface) {
-                IconButton(onClick = { camera.move(center) }) { PlanIcon("target", "表示の中心に戻る") }
+                IconButton(onClick = { currentLocation.locate() }) { PlanIcon("target", if(tsunamiEnglish)"My location" else "現在地") }
             }
             if(!preview) TsunamiMapCalculation(enabled=tsunami,height=tsunamiHeight,onResult={tsunamiResult=it},onStatus={tsunamiStatus=it})
             if (failed) Surface(Modifier.align(Alignment.TopStart).padding(12.dp), shape = RoundedCornerShape(12.dp)) {
@@ -271,8 +273,8 @@ fun filteredPeople(people:List<MapPerson>,filter:String?,now:Long)=when(filter){
     }
 }
 
-@Composable private fun Observation(resource: Int, text: String) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) { Image(painterResource(resource), null, Modifier.size(24.dp)); Text(text, style = MaterialTheme.typography.bodyMedium) }
+@Composable private fun Observation(resource: Int, text: String,modifier:Modifier=Modifier) {
+    Row(modifier,verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) { Image(painterResource(resource), null, Modifier.size(24.dp)); Text(text, style = MaterialTheme.typography.bodyMedium) }
 }
 
 @Composable private fun PersonRow(person: MapPerson, now: Long, unknown: Boolean, click: () -> Unit) {
@@ -354,7 +356,7 @@ fun filteredPeople(people:List<MapPerson>,filter:String?,now:Long)=when(filter){
             if (person.impactAt != null || person.enclosedAt != null) {
                 HorizontalDivider(); Text(uiText("phone_observations"), style = MaterialTheme.typography.titleMedium)
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                    listOf(Triple(person.impactAt,R.drawable.impact,uiText("impact")),Triple(person.enclosedAt,R.drawable.enclosed,uiText("enclosed"))).forEach {(time,icon,label)->if(time!=null)OutlinedCard(Modifier.weight(1f)) {Column(Modifier.padding(10.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){Observation(icon,label);Text(formatTime(time),fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)}}}
+                    listOf(Triple(person.impactAt,R.drawable.impact,uiText("impact")),Triple(person.enclosedAt,R.drawable.enclosed,uiText("enclosed"))).forEach {(time,icon,label)->if(time!=null)OutlinedCard(Modifier.weight(1f)) {Column(Modifier.padding(10.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){Observation(icon,label,if(LocalUiLanguage.current=="en")Modifier.heightIn(min=48.dp)else Modifier);Text(formatTime(time),fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)}}}
                 }
             }
         }

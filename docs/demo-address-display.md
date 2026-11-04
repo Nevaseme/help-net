@@ -2,7 +2,7 @@
 
 Reviewed 2026-11-04. Scope: the 12 unique published building addresses already
 present in `cloud-sync/src/venue-buildings.json`, covering its 64 simulated home
-placements in Kyoto Gosho south / Karasuma Oike. This does not translate other
+placements in Kyoto Gosho south / Karasuma Oike. Eleven exact legacy approximate labels are also covered, as described below. This does not translate arbitrary
 addresses in the bounding box or elsewhere in Japan.
 
 `lab/web/demo-address-display.mjs` exports `DEMO_ADDRESS_LABELS` and
@@ -61,3 +61,9 @@ lot numbers; see each catalogue home's `addressEvidence`.
 | 京都府京都市中京区守山町156-3 | 156-3 Moriyama-cho, Nakagyo-ku, Kyoto, Kyoto Prefecture |
 | 京都府京都市中京区毘沙門町546 | 546 Bishamon-cho, Nakagyo-ku, Kyoto, Kyoto Prefecture |
 | 京都府京都市中京区六丁目290 | 290 Rokuchome, Nakagyo-ku, Kyoto, Kyoto Prefecture |
+
+## Legacy sessions
+
+Existing demos may retain one of eleven approximate labels. Their exact string aliases now display `Near …` in English; no lot number, home, position, or stored record is inferred or changed. New demos already use the twelve reviewed full addresses above and do not require this fallback.
+
+Town readings were checked against [Japan Post’s Nakagyo ward list](https://www.post.japanpost.jp/cgi-zip/zipcode.php?city=1261040&pref=26): Sanbongi Gochome, Kameya-cho, Heinouchi-cho, Tsuboya-cho, Tenshu-cho, Shoshoi Otabicho, Tomoe-cho, Matsuya-cho, Kusunoki-cho, Shinnyodo-cho and Kagiya-cho. Street names follow the [Kyoto municipal Nijo Castle English access map](https://nijo-jocastle.city.kyoto.lg.jp/wp-content/themes/nijojo/assets/img/admission/map_access_en.pdf): Higashinotoin-dori and Takeyamachi-dori. The Casey Brown legacy label retains the word `Near`.

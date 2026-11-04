@@ -11,7 +11,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.test.*
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.test.platform.app.InstrumentationRegistry
 import io.github.nevaseme.plandmk1.ui.*
 import io.github.nevaseme.plandmk1.ui.theme.PlanDMk1Theme
@@ -23,7 +23,7 @@ import java.util.Locale
 
 /** In-memory components only: no profile, group, location or server changes. */
 class BuildingStatusPrivacyDeviceTest {
-    @get:Rule val compose=createComposeRule()
+    @get:Rule val compose=createEmptyComposeRule()
     private val start=1_800_000_000_000L
     private val home=MapHome("building","京都府京都市中京区少将井町245-1",MapPoint(35.0,135.0),built=1995,floors=2)
     private val phone=MapPoint(35.1,135.1)
@@ -43,7 +43,7 @@ class BuildingStatusPrivacyDeviceTest {
         )
         var jump:MapPoint?=null
         var detail:MapPerson?=null
-        compose.setContent {Fixture {BuildingMapDetail(home,BuildingResidentCounts(4,1,1,1,1),source.map {projectPersonPrivacy(it,start,now.value)},now.value,{jump=it},{detail=it},{})}}
+        shellComposeContent {Fixture {BuildingMapDetail(home,BuildingResidentCounts(4,1,1,1,1),source.map {projectPersonPrivacy(it,start,now.value)},now.value,{jump=it},{detail=it},{})}}
         compose.onNodeWithText("Total residents: 4").assertIsDisplayed()
         compose.onNodeWithText("Safe 1 · No response 1\nSOS 1 · Rescued 1").assertIsDisplayed()
         compose.onNodeWithText("2 floors").assertIsDisplayed()
@@ -63,7 +63,7 @@ class BuildingStatusPrivacyDeviceTest {
         val admin=mutableStateOf(false)
         var undos=0
         var homeOpens=0
-        compose.setContent {Fixture {PersonMapDetail(person.value,start+200_000,true,admin.value,{}, {undos++},{homeOpens++},{},{Text("Private history")})}}
+        shellComposeContent {Fixture {PersonMapDetail(person.value,start+200_000,true,admin.value,{}, {undos++},{homeOpens++},{},{Text("Private history")})}}
         compose.onNodeWithText("Safe resident").assertIsDisplayed()
         assertPrivateFieldsAbsent()
         capture("safe-anonymous.png")
@@ -76,6 +76,24 @@ class BuildingStatusPrivacyDeviceTest {
         compose.onNodeWithText("Correct rescued status").performClick()
         compose.runOnIdle {assertEquals(1,undos);assertEquals(0,homeOpens)}
         capture("rescued-admin-anonymous.png")
+    }
+    @Test fun shortObservationLabelsAndTsunamiLegendInEnglish() {
+        shellComposeContent {Fixture {androidx.compose.foundation.layout.Column {TsunamiLegend();Text(uiText("impact"));Text(uiText("enclosed"));Text(tsunamiText("range",true))}}}
+        compose.onNodeWithText("Tsunami inundation depth").assertIsDisplayed()
+        compose.onNodeWithText("3m or more").assertIsDisplayed()
+        compose.onNodeWithText("Impact").assertIsDisplayed()
+        compose.onNodeWithText("Enclosed space").assertIsDisplayed()
+        compose.onNodeWithText("Enter a whole number from 0 to 35m").assertIsDisplayed()
+        capture("tsunami-labels-en.png")
+    }
+    @Test fun observationCardsUseAtMostTwoEnglishLines() {
+        val person=MapPerson("p","Casey Brown",MapSafety.UNANSWERED,phone,start,home=home,bedroom="Floor 2",impactAt=start,enclosedAt=start,demo=true,fictional=true)
+        shellComposeContent {Fixture {PersonMapDetail(person,start+200000,true,false,{},{},{},{},{})}}
+        compose.onNodeWithText("Enclosed space").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Enclosed space").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult) {action->
+            val layouts=mutableListOf<androidx.compose.ui.text.TextLayoutResult>();action(layouts);assertTrue(layouts.isNotEmpty());assertTrue(layouts.all {it.lineCount<=2})
+        }
+        capture("observation-cards-en.png")
     }
     private fun assertPrivateFieldsAbsent() {
         listOf("Private name","Private bedroom","Private memo","Private history",home.address,"245-1 Shoshoicho, Nakagyo-ku, Kyoto, Kyoto Prefecture").forEach {compose.onNodeWithText(it).assertDoesNotExist()}

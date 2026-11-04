@@ -181,15 +181,22 @@ fun CloudSyncButton(busy: Boolean, onSync: () -> Unit) {
     val adminPassword by model.cloud.venueAdminPasswordDraft.collectAsStateWithLifecycle()
     val positionMode by model.cloud.venuePositionModeDraft.collectAsStateWithLifecycle()
     var confirming by remember {mutableStateOf(false)}
+    var initialMinutes by rememberSaveable {mutableStateOf("3")}
     if(state.connected&&state.admin)Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
-        if(state.venue?.closed==false)TextButton(onClick={confirming=true},enabled=!state.busy){Text("デモを終了する")}
-        else VenueSetupForm(adminPassword,{model.cloud.venueAdminPasswordDraft.value=it},state.busy,positionMode,{model.cloud.venuePositionModeDraft.value=it}){mode->model.cloud.startVenue(adminPassword,positionMode=mode)}
+        if(state.venue?.closed==false) {
+            val venue=state.venue!!;val english=LocalUiLanguage.current=="en"
+            var minutes by remember(venue.sessionId,venue.simulationStartedAt){mutableStateOf(((System.currentTimeMillis()-(venue.simulationStartedAt?:venue.startedAt))/60000).coerceAtLeast(0).toString())}
+            OutlinedTextField(minutes,{minutes=it},singleLine=true,label={Text(if(english)"Minutes since the earthquake" else "地震発生からの経過分数")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number,imeAction=ImeAction.Done),modifier=Modifier.fillMaxWidth())
+            TextButton(enabled=!state.busy&&minutes.toIntOrNull() in 0..1440,onClick={minutes.toIntOrNull()?.let {model.cloud.setVenueClock(it)}}){Text(if(english)"Apply time" else "経過時間を変更")}
+            TextButton(onClick={confirming=true},enabled=!state.busy){Text(if(english)"End demo" else "デモを終了する")}
+        }
+        else VenueSetupForm(adminPassword,{model.cloud.venueAdminPasswordDraft.value=it},state.busy,positionMode,{model.cloud.venuePositionModeDraft.value=it},initialMinutes,{initialMinutes=it}){mode->model.cloud.startVenue(adminPassword,positionMode=mode,elapsedMinutes=initialMinutes.toInt())}
     }
     if(confirming)AlertDialog(onDismissRequest={confirming=false},title={Text("デモを終了しますか？")},text={Text("記録は残ります。次回は新しい安否回答から始められます。")},confirmButton={TextButton(onClick={confirming=false;model.cloud.endVenue()}){Text("終了する")}},dismissButton={TextButton(onClick={confirming=false}){Text("キャンセル")}})
 }
 
 /** Invalid input explains how to proceed; only an in-flight operation disables submission. */
-@Composable fun VenueSetupForm(password:String,onPassword:(String)->Unit,busy:Boolean,positionMode:String,onPositionMode:(String)->Unit,onStart:(String)->Unit) {
+@Composable fun VenueSetupForm(password:String,onPassword:(String)->Unit,busy:Boolean,positionMode:String,onPositionMode:(String)->Unit,initialMinutes:String="3",onInitialMinutes:(String)->Unit={},onStart:(String)->Unit) {
     val english=LocalUiLanguage.current=="en"
     fun tr(ja:String,en:String)=if(english)en else ja
     val actualPosition=positionMode=="ACTUAL"
@@ -197,8 +204,10 @@ fun CloudSyncButton(busy: Boolean, onSync: () -> Unit) {
     var visible by rememberSaveable {mutableStateOf(false)}
     val keyboard=LocalSoftwareKeyboardController.current
     val invalid=password.isBlank() || password.length > 128
-    fun submit(){if(!busy){attempted=true;if(!invalid){keyboard?.hide();onStart(if(actualPosition)"ACTUAL" else "KYOTO")}}}
+    val invalidMinutes=initialMinutes.toIntOrNull() !in 0..1440
+    fun submit(){if(!busy){attempted=true;if(!invalid&&!invalidMinutes){keyboard?.hide();onStart(if(actualPosition)"ACTUAL" else "KYOTO")}}}
     Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
+        OutlinedTextField(initialMinutes,onInitialMinutes,singleLine=true,label={Text(tr("開始時の経過分数","Elapsed minutes at start"))},isError=attempted&&invalidMinutes,supportingText={if(attempted&&invalidMinutes)Text(tr("0〜1440分の整数で入力してください","Enter 0–1440 whole minutes"))},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number,imeAction=ImeAction.Next),modifier=Modifier.fillMaxWidth())
         Text(tr("参加者を表示する位置","Participant locations"),style=MaterialTheme.typography.titleSmall)
         listOf(false to tr("京都の架空位置","Assigned locations in Kyoto"),true to tr("参加者の現在地","Participants’ actual locations")).forEach {(actual,label)->
             Row(Modifier.fillMaxWidth().heightIn(min=48.dp).selectable(selected=actualPosition==actual,enabled=!busy,role=Role.RadioButton,onClick={onPositionMode(if(actual)"ACTUAL" else "KYOTO")}),verticalAlignment=Alignment.CenterVertically){RadioButton(selected=actualPosition==actual,onClick=null,enabled=!busy);Spacer(Modifier.width(8.dp));Text(label)}

@@ -30,9 +30,14 @@ export class CloudClient {
   await this.request(`/groups/${group}/records`,{session,body:{records:[{collection:'quakes',record}]}});await this.sync(group);await this.store.update('meta',key,()=>null);
  }
  async access(group,action,memberId){const result=await this.request(`/groups/${group}/access`,{session:await this.requireSession(group),body:{action,memberId}});if(action==='revoke'){await this.store.importCloudRoster(result,this.deviceId);await saveVenue(this.store,result);}return result;}
+ async setVenueClock(group,minutes){
+  const venue=await this.store.read('meta','venue:'+group);
+  const body=await this.request(`/groups/${group}/venue-clock`,{session:await this.requireSession(group),body:{sessionId:venue?.sessionId,minutes}});
+  await saveVenue(this.store,body);return body.venue;
+ }
  async startVenue(group,password,options={}){
   const key='venue-start:'+group;let pending;
-  await this.store.update('meta',key,old=>{pending=old??{requestId:crypto.randomUUID(),areaId:'kyoto-gosho-south',positionMode:options.positionMode??'KYOTO',...(options.privateTraining?{privateTraining:true,title:options.title,area:options.area}:{})};return old?undefined:pending;});
+  await this.store.update('meta',key,old=>{pending=old??{requestId:crypto.randomUUID(),areaId:'kyoto-gosho-south',positionMode:options.positionMode??'KYOTO',elapsedMinutes:options.elapsedMinutes??(options.privateTraining?0:3),...(options.privateTraining?{privateTraining:true,title:options.title,area:options.area}:{})};return old?undefined:pending;});
   const body=await this.request(`/groups/${group}/venue`,{session:await this.requireSession(group),body:{...pending,password}});
   await this.store.importCloudRoster(body,this.deviceId);await saveVenue(this.store,body);await saveMunicipality(this.store,body);
   await this.store.update('meta','venue-onboarding:'+group,()=>body.venue.sessionId);

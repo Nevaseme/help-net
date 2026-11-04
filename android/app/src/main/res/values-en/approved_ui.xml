@@ -51,8 +51,8 @@
     <string name="approved_home_sleeping">Home and sleeping area</string>
     <string name="approved_see_building">View building</string>
     <string name="approved_phone_observations">Detected events</string>
-    <string name="approved_impact">Impact detected</string>
-    <string name="approved_enclosed">Enclosed space detected</string>
+    <string name="approved_impact">Impact</string>
+    <string name="approved_enclosed">Enclosed space</string>
     <string name="approved_waiting_disclosure">Details of residents with no response are shown 3 minutes after safety confirmation starts.</string>
     <string name="approved_care_history">Rescue and check history</string>
     <string name="approved_mark_rescued">Mark as rescued</string>

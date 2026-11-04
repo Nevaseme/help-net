@@ -44,7 +44,8 @@ test('Kyoto participants receive reviewed building addresses with public provena
  const start=await f.call(`/groups/${g}/venue`,{requestId:id(),password,areaId:'kyoto-gosho-south'},admin.token);
  const p=start.body.venue.placements[0];
  assert.ok(p.home?.plateauId?.startsWith('bldg_'));
- assert.match(p.home.address,/京都/);assert.equal(p.latitude,p.home.latitude);
+ assert.match(p.home.address,/京都/);assert.notEqual(p.latitude,p.home.latitude);
+ const {demoCommunityAt}=await import('../src/venue-layout.mjs');assert.equal(demoCommunityAt(p.longitude),demoCommunityAt(p.home.longitude));
  assert.equal(p.home.addressPrecision,'verified-building-address');
  assert.equal(p.home.address.includes('付近'),false);assert.match(p.home.address,/\d/);
  assert.ok(p.home.addressEvidence.sources.every(s=>s.url.startsWith('https://')));
@@ -265,4 +266,29 @@ test('private training assigns administrator and invited members without a publi
  j.append(actor,{collection:'quakes',record:{groupId:admin.groupId,eventId:id(),actorDeviceId:admin.deviceId,operatedAt:Date.now(),action:'END',training:true,targetId:sessionId}});
  assert.equal(j.venueSnapshot().closed,true);const afterEnd=await join('終了後参加');assert.equal(afterEnd.status,200);assert.equal(afterEnd.body.venue.placements.length,3);
 
+});
+
+test('shared demo clock defaults to three minutes and only admin may change active-session projection',async t=>{
+ const f=fixture(t),admin=await setup(f),g=admin.groupId,sessionId=id();
+ const started=(await f.call(`/groups/${g}/venue`,{requestId:sessionId,password,areaId:'kyoto-gosho-south'},admin.token)).body;
+ assert.ok(started.venue.startedAt-started.venue.simulationStartedAt>=179999);
+ const member=(await f.call('/venue/join',{groupName:'会場テスト',password,activityName:'Member',deviceId:id(),registrationToken:token()})).body;
+ const j=f.get(g),originals=JSON.stringify(['quakes','incidents','responses'].map(k=>j.history(k))),homes=JSON.stringify(j.venueSnapshot().placements);
+ const change=(minutes,auth=admin.token,s=sessionId)=>f.call(`/groups/${g}/venue-clock`,{minutes,sessionId:s},auth);
+ assert.equal((await change(10,member.token)).status,403);
+ for(const invalid of [-1,1.5,1441,'3',null])assert.equal((await change(invalid)).status,400);
+ assert.equal((await change(10,admin.token,id())).status,409);
+ for(const minutes of [0,3,15]){const response=await change(minutes);assert.equal(response.status,200,JSON.stringify(response.body));assert.ok(Math.abs(Date.now()-response.body.venue.simulationStartedAt-minutes*60000)<3000);const other=(await f.call(`/groups/${g}/roster`,undefined,member.token)).body;assert.equal(other.venue.simulationStartedAt,response.body.venue.simulationStartedAt);}
+ assert.equal(JSON.stringify(['quakes','incidents','responses'].map(k=>j.history(k))),originals);assert.equal(JSON.stringify(j.venueSnapshot().placements),homes);
+ j.append(await j.identity(admin.token),{collection:'quakes',record:{groupId:g,eventId:id(),actorDeviceId:admin.deviceId,operatedAt:Date.now(),action:'END',training:true,targetId:sessionId}});
+ assert.equal((await change(5)).status,409);
+});
+
+test('administrator can choose initial elapsed minutes without backdating original quake or response records',async t=>{
+ for(const minutes of [0,5]){const f=fixture(t),admin=await setup(f),g=admin.groupId;
+  const result=await f.call(`/groups/${g}/venue`,{requestId:id(),password,areaId:'kyoto-gosho-south',elapsedMinutes:minutes},admin.token);assert.equal(result.status,200);const v=result.body.venue;
+  assert.ok(Math.abs(v.startedAt-v.simulationStartedAt-minutes*60000)<=2);assert.ok(f.get(g).history('quakes')[0].operatedAt>=v.startedAt);
+ }
+ const f=fixture(t),admin=await setup(f);
+ for(const minutes of [-1,1.5,1441,'5'])assert.equal((await f.call(`/groups/${admin.groupId}/venue`,{requestId:id(),password,areaId:'kyoto-gosho-south',elapsedMinutes:minutes},admin.token)).status,400);
 });

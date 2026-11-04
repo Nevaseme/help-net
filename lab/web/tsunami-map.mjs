@@ -1,10 +1,16 @@
+import {currentLocationControl} from './current-location.mjs';
 import {mapBuildingFeatures} from './building-details.mjs';
 import {tsunamiDepthColor} from './tsunami-map-model.mjs';
 
 /** One map for normal browsing and exact, previously checked height results. */
 export function createTsunamiMap(){
  const $=id=>document.getElementById(id);let map,home=null,initialFocus=null,result=null,layers=[],generation=0,controller=null;
+ let locationControl=null,myDot=null,myAccuracy=null,lastLanguage=null;
  let tsunamiEnabled=false,heightTimer,vectorMap,selectBuilding=()=>{},buildingRequest=0;
+ let statusKey='off',statusHeight=null,loadStarted=null;
+ function status(key,height=null){statusKey=key;statusHeight=height;renderStatus();}
+ function renderStatus(){const messages={off:local('津波表示はオフです。','Tsunami overlay is off.'),enter:local('津波の高さを入力してください','Enter the tsunami height'),range:local('0〜35m・1m刻みで入力してください','Enter a whole number from 0 to 35m'),loading:local('計算済みの結果を読み込んでいます…','Loading saved results…'),result:local(`津波高 ${statusHeight}m の条件計算を表示しています。`,`Showing results for a ${statusHeight}m tsunami.`),error:local('津波データを読み込めませんでした。通信を確認してもう一度お試しください。','Unable to load tsunami data. Check your connection and try again.')};$('tsunami-status').textContent=messages[statusKey]+(statusKey==='loading'&&loadStarted?local(`（経過 ${Math.floor((Date.now()-loadStarted)/1000)}秒）`,` (${Math.floor((Date.now()-loadStarted)/1000)}s)`):'');}
+ function refreshLanguage(){renderStatus();locationControl?.refreshLanguage();$('tsunami-map').querySelectorAll('.leaflet-control-zoom-in,.leaflet-control-zoom-out').forEach(el=>{const label=el.classList.contains('leaflet-control-zoom-in')?local('拡大','Zoom in'):local('縮小','Zoom out');el.setAttribute('aria-label',label);el.setAttribute('title',label);});document.querySelector('.tsunami-legend')?.setAttribute('aria-label',local('最大浸水深の凡例','Maximum inundation depth legend'));if(lastLanguage!==document.documentElement.lang){map?.closePopup();lastLanguage=document.documentElement.lang;}}
  let communities=[],selectCommunity=()=>{},people=[],reports=[],caseLayers=[],selectPerson=()=>{},selectReport=()=>{},pick=null,showSafe=true,caseSignature=null;
  const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const en=()=>document.documentElement.lang==='en';
@@ -20,7 +26,7 @@ export function createTsunamiMap(){
   }
   for(const person of people.filter(p=>validPosition(p.position)&&(showSafe||!['SAFE','RESCUED'].includes(p.status)))){
    const symbol=person.status==='SOS'?'SOS':person.status==='UNREPORTED'?'?':`<img src="/web1617-${person.status==='RESCUED'?'rescued':'safe'}.svg" alt="">`;
-   const marker=L.marker([person.position.latitude,person.position.longitude],{icon:L.divIcon({className:'person-map-marker',html:`<span class="person-symbol ${escape(person.status)}">${symbol}</span>${person.impactAt?`<span class="person-impact" aria-label="${local('衝撃を検知','Impact detected')}"><img src="/web1617-impact-collision.svg" alt=""></span>`:''}${person.enclosedAt?`<span class="person-enclosed" aria-label="${local('閉所を検知','Enclosed space detected')}"><img src="/web1617-enclosed.png" alt=""></span>`:''}`,iconSize:[44,44],iconAnchor:[22,22]}),title:person.label,keyboard:true});
+   const marker=L.marker([person.position.latitude,person.position.longitude],{icon:L.divIcon({className:'person-map-marker',html:`<span class="person-symbol ${escape(person.status)}">${symbol}</span>${person.impactAt?`<span class="person-impact" aria-label="${local('衝撃を検知','Impact')}"><img src="/web1617-impact-collision.svg" alt=""></span>`:''}${person.enclosedAt?`<span class="person-enclosed" aria-label="${local('閉所を検知','Enclosed space')}"><img src="/web1617-enclosed.png" alt=""></span>`:''}`,iconSize:[44,44],iconAnchor:[22,22]}),title:person.label,keyboard:true});
    marker.on('click',()=>selectEntry({kind:'person',id:person.id,...person.position}));marker.addTo(map);caseLayers.push(marker);
   }
   const occupied=entries.map(p=>{const c=map.latLngToContainerPoint([p.latitude,p.longitude]);return {x:c.x-26,y:c.y-26,w:52,h:52};});
@@ -49,7 +55,7 @@ export function createTsunamiMap(){
  function drawResult(){
   clearResult();if(!map||!result||!tsunamiEnabled)return;
   layers.push(L.geoJSON(result.coverage,{interactive:false,style:{color:'#155eef',weight:2,fill:false,dashArray:'6 4'}}).addTo(map));
-  layers.push(L.geoJSON(result.geojson,{style:f=>({stroke:false,fillColor:tsunamiDepthColor(f.properties.max_depth_m),fillOpacity:.72}),onEachFeature:(feature,layer)=>layer.on('click',event=>{L.DomEvent.stopPropagation(event);if(consumePick({latitude:event.latlng.lat,longitude:event.latlng.lng}))return;L.popup().setLatLng(event.latlng).setContent(`${local('最大浸水深（計算）','Calculated maximum depth')} ${Number(feature.properties.max_depth_m).toFixed(2)}m`).openOn(map);})}).addTo(map));
+  layers.push(L.geoJSON(result.geojson,{style:f=>({stroke:false,fillColor:tsunamiDepthColor(f.properties.max_depth_m),fillOpacity:.72}),onEachFeature:(feature,layer)=>layer.on('click',event=>{L.DomEvent.stopPropagation(event);if(consumePick({latitude:event.latlng.lat,longitude:event.latlng.lng}))return;L.popup().setLatLng(event.latlng).setContent(`${local('最大浸水深（計算）','Calculated maximum inundation depth')} ${Number(feature.properties.max_depth_m).toFixed(2)}m`).openOn(map);})}).addTo(map));
   $('tsunami-map').dataset.caseId=String(result.metadata?.id||result.heightM);$('tsunami-map').dataset.cells=String(result.geojson.features.length);
  }
  function center(){if(home)map.setView([home.latitude,home.longitude],15,{animate:false});else map.setView([35.5,138],6,{animate:false});}
@@ -68,13 +74,20 @@ export function createTsunamiMap(){
   });
   map.on('moveend zoomend',()=>{buildingRequest++;drawCases();});
   import('./vector-basemap.mjs').then(async({addVectorBasemap})=>{const layer=await addVectorBasemap(map);vectorMap=layer.getMaplibreMap();import('./building-risk.mjs').then(({installBuildingRisk})=>installBuildingRisk(layer.getMaplibreMap())).catch(()=>{$('tsunami-map').dataset.buildingRisk='unavailable';});layer.getMaplibreMap().on('error',()=>{$('tsunami-basemap-state').textContent='背景地図を取得できません。圏外で使うには市全域の地図を保存してください。';});layer.getMaplibreMap().on('idle',()=>{$('tsunami-basemap-state').textContent='';});}).catch(()=>{$('tsunami-basemap-state').textContent='背景地図を読み込めませんでした';});
-  if(initialFocus)map.setView(initialFocus,15,{animate:false});else center();drawCases();$('tsunami-fit').onclick=()=>{if(home)map.setView([home.latitude,home.longitude],15,{animate:false});else if(initialFocus)map.setView(initialFocus,15,{animate:false});else map.setView([35.5,138],6,{animate:false});};
-  for(const [cls,label] of [['.leaflet-control-zoom-in','拡大'],['.leaflet-control-zoom-out','縮小']]){const el=$('tsunami-map').querySelector(cls);el?.setAttribute('aria-label',label);el?.setAttribute('title',label);}
+  if(initialFocus)map.setView(initialFocus,15,{animate:false});else center();drawCases();locationControl=currentLocationControl({button:$('tsunami-fit'),isVisible:()=>!$('buildings').hidden,onFix:fix=>{
+   if(!fix){myDot?.remove();myAccuracy?.remove();myDot=null;myAccuracy=null;return;}
+   const point=[fix.latitude,fix.longitude];
+   if(!myAccuracy)myAccuracy=L.circle(point,{className:'my-location-accuracy',radius:fix.accuracy,color:'#2675df',weight:1,opacity:.25,fillOpacity:.12,interactive:false}).addTo(map);else myAccuracy.setLatLng(point).setRadius(fix.accuracy);
+   if(!myDot)myDot=L.circleMarker(point,{className:'my-location-dot',radius:7,color:'#fff',weight:3,fillColor:'#2675df',fillOpacity:1,interactive:false}).addTo(map);else myDot.setLatLng(point);
+  },onCenter:fix=>map.setView([fix.latitude,fix.longitude],Math.max(16,map.getZoom()),{animate:false}),onMessage:message=>$('current-location-status').textContent=message});
+  map.on('dragstart zoomstart',()=>locationControl.cancelCenter());
+  new MutationObserver(()=>locationControl.resume()).observe($('buildings'),{attributes:true,attributeFilter:['hidden']});locationControl.resume();
+  for(const [cls,label] of [['.leaflet-control-zoom-in','拡大'],['.leaflet-control-zoom-out','縮小']]){const el=$('tsunami-map').querySelector(cls);el?.setAttribute('aria-label',label);el?.setAttribute('title',label);}refreshLanguage();
  }
  function scheduleHeight(){
   clearTimeout(heightTimer);controller?.abort();generation++;$('tsunami-height-form').setAttribute('aria-busy','false');
   const raw=$('tsunami-height').value.trim(),heightM=Number(raw);
-  if(!raw||!Number.isInteger(heightM)||heightM<0||heightM>35){clearResult();result=null;$('tsunami-status').textContent=raw?'0〜35m・1m刻みで入力してください':'津波の高さを入力してください';$('tsunami-status').dataset.status='error';$('tsunami-height').setAttribute('aria-invalid',String(Boolean(raw)));return;}
+  if(!raw||!Number.isInteger(heightM)||heightM<0||heightM>35){clearResult();result=null;status(raw?'range':'enter');$('tsunami-status').dataset.status='error';$('tsunami-height').setAttribute('aria-invalid',String(Boolean(raw)));return;}
   $('tsunami-height').removeAttribute('aria-invalid');
   clearResult();result=null;
   if(tsunamiEnabled){heightTimer=setTimeout(()=>$('tsunami-height-form').requestSubmit(),350);}
@@ -84,27 +97,27 @@ export function createTsunamiMap(){
   tsunamiEnabled=!tsunamiEnabled;
   clearTimeout(heightTimer);if(!tsunamiEnabled){controller?.abort();generation++;$('tsunami-height-form').setAttribute('aria-busy','false');}
   $('map-tsunami').setAttribute('aria-pressed',String(tsunamiEnabled));
-  if(!tsunamiEnabled)$('tsunami-status').textContent='津波表示はオフです。';
-  else if(result)$('tsunami-status').textContent=`津波高 ${result.heightM}m の条件計算を表示しています。`;
+  if(!tsunamiEnabled)status('off');
+  else if(result)status('result',result.heightM);
 
   if(tsunamiEnabled&&!result)scheduleHeight();
   drawResult();
  };
  $('tsunami-height-form').onsubmit=async event=>{
-  event.preventDefault();clearTimeout(heightTimer);const raw=$('tsunami-height').value.trim(),heightM=Number(raw);if(!raw||!Number.isInteger(heightM)||heightM<0||heightM>35){$('tsunami-status').textContent='津波高は0〜35mの範囲で、1m刻みで入力してください。';$('tsunami-status').dataset.status='error';return;}
+  event.preventDefault();clearTimeout(heightTimer);const raw=$('tsunami-height').value.trim(),heightM=Number(raw);if(!raw||!Number.isInteger(heightM)||heightM<0||heightM>35){status('range');$('tsunami-status').dataset.status='error';return;}
   controller?.abort();controller=new AbortController();const epoch=++generation;
-  const started=Date.now();let progressMessage='計算済みの結果を読み込んでいます…';
-  const showProgress=()=>{if(epoch===generation)$('tsunami-status').textContent=`${progressMessage}（経過 ${Math.floor((Date.now()-started)/1000)}秒）`;};
+  loadStarted=Date.now();
+  const showProgress=()=>{if(epoch===generation)status('loading');};
   const ticker=setInterval(showProgress,1000);
   clearResult();result=null;
-  $('tsunami-status').textContent=progressMessage;$('tsunami-status').dataset.status='pending';$('tsunami-height-form').setAttribute('aria-busy','true');
+  status('loading');$('tsunami-status').dataset.status='pending';$('tsunami-height-form').setAttribute('aria-busy','true');
   try{
    const {computePrecomputedHeight}=await import('./tsunami-precomputed.mjs');
-   const calculated=await computePrecomputedHeight(heightM,{signal:controller.signal,onProgress:progress=>{if(epoch===generation){progressMessage=progress.message||'読み込んでいます…';showProgress();}}});
+   const calculated=await computePrecomputedHeight(heightM,{signal:controller.signal,onProgress:()=>{if(epoch===generation)showProgress();}});
    if(epoch!==generation)return;result=calculated;drawResult();
-   $('tsunami-status').textContent=`津波高 ${heightM}m の条件計算を表示しています。`;$('tsunami-status').dataset.status='success';
-  }catch(error){if(epoch!==generation)return;clearResult();result=null;$('tsunami-status').textContent=error.message||'計算を完了できませんでした。';$('tsunami-status').dataset.status='error';}
+   status('result',heightM);$('tsunami-status').dataset.status='success';
+  }catch(error){if(epoch!==generation)return;clearResult();result=null;status('error');$('tsunami-status').dataset.status='error';}
   finally{clearInterval(ticker);if(epoch===generation){$('tsunami-height-form').setAttribute('aria-busy','false');}}
  };
- return {focusPerson(position){if(!validPosition(position))return;initialFocus=[position.latitude,position.longitude];if(!map)initialize();map.setView(initialFocus,Math.max(16,map.getZoom()),{animate:false});},setBuildingSelect(callback){selectBuilding=callback;},focusRegion(region){if(map)map.setView([region.latitude,region.longitude],16,{animate:false});},focusHome(){if(home){initialFocus=[home.latitude,home.longitude];if(map)map.setView(initialFocus,16,{animate:false});}},focusVenue(actual=false){initialFocus=actual?[35.6665,139.7495]:[35.0145,135.7625];if(map)map.setView(initialFocus,15,{animate:false});},setHome(value){home=value;},setCommunities(value,onSelect){communities=value;selectCommunity=onSelect||selectCommunity;drawCases();},setPeople(value,onSelect){people=value;selectPerson=onSelect||selectPerson;drawCases();},setReports(value,onSelect){reports=value;selectReport=onSelect||selectReport;drawCases();},setShowSafe(value){showSafe=value;drawCases();},pickLocation(callback,{language='ja'}={}){if(!map)initialize();pick=callback;picker.querySelector('p').textContent=language==='en'?'Select the incident location on the map':'通報する場所を地図上で選んでください';picker.querySelector('button').textContent=language==='en'?'Cancel':'中止';picker.hidden=false;$('tsunami-map').classList.add('selecting-location');},cancelPick:endPick,async show(){try{if(!map)initialize();requestAnimationFrame(()=>{if(!$('buildings').hidden){const center=map.getCenter(),zoom=map.getZoom();map.invalidateSize({pan:false});map.setView(center,zoom,{animate:false});}});}catch(error){$('tsunami-basemap-state').textContent=error.message;}}};
+ return {refreshLanguage,focusPerson(position){if(!validPosition(position))return;initialFocus=[position.latitude,position.longitude];if(!map)initialize();map.setView(initialFocus,Math.max(16,map.getZoom()),{animate:false});},setBuildingSelect(callback){selectBuilding=callback;},focusRegion(region){if(map)map.setView([region.latitude,region.longitude],16,{animate:false});},focusHome(){if(home){initialFocus=[home.latitude,home.longitude];if(map)map.setView(initialFocus,16,{animate:false});}},focusVenue(actual=false){initialFocus=actual?[35.6665,139.7495]:[35.0145,135.7625];if(map)map.setView(initialFocus,15,{animate:false});},setHome(value){home=value;},setCommunities(value,onSelect){communities=value;selectCommunity=onSelect||selectCommunity;drawCases();},setPeople(value,onSelect){people=value;selectPerson=onSelect||selectPerson;drawCases();},setReports(value,onSelect){reports=value;selectReport=onSelect||selectReport;drawCases();},setShowSafe(value){showSafe=value;drawCases();},pickLocation(callback,{language='ja'}={}){if(!map)initialize();pick=callback;picker.querySelector('p').textContent=language==='en'?'Select the incident location on the map':'通報する場所を地図上で選んでください';picker.querySelector('button').textContent=language==='en'?'Cancel':'中止';picker.hidden=false;$('tsunami-map').classList.add('selecting-location');},cancelPick:endPick,async show(){try{if(!map)initialize();locationControl?.resume();requestAnimationFrame(()=>{if(!$('buildings').hidden){const center=map.getCenter(),zoom=map.getZoom();map.invalidateSize({pan:false});map.setView(center,zoom,{animate:false});}});}catch(error){$('tsunami-basemap-state').textContent=error.message;}}};
 }

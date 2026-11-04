@@ -121,7 +121,7 @@ import io.github.nevaseme.plandmk1.core.*
                 if (answer?.safety == Safety.SOS) notes[answer.eventId]?.takeIf {it.authorId==person.originId&&it.incidentId==answer.incidentId}?.text?:scenarioPerson?.note.orEmpty() else scenarioPerson?.note.orEmpty(), language=language,roster=roster).copy(impactAt=if(scenarioPerson!=null)simulated?.first else latestImpact(deviceRecords,group,person.originId,now),enclosedAt=simulated?.second)
             val placement=venue?.allPlacements()?.find {it.deviceId==person.originId}
             val enriched=base.copy(home=base.home?.let {home->homes.find {it.id==home.id}?:home})
-            projectPersonPrivacy(if(placement==null)enriched else if(venue?.positionMode=="ACTUAL"&&placement.source!="SCENARIO")enriched.copy(name=placement.name,home=null,demo=true) else enriched.copy(name=placement.name,home=enriched.home.takeIf {placement.home!=null},bedroom=base.bedroom.takeIf {placement.home!=null}.orEmpty(),point=MapPoint(checkNotNull(placement.latitude),checkNotNull(placement.longitude)),acquiredAt=incident.current?.start?.createdAt,accuracy=null,demo=true,fictional=placement.source=="SCENARIO"),incident.current?.start?.createdAt,now)
+            projectPersonPrivacy(if(placement==null)enriched else if(venue?.positionMode=="ACTUAL"&&placement.source!="SCENARIO")enriched.copy(name=placement.name,home=null,demo=true) else enriched.copy(name=placement.name,home=enriched.home.takeIf {placement.home!=null},bedroom=base.bedroom.takeIf {placement.home!=null}.orEmpty(),point=MapPoint(checkNotNull(placement.latitude),checkNotNull(placement.longitude)),acquiredAt=venue?.startedAt,accuracy=null,demo=true,fictional=placement.source=="SCENARIO"),incident.current?.start?.createdAt,now)
         }
     }
     val incidentResponses=responses.filter {it.groupId==group&&it.incidentId==incident.current?.start?.eventId}
@@ -133,7 +133,9 @@ import io.github.nevaseme.plandmk1.core.*
     val activeRows=communityOverview(communityPeople,activeMaterialChanges(incidentResponses.map {it.change}),names)
     val neighborhoods=communityRows.map {row->
         val points=venue?.allPlacements().orEmpty().filter {p->communityPeople.any {it.id==p.deviceId&&it.communityId==row.id}}.mapNotNull {it.home?.let {h->MapPoint(h.latitude,h.longitude)}}
-        MapNeighborhood(row.copy(materials=activeRows.find {it.id==row.id}?.materials?:mutableListOf()),points.takeIf {it.isNotEmpty()}?.let {MapPoint(it.map {p->p.latitude}.average(),it.map {p->p.longitude}.average())},activeHighReports(incidentResponses.map {it.change},row.id),incidentResponses.mapNotNull {it.change as? ResponseChange.Report}.filter {!it.cancelled&&row.id in it.regionIds}.distinctBy {it.reportId}.map {it.reportId to it.category})
+        val region=venue?.scenario?.communities?.find {it.id==row.id}
+        val regionPoint=region?.latitude?.let {lat->region.longitude?.let {lon->MapPoint(lat,lon)}}
+        MapNeighborhood(row.copy(materials=activeRows.find {it.id==row.id}?.materials?:mutableListOf()),regionPoint?:points.takeIf {it.isNotEmpty()}?.let {MapPoint(it.map {p->p.latitude}.average(),it.map {p->p.longitude}.average())},activeHighReports(incidentResponses.map {it.change},row.id),incidentResponses.mapNotNull {it.change as? ResponseChange.Report}.filter {!it.cancelled&&row.id in it.regionIds}.distinctBy {it.reportId}.map {it.reportId to it.category})
     }
     val visiblePeople=people.filter {p->venue?.scenario==null||p.id==model.localId||communityPeople.any {it.id==p.id&&it.communityId==ownNeighborhood}}
     val reports=incidentResponses.mapNotNull {it.change as? ResponseChange.Report}.filterNot {it.cancelled}.distinctBy {it.reportId}.map {report->MapReport(report.reportId,MapPoint(report.latitude,report.longitude),responseUrgency(incidentResponses,ResponseTarget(TargetKind.REPORT,report.reportId)))}

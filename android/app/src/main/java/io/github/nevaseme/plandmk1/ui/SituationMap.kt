@@ -41,6 +41,7 @@ import kotlin.math.*
 
 class SituationCamera {
     internal var map: MapLibreMap? = null
+    var cancelLocationCenter:()->Unit = {}
     fun zoom(delta: Double) { map?.let { it.animateCamera(CameraUpdateFactory.zoomTo((it.cameraPosition.zoom + delta).coerceIn(2.0, 20.0))) } }
     fun move(point: MapPoint, zoom: Double = 16.8) { map?.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(point.latitude, point.longitude), zoom)) }
     fun showKyoto() {
@@ -65,6 +66,7 @@ fun SituationMap(
     onReportPoint: ((MapPoint) -> Unit)? = null,
     reports:List<MapReport> = emptyList(),onReport: (String)->Unit = {}, initialZoom:Double=16.8,
     neighborhoods:List<MapNeighborhood> = emptyList(),onNeighborhood:(String)->Unit={},
+    currentLocation:io.github.nevaseme.plandmk1.location.PositionFix?=null,
 ) {
     val context = LocalContext.current
     val supports = remember { (context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager).deviceConfigurationInfo.reqGlEsVersion >= 0x30000 }
@@ -95,6 +97,7 @@ fun SituationMap(
     val latestReportPoint by rememberUpdatedState(onReportPoint)
     val latestReport by rememberUpdatedState(onReport)
     val latestTsunami by rememberUpdatedState(tsunamiResult)
+    val tsunamiEnglish by rememberUpdatedState(LocalUiLanguage.current=="en")
     val neighborhoodMarkers=remember {mutableMapOf<Long,String>()}
     val neighborhoodRendered=remember {mutableListOf<Marker>()}
     val latestNeighborhood by rememberUpdatedState(onNeighborhood)
@@ -122,6 +125,7 @@ fun SituationMap(
             io.github.nevaseme.plandmk1.tsunami.TsunamiOverlay.update(style,tsunamiResult)
         }
     }
+    LaunchedEffect(ready,currentLocation){if(ready)controller?.style?.let {drawCurrentMapLocation(it,currentLocation)}}
     DisposableEffect(view, owner) {
         val observer = LifecycleEventObserver { _, event -> if (!view.isDestroyed) when (event) {
             Lifecycle.Event.ON_START -> if(latestMapVisible) view.onStart()
@@ -135,6 +139,7 @@ fun SituationMap(
         view.addOnDidFailLoadingMapListener { latestError() }
         view.getMapAsync { map ->
             controller = map; camera.map = map
+            map.addOnCameraMoveStartedListener {reason->if(reason==MapLibreMap.OnCameraMoveStartedListener.REASON_API_GESTURE)camera.cancelLocationCenter()}
             map.cameraPosition = CameraPosition.Builder().target(LatLng(latitude, longitude)).zoom(zoom).build()
             map.uiSettings.apply { isRotateGesturesEnabled = false; isTiltGesturesEnabled = false; isCompassEnabled = false }
             // Tile caching is enabled by default. The redundant renderer-backed
@@ -181,7 +186,7 @@ fun SituationMap(
                 if(latestTsunami!=null) {
                     val cell=map.queryRenderedFeatures(map.projection.toScreenLocation(point),"tsunami-depth-fill").firstOrNull()
                     if(cell!=null) {
-                        android.widget.Toast.makeText(context,"最大浸水深 ${String.format(java.util.Locale.JAPAN,"%.2f",cell.getNumberProperty("max_depth_m").toDouble())}m",android.widget.Toast.LENGTH_SHORT).show()
+                        android.widget.Toast.makeText(context,tsunamiText("depth",tsunamiEnglish)+" ${String.format(java.util.Locale.US,"%.2f",cell.getNumberProperty("max_depth_m").toDouble())}m",android.widget.Toast.LENGTH_SHORT).show()
                         return@addOnMapClickListener true
                     }
                 }

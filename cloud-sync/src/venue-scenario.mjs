@@ -2,12 +2,12 @@ import catalogue from './venue-buildings.json' with {type:'json'};
 import {withDemoObservations} from '../../lab/web/venue-observations.mjs';
 
 export const demoCommunities=[
- {id:'demo-west',nameJa:'御所南西町内会（デモ）',nameEn:'Gosho South West (demo)'},
- {id:'demo-central',nameJa:'御所南中央町内会（デモ）',nameEn:'Gosho South Central (demo)'},
- {id:'demo-east',nameJa:'御所南東町内会（デモ）',nameEn:'Gosho South East (demo)'}
+ {id:'demo-west',latitude:35.0145,longitude:135.759,nameJa:'御所南西町内会（デモ）',nameEn:'Gosho South West (demo)'},
+ {id:'demo-central',latitude:35.0145,longitude:135.7622,nameJa:'御所南中央町内会（デモ）',nameEn:'Gosho South Central (demo)'},
+ {id:'demo-east',latitude:35.0145,longitude:135.7657,nameJa:'御所南東町内会（デモ）',nameEn:'Gosho South East (demo)'}
 ];
-const communityLongitudeCuts=[135.760,135.7644];
-export const demoCommunityAt=longitude=>longitude<communityLongitudeCuts[0]?'demo-west':longitude<communityLongitudeCuts[1]?'demo-central':'demo-east';
+import {communityLongitudeCuts,demoCommunityAt,demoPhonePoint} from './venue-layout.mjs';
+export {demoCommunityAt};
 
 /** Fictional people are scenario objects, never login identities or authenticated phone observations. */
 export function createVenueScenario(sessionId){
@@ -17,13 +17,15 @@ export function createVenueScenario(sessionId){
  for(let i=0;i<12;i++){const community=demoCommunities[i%3];const home=homes.find(h=>demoCommunityAt(h.longitude)===community.id&&!used.has(h.buildingId))||homes.find(h=>!used.has(h.buildingId));used.add(home.buildingId);ordered.push(home);}
  const usedPlacements=new Set(ordered.map(h=>h.placementId));ordered.push(...homes.filter(h=>!usedPlacements.has(h.placementId)));
  const given=['Taylor','Morgan','Parker','Reese','Rowan','Finley','Blake','Hayden'],family=['Brooks','Reed','Hayes','Bell','Carter','Adams','Wright'];
+ const regionSlots=new Map();
  const people=ordered.map((home,i)=>{
+  const region=demoCommunityAt(home.longitude),slot=regionSlots.get(region)||0;regionSlots.set(region,slot+1);
   const extra=i-12,phase=extra%13,safety=i<12?(i<4?'SAFE':i<8?'UNREPORTED':'SOS'):(phase<9?'SAFE':phase<11?'UNREPORTED':'SOS');
   const initialRescue=i===10||i===11||i>=12&&phase===12;
   const injury=i===8||i===10||i>=12&&phase===11?'INJURED':safety==='SAFE'?'UNINJURED':'UNKNOWN';
   const name=names[i]||given[Math.floor(extra/family.length)]+' '+family[extra%family.length];
   const countFloors=Math.max(1,Number(home.attributes?.floors)||1);
-  return {deviceId:crypto.randomUUID(),name,safety,injury,initialRescue,note:safety==='SOS'?'I need help. The doorway is blocked.':'',communityId:demoCommunityAt(home.longitude),home:{...home,floor:String(i%Math.min(3,countFloors)+1),room:i%2?'Bedroom facing the street':'Bedroom at the back'}};
+  return {position:demoPhonePoint(region,slot),deviceId:crypto.randomUUID(),name,safety,injury,initialRescue,note:safety==='SOS'?'I need help. The doorway is blocked.':'',communityId:demoCommunityAt(home.longitude),home:{...home,floor:String(i%Math.min(3,countFloors)+1),room:i%2?'Bedroom facing the street':'Bedroom at the back'}};
  });
  return withDemoObservations({version:1,sessionId,communityLongitudeCuts,communities:demoCommunities,people});
 }

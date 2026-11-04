@@ -23,7 +23,7 @@ export class GroupJournal extends DurableObject {
      if(result.status!==200)throw new ApiError(result.status,result.body.error.code,result.body.error.message);
      return result.body;
     });break;
-    case 'access':case 'recoverVenue':case 'authorizeVenue':case 'configureVenue':case 'checkVenue':case 'joinVenue':body=await this.journal[operation](token,args);break;
+    case 'setVenueClock':case 'access':case 'recoverVenue':case 'authorizeVenue':case 'configureVenue':case 'checkVenue':case 'joinVenue':body=await this.journal[operation](token,args);break;
     case 'create':body=await this.journal.create(args);break;
     case 'join':body=await this.journal.join(args);break;
     case 'invite':body=await this.journal.invite(token);break;

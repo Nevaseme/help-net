@@ -9,7 +9,7 @@ test('English display covers exactly the verified demo addresses without changin
   const before = JSON.stringify(catalogue);
   const addresses = [...new Set(catalogue.homes.map(home => home.address))];
   assert.equal(addresses.length, 12);
-  assert.deepEqual(Object.keys(DEMO_ADDRESS_LABELS).sort(), addresses.sort());
+  assert.deepEqual(Object.keys(DEMO_ADDRESS_LABELS).filter(k=>!k.endsWith('付近')).sort(), addresses.sort());
   for (const home of catalogue.homes) {
     assert.equal(home.addressPrecision, 'verified-building-address');
     assert.match(demoAddressLabel(home.address, true), /^[\x20-\x7e]+$/);
@@ -38,4 +38,10 @@ test('confirmed readings preserve non-obvious town names and exact lot numbers',
   assert.equal(demoAddressLabel('京都府京都市中京区少将井町245-1', true), '245-1 Shoshoicho, Nakagyo-ku, Kyoto, Kyoto Prefecture');
   assert.equal(demoAddressLabel('京都府京都市中京区六丁目290', true), '290 Rokuchome, Nakagyo-ku, Kyoto, Kyoto Prefecture');
   assert.equal(demoAddressLabel('京都府京都市中京区俵屋町293-1', true), '293-1 Tawaraya-cho, Nakagyo-ku, Kyoto, Kyoto Prefecture');
+});
+
+test('legacy approximate demo addresses use English Near without manufacturing parcel numbers',()=>{
+ const aliases=Object.keys(DEMO_ADDRESS_LABELS).filter(a=>a.endsWith('付近'));assert.equal(aliases.length,11);
+ for(const a of aliases){assert.match(demoAddressLabel(a,true),/^Near [\x20-\x7e]+$/);assert.equal(demoAddressLabel(a,false),a);}
+ assert.equal(demoAddressLabel('京都府京都市中京区三本木五丁目東洞院通竹屋町付近',true),'Near Sanbongi Gochome, Higashinotoin-dori Takeyamachi, Nakagyo-ku, Kyoto');
 });
