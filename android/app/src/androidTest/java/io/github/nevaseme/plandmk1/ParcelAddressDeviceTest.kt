@@ -36,4 +36,39 @@ class ParcelAddressDeviceTest {
   val result=buildJsonObject{put("passed",true);put("warmP95Ms",p95);put("buildingId",containing.id);put("samples",JsonArray(samples));put("candidateCount",options.size)}
   File(context.getExternalFilesDir(null),"parcel-address-test.json").writeText(result.toString())
  }
+ @Test fun addressesAcrossAllElevenWardsUseTheSameSearch()=runBlocking<Unit> {
+  val context=InstrumentationRegistry.getInstrumentation().targetContext
+  val repo=CityAddresses(context)
+  val index=Json.parseToJsonElement(context.assets.open("kyoto-parcel-search/index.json").bufferedReader().use{it.readText()}).jsonObject
+  val samples=linkedMapOf<String,LinkedHashMap<String,String>>()
+  for(chunk in index.getValue("chunks").jsonArray){
+   val file=chunk.jsonObject.getValue("file").jsonPrimitive.content
+   val data=java.util.zip.GZIPInputStream(context.assets.open("kyoto-parcel-search/$file")).bufferedReader().use{Json.parseToJsonElement(it.readText()).jsonObject}
+   for(raw in data.getValue("rows").jsonArray){
+    val row=raw.jsonArray;val address=row[1].jsonPrimitive.content
+    val ward=row[5].jsonObject.getValue("wardCode").jsonPrimitive.content
+    val town=address.replace(Regex("[0-9].*$"),"")
+    val selected=samples.getOrPut(ward){linkedMapOf()}
+    if(selected.size<3&&!selected.containsKey(town)&&address.any{it in '0'..'9'})selected[town]=address
+   }
+   if(samples.size==11&&samples.values.all{it.size==3})break
+  }
+  assertEquals("All Kyoto wards",11,samples.size)
+  assertTrue(samples.values.all{it.size==3})
+  val measurements=mutableListOf<JsonObject>()
+  for((ward,towns) in samples)for((town,address) in towns){
+   val fullWidth=address.map{if(it in '0'..'9')('０'.code+it.code-'0'.code).toChar() else it}.joinToString("")
+   for(query in listOf(address,address.removePrefix("京都府京都市"),fullWidth)){
+    val begin=SystemClock.elapsedRealtimeNanos();val found=repo.candidates(query,"26100")
+    val exact=found.firstOrNull{it.address==address}
+    assertNotNull("No exact address for $query",exact)
+    assertFalse("Coarse match presented as exact for $query",exact!!.precision in listOf("town","block","area"))
+    measurements+=buildJsonObject{put("ward",ward);put("query",query);put("precision",exact.precision);put("ms",(SystemClock.elapsedRealtimeNanos()-begin)/1e6)}
+   }
+   val missing=town+"999999999999"
+   assertTrue("Invented parcel $missing",repo.candidates(missing,"26100").none{it.address==missing})
+  }
+  File(context.getExternalFilesDir(null),"parcel-wards-test.json").writeText(buildJsonObject{put("passed",true);put("wards",samples.size);put("addresses",samples.values.sumOf{it.size});put("exactQueries",measurements.size);put("missingNumberQueries",33);put("samples",JsonArray(measurements))}.toString())
+ }
+
 }
