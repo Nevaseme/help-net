@@ -312,7 +312,9 @@ fun SituationMap(
         neighborhoodRendered.filter {neighborhoodMarkers[it.id] !in liveNeighborhoods}.toList().forEach {marker->map.removeMarker(marker);neighborhoodRendered.remove(marker);neighborhoodMarkers.remove(marker.id)}
         neighborhoods.forEach {n->n.point?.let {point->
             val d=context.resources.displayMetrics.density
-            val bitmap=Bitmap.createBitmap((148*d).roundToInt(),(100*d).roundToInt(),Bitmap.Config.ARGB_8888)
+            // Legacy MapLibre markers center the bitmap on the coordinate. Keep the
+            // lower half transparent so the visible card's bottom is the anchor.
+            val bitmap=Bitmap.createBitmap((148*d).roundToInt(),(200*d).roundToInt(),Bitmap.Config.ARGB_8888)
             val canvas=Canvas(bitmap);canvas.scale(d,d);val paint=Paint(Paint.ANTI_ALIAS_FLAG)
             paint.color=Color.WHITE;canvas.drawRoundRect(1f,1f,147f,99f,10f,10f,paint)
             paint.color=0xFF183447.toInt();paint.textSize=12f;paint.typeface=Typeface.create("sans-serif",Typeface.BOLD)

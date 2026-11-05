@@ -10,6 +10,10 @@ for(const version of versions){
  if(location.hash===`#${version.id}`)section.scrollIntoView({inline:'start',block:'start'});
 }
 const android=document.createElement('section');android.className='view';android.id='helpnet-neighborhood-placement-android';
-android.innerHTML='<header class="comparison-caption" style="height:auto;min-height:126px"><h1 class="comparison-label">Help Net · Android 1.5.77 実装版</h1><p class="comparison-summary">町内会の地点に吹き出しを固定する配置へ戻しました。実機への更新は済み、操作確認は保留中です。</p></header><p style="padding:20px;font-size:16px;line-height:1.7">ビルドと単体試験298件は成功。エミュレーターの画面試験は完了していないため、確認済みの画面画像はまだ掲載していません。</p>';
+android.innerHTML='<header class="comparison-caption" style="height:auto;min-height:126px"><h1 class="comparison-label">Help Net · Android 1.5.77 実装版</h1><p class="comparison-summary">配置探索を撤去した旧版です。後の実機確認で下端固定が未反映と判明し、右の1.5.78で修正しました。</p></header><p style="padding:20px;font-size:16px;line-height:1.7">ビルドと単体試験298件は成功していましたが、吹き出しの中央が地域の地点に重なっていました。この列は比較履歴として残しています。</p>';
 document.getElementById('board').append(android);
 if(location.hash===`#${android.id}`)android.scrollIntoView({inline:'start',block:'start'});
+const verified=document.createElement('section');verified.className='view';verified.id='helpnet-neighborhood-placement-android-1578';
+verified.innerHTML='<header class="comparison-caption" style="height:auto;min-height:126px"><h1 class="comparison-label">Help Net · Android 1.5.78 実装確認</h1><p class="comparison-summary">吹き出しの下端中央を町内会の地点に固定しました。実機で16回の移動・拡大縮小とタップを確認し、見た目は維持しています。</p></header><img src="helpnet-neighborhood-placement/android-map-1578.png" alt="Android実機の配置確認用画面。町内会の地点に下端を固定した2つの吹き出し。" style="display:block;width:100%;height:auto;border-radius:16px"><p style="font-size:14px;line-height:1.7">配置試験用の地図画面です。通常画面でも町内会集計の開閉、地図操作、一覧との往復を確認しました。</p>';
+document.getElementById('board').append(verified);
+if(location.hash===`#${verified.id}`)verified.scrollIntoView({inline:'start',block:'start'});
