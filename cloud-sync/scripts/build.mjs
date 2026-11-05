@@ -8,7 +8,7 @@ import {build} from 'esbuild';
 const root=fileURLToPath(new URL('../',import.meta.url)),web=join(root,'../lab/web');
 for(const dir of ['dist/src','dist/shared','dist/public'])await mkdir(join(root,dir),{recursive:true});
 // Keep rejected history and the offline research solver out of the saved-result PWA.
-const archivedAssets=new Set(['tsunami-atami.json','tsunami-domain-atami.json','tsunami-compute.mjs','tsunami-solver.mjs','tsunami-solver-worker.mjs']);
+const archivedAssets=new Set(['map-label-layout.mjs','tsunami-atami.json','tsunami-domain-atami.json','tsunami-compute.mjs','tsunami-solver.mjs','tsunami-solver-worker.mjs']);
 const licenseAssets=new Set(['ASSETS-LICENSE.md','LEAFLET-LICENSE.md','web1617-LICENSES.md','web1617-phosphor-LICENSE.txt','maplibre-LICENSE.txt','leaflet-maplibre-LICENSE.txt']);
 for(const name of archivedAssets)await rm(join(root,'dist/public',name),{force:true});
 // Copy only the public PWA and pure shared modules. No lab server config, certificate or token is read.

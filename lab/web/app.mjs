@@ -275,7 +275,7 @@ await task(async()=>{
  attachCityOffline({store,getGroup:()=>group,host:document.querySelector('.appearance-settings').parentElement});
  if($('cloud-map-preview'))$('cloud-map-preview').onclick=()=>tab('buildings');$('tsunami-back').onclick=()=>tab('settings');
  if($('cloud-map-preview'))$('cloud-map-preview').textContent='地図を見る';
- document.querySelector('footer').textContent='Help Net · PWA 1.6.50 · '+t('この端末に記録を保存');
+ document.querySelector('footer').textContent='Help Net · PWA 1.6.51 · '+t('この端末に記録を保存');
  await refresh();
  if(document.body.classList.contains('registration-needed'))openSettings('group');else if(!startupNavigationChosen)await afterJoining();
  if('serviceWorker'in navigator){await setupAppUpdates();$('offline').textContent=cloudMode?t('オフライン起動の準備ができました。接続できるときに記録を共有します。'):'オフライン起動の準備ができました。通信には同じWi-Fiと実験サーバーが必要です。';}
@@ -288,5 +288,5 @@ async function groupIncidentArea(fictional=false){return incidentAreaForGroup({m
 
 bindStaticUiLanguage(trainingPage);
 const defaultTitles={ 'training-title':['安否確認の訓練','Safety drill'], 'incident-title':['地震の安否確認','Earthquake safety check'] };
-function updateIncidentLanguage(){document.querySelector("footer").textContent="Help Net · PWA 1.6.50 · "+t("この端末に記録を保存");$("menu-close").setAttribute("aria-label",t("閉じる"));$("app-menu").querySelector("nav")?.setAttribute("aria-label",t("メニュー"));for(const [id,values] of Object.entries(defaultTitles)){const input=$(id);if(values.includes(input.value))input.value=values[document.documentElement.lang==='en'?1:0];}if(store)task(refresh);}
+function updateIncidentLanguage(){document.querySelector("footer").textContent="Help Net · PWA 1.6.51 · "+t("この端末に記録を保存");$("menu-close").setAttribute("aria-label",t("閉じる"));$("app-menu").querySelector("nav")?.setAttribute("aria-label",t("メニュー"));for(const [id,values] of Object.entries(defaultTitles)){const input=$(id);if(values.includes(input.value))input.value=values[document.documentElement.lang==='en'?1:0];}if(store)task(refresh);}
 observeUiLanguage(updateIncidentLanguage);updateIncidentLanguage();

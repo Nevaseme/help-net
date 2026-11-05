@@ -1,5 +1,4 @@
 import {translateUI as t} from './web1617-english.mjs';
-import {placeMapLabel} from './map-label-layout.mjs';
 import {currentLocationControl} from './current-location.mjs';
 import {mapBuildingFeatures} from './building-details.mjs';
 import {tsunamiDepthColor} from './tsunami-map-model.mjs';
@@ -33,30 +32,22 @@ export function createTsunamiMap(){
    const marker=L.marker([person.position.latitude,person.position.longitude],{icon:L.divIcon({className:'person-map-marker',html:`<span class="person-symbol ${escape(person.status)}">${symbol}</span>${person.impactAt?`<span class="person-impact" aria-label="${local('衝撃を検知','Impact')}"><img src="/web1617-impact-collision.svg" alt=""></span>`:''}${person.enclosedAt?`<span class="person-enclosed" aria-label="${local('閉所を検知','Enclosed space')}"><img src="/web1617-enclosed.png" alt=""></span>`:''}`,iconSize:[44,44],iconAnchor:[22,22]}),title:person.label,keyboard:true});
    marker.on('click',()=>selectEntry({kind:'person',id:person.id,...person.position}));marker.addTo(map);caseLayers.push(marker);
   }
-  const occupied=[{x:map.getSize().x-66,y:0,w:66,h:120},...entries.filter(p=>p.kind==='person').map(p=>{const c=map.latLngToContainerPoint([p.latitude,p.longitude]);return {x:c.x-26,y:c.y-26,w:52,h:52};})];
-  for(const report of reports.filter(r=>!r.cancelled&&validPosition(r))){const p=map.latLngToContainerPoint([report.latitude,report.longitude]);occupied.push({x:p.x-24,y:p.y-24,w:48,h:48});}
   for(const region of communities.filter(validPosition)){
    const label=en()?region.nameEn:region.nameJa;
    const html=`<span class="community-map-label"><strong>${escape(label)}</strong>${[['sos','SOS','SOS'],['unreported','応答なし','No response'],['safe','無事','Safe'],['rescued','救助済み','Rescued']].map(([key,ja,en])=>`<span>${local(ja,en)} ${region[key]}${local('人','')}</span>`).join('')}</span>`;
-   const point=map.latLngToContainerPoint([region.latitude,region.longitude]),size=map.getSize();
-   if(point.x<0||point.y<0||point.x>size.x||point.y>size.y)continue;
+   // Saved Web 1.6.17: the card's bottom stays attached to the neighborhood point.
+   const destination=[region.latitude,region.longitude];
    let saved=communityMarkers.get(region.id);
-   const prior=saved?map.latLngToContainerPoint(saved.marker.getLatLng()):null;
-   const previous=prior?{x:prior.x-68,y:prior.y-56,w:136,h:112}:null;
-   const rect=placeMapLabel(point,size,occupied,136,112,previous);occupied.push(rect);
-   const destination=map.containerPointToLatLng([rect.x+68,rect.y+56]);
    if(!saved){
-    const marker=L.marker(destination,{icon:L.divIcon({className:'community-map-marker',html,iconSize:[136,112],iconAnchor:[68,56]}),title:label,keyboard:true,zIndexOffset:500}).addTo(map);
-    const line=L.polyline([[region.latitude,region.longitude],destination],{color:'#52616a',weight:1,interactive:false}).addTo(map);
+    const marker=L.marker(destination,{icon:L.divIcon({className:'community-map-marker',html,iconSize:[136,112],iconAnchor:[68,112]}),title:label,keyboard:true,zIndexOffset:500}).addTo(map);
     marker.on('click',()=>{const current=communities.find(r=>r.id===region.id);if(current&&!consumePick(current))selectCommunity(region.id);});
-    saved={marker,line,html};communityMarkers.set(region.id,saved);
+    saved={marker,html};communityMarkers.set(region.id,saved);
    }else{
-    if(saved.html!==html){saved.marker.setIcon(L.divIcon({className:'community-map-marker',html,iconSize:[136,112],iconAnchor:[68,56]}));saved.html=html;}
+    if(saved.html!==html){saved.marker.setIcon(L.divIcon({className:'community-map-marker',html,iconSize:[136,112],iconAnchor:[68,112]}));saved.html=html;}
     saved.marker.setLatLng(destination);saved.marker.getElement()?.setAttribute('title',label);
-    saved.line.setLatLngs([[region.latitude,region.longitude],destination]);
    }
   }
-  for(const [id,saved] of communityMarkers){const region=communities.find(r=>r.id===id),point=region&&map.latLngToContainerPoint([region.latitude,region.longitude]),size=map.getSize();if(!point||point.x<0||point.y<0||point.x>size.x||point.y>size.y){map.removeLayer(saved.marker);map.removeLayer(saved.line);communityMarkers.delete(id);}}
+  for(const [id,saved] of communityMarkers){if(!communities.some(region=>region.id===id&&validPosition(region))){map.removeLayer(saved.marker);communityMarkers.delete(id);}}
   for(const report of reports.filter(r=>!r.cancelled&&validPosition(r))){
    const destination=[report.latitude,report.longitude];
    const marker=L.marker(destination,{icon:L.divIcon({className:'report-map-marker',html:`<img src="${report.urgency==='HIGH'?'/web1617-report-emergency.png':['LOW','MEDIUM'].includes(report.urgency)?'/web1617-report-normal.png':'/web1617-report-unrated.svg'}" alt="">`,iconSize:[44,44],iconAnchor:[22,22]}),title:report.label,keyboard:true});

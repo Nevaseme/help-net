@@ -102,8 +102,6 @@ fun SituationMap(
     val neighborhoodMarkers=remember {mutableMapOf<Long,String>()}
     val neighborhoodRendered=remember {mutableListOf<Marker>()}
     val neighborhoodImages=remember {mutableMapOf<String,String>()}
-    val neighborhoodAnimations=remember {mutableMapOf<String,android.animation.ValueAnimator>()}
-    DisposableEffect(Unit){onDispose{neighborhoodAnimations.values.forEach {it.cancel()}}}
     val latestNeighborhood by rememberUpdatedState(onNeighborhood)
     val neighborhoodEnglish=LocalUiLanguage.current=="en"
     var riskModel by remember { mutableStateOf<BuildingMapModel?>(null) }
@@ -307,14 +305,11 @@ fun SituationMap(
             }
         }
     }
-    LaunchedEffect(ready,neighborhoods,neighborhoodEnglish,people,reports,showSafe,zoom,latitude,longitude) {
+    LaunchedEffect(ready,neighborhoods,neighborhoodEnglish) {
         val map=controller?:return@LaunchedEffect
         if(!ready)return@LaunchedEffect
         val liveNeighborhoods=neighborhoods.map {it.row.id}.toSet()
-        neighborhoodRendered.filter {neighborhoodMarkers[it.id] !in liveNeighborhoods}.toList().forEach {marker->neighborhoodAnimations.remove(neighborhoodMarkers[marker.id])?.cancel();map.removeMarker(marker);neighborhoodRendered.remove(marker);neighborhoodMarkers.remove(marker.id)}
-        val d=context.resources.displayMetrics.density.toDouble()
-        val occupied=people.filter {it.point!=null&&(showSafe||it.state !in setOf(MapSafety.SAFE,MapSafety.RESCUED))}.mapNotNull {it.point}.map {p->val q=map.projection.toScreenLocation(LatLng(p.latitude,p.longitude));LabelRect(q.x/d-32,q.y/d-44,64.0,88.0)}.toMutableList()
-        occupied.addAll(reports.map {p->val q=map.projection.toScreenLocation(LatLng(p.point.latitude,p.point.longitude));LabelRect(q.x/d-26,q.y/d-26,52.0,52.0)})
+        neighborhoodRendered.filter {neighborhoodMarkers[it.id] !in liveNeighborhoods}.toList().forEach {marker->map.removeMarker(marker);neighborhoodRendered.remove(marker);neighborhoodMarkers.remove(marker.id)}
         neighborhoods.forEach {n->n.point?.let {point->
             val d=context.resources.displayMetrics.density
             val bitmap=Bitmap.createBitmap((148*d).roundToInt(),(100*d).roundToInt(),Bitmap.Config.ARGB_8888)
@@ -326,32 +321,16 @@ fun SituationMap(
             canvas.drawText("SOS ${n.row.sos} · ${if(neighborhoodEnglish)"No response" else "応答なし"} ${n.row.unreported}",8f,44f,paint)
             canvas.drawText("${if(neighborhoodEnglish)"Safe" else "無事"} ${n.row.safe} · ${if(neighborhoodEnglish)"Rescued" else "救助済み"} ${n.row.rescued}",8f,65f,paint)
             canvas.drawText("${if(neighborhoodEnglish)"High urgency" else "高緊急度"} ${n.activeHigh}",8f,86f,paint)
-            val origin=map.projection.toScreenLocation(LatLng(point.latitude,point.longitude))
-            if(origin.x<0||origin.y<0||origin.x>view.width||origin.y>view.height){
-                neighborhoodAnimations.remove(n.row.id)?.cancel()
-                neighborhoodRendered.find {neighborhoodMarkers[it.id]==n.row.id}?.let {marker->map.removeMarker(marker);neighborhoodRendered.remove(marker);neighborhoodMarkers.remove(marker.id)}
-                neighborhoodImages.remove(n.row.id)
-                bitmap.recycle();return@let
-            }
+            // Match the saved Web map: bottom-anchored native marker at the fixed neighborhood point.
+            val placed=LatLng(point.latitude,point.longitude)
             val existing=neighborhoodRendered.find {neighborhoodMarkers[it.id]==n.row.id}
-            val previous=existing?.position?.let {map.projection.toScreenLocation(it)}?.let {LabelRect(it.x/d.toDouble()-74,it.y/d.toDouble()-100,148.0,100.0)}
-            val rect=placeMapLabel(origin.x/d.toDouble(),origin.y/d.toDouble(),view.width/d.toDouble(),view.height/d.toDouble(),occupied,previous=previous);occupied+=rect
-            val placed=map.projection.fromScreenLocation(PointF(((rect.x+rect.w/2)*d).toFloat(),((rect.y+rect.h)*d).toFloat()))
             val signature="${n.row}:$neighborhoodEnglish:${n.activeHigh}"
             if(existing==null){
                 val marker=map.addMarker(MarkerOptions().position(placed).icon(IconFactory.getInstance(context).fromBitmap(bitmap)))
                 neighborhoodRendered.add(marker);neighborhoodMarkers[marker.id]=n.row.id
             }else{
                 if(neighborhoodImages[n.row.id]!=signature)existing.icon=IconFactory.getInstance(context).fromBitmap(bitmap)
-                neighborhoodAnimations.remove(n.row.id)?.cancel()
-                val from=existing.position
-                if(abs(from.latitude-placed.latitude)+abs(from.longitude-placed.longitude)>1e-8){
-                    neighborhoodAnimations[n.row.id]=android.animation.ValueAnimator.ofFloat(0f,1f).apply {
-                        duration=180
-                        addUpdateListener {val progress=(it.animatedValue as Float).toDouble();existing.position=LatLng(from.latitude+(placed.latitude-from.latitude)*progress,from.longitude+(placed.longitude-from.longitude)*progress)}
-                        start()
-                    }
-                }
+                if(existing.position!=placed)existing.position=placed
             }
             neighborhoodImages[n.row.id]=signature
         }}

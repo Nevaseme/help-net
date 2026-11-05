@@ -299,8 +299,6 @@ html[lang="en"] .map-toolbar #map-unknown{display:block;position:relative;paddin
 html[lang="en"] .map-toolbar .map-safe-toggle input:checked::after{left:11px}
 
 /* Keep labels attached during map pans; animate only collision-avoidance adjustments. */
-.community-map-marker{transition:transform 180ms ease-out}
-@media(prefers-reduced-motion:reduce){.community-map-marker{transition:none}}
 #community-report-preview [data-print-report]{margin:12px 20px}
 
 /* Keep the selected building visible above its details. */
