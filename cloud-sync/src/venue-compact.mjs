@@ -11,5 +11,5 @@ export function compactScenario(sessionId,startedAt){
   if(p.lastKnownPosition)p.lastKnownPosition.acquiredAt=startedAt-lastKnownAgeDays*86400000;
   return {...p,deviceId:crypto.randomUUID(),name:given[i%given.length]+' '+family[Math.floor(i/given.length)]};
  });
- return {version:1,layoutVersion:3,sessionId,communities:structuredClone(layout.communities),communityLongitudeCuts:[135.7636,135.7643],people};
+ return {version:1,layoutVersion:4,sessionId,communities:structuredClone(layout.communities),communityLongitudeCuts:structuredClone(layout.communityLongitudeCuts),people};
 }

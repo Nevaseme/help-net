@@ -42,9 +42,9 @@ try{for(const mode of ['DRILL','EARTHQUAKE']){
    if(region==='demo-central')await sheet.getByRole('button').filter({hasText:person.name}).waitFor();else{assert.match(await sheet.innerText(),/You cannot view individual details because you do not belong to this neighborhood\./);assert.equal(await sheet.locator('[data-building-person]').count(),0);}
    await audit(region+'-building');await page.screenshot({path:out+'/'+mode+'-'+region+'-building.png'});await sheet.locator('.sheet-close').click();
   }
-  await page.evaluate(()=>window.qaMap.setView([35.01395,135.76395],19,{animate:false}));await page.waitForTimeout(800);await page.screenshot({path:out+'/'+mode+'-compact-map.png'});
-  await page.evaluate(()=>window.qaMap.setView([35.01395,135.76395],17.75,{animate:false}));await page.waitForTimeout(900);await page.screenshot({path:out+'/'+mode+'-neighborhoods.png'});
-  await page.evaluate(()=>window.qaMap.setView([35.01395,135.76395],19,{animate:false}));await page.waitForTimeout(700);
+  await page.evaluate(async()=>{const {Store}=await import('/sync.mjs');const s=await Store.open('tasukeai-cloud'),v=await s.read('meta','venue:'+await s.read('meta','group'));s.close();window.qaMap.fitBounds(v.scenario.communities.find(c=>c.id==='demo-central').boundary.map(([lng,lat])=>[lat,lng]),{padding:[24,24],animate:false});});await page.waitForTimeout(800);await page.screenshot({path:out+'/'+mode+'-compact-map.png'});
+  await page.evaluate(async()=>{const {Store}=await import('/sync.mjs');const s=await Store.open('tasukeai-cloud'),v=await s.read('meta','venue:'+await s.read('meta','group'));s.close();window.qaMap.fitBounds(v.scenario.communities.flatMap(c=>c.boundary.map(([lng,lat])=>[lat,lng])),{padding:[24,24],animate:false});});await page.waitForTimeout(900);await page.screenshot({path:out+'/'+mode+'-neighborhoods.png'});
+  await page.evaluate(async()=>{const {Store}=await import('/sync.mjs');const s=await Store.open('tasukeai-cloud'),v=await s.read('meta','venue:'+await s.read('meta','group'));s.close();window.qaMap.fitBounds(v.scenario.communities.find(c=>c.id==='demo-central').boundary.map(([lng,lat])=>[lat,lng]),{padding:[24,24],animate:false});});await page.waitForTimeout(700);
   await page.locator('#map-show-safe').uncheck();await page.waitForTimeout(250);await page.screenshot({path:out+'/'+mode+'-compact-focused.png'});await page.locator('#map-show-safe').check();
  }
  await page.locator('#map-report-add').click();assert.equal(await page.locator('#map-pick-confirm').isDisabled(),true);

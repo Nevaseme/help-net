@@ -75,10 +75,10 @@ test('venue creates persistent fictional scenario without consuming audience ide
  const input={requestId,password,areaId:'kyoto-gosho-south'};
  const start=await f.call(`/groups/${g}/venue`,input,admin.token);
  const scenario=start.body.venue.scenario;assert.equal(scenario?.people?.length,96);
- assert.equal(scenario.people.filter(p=>p.safety==='SAFE').length,88);assert.equal(scenario.people.filter(p=>p.safety==='UNREPORTED').length,4);assert.equal(scenario.people.filter(p=>p.initialRescue).length,0);assert.equal(new Set(scenario.people.map(p=>p.home.plateauId)).size,47);assert.equal(new Set(scenario.people.map(p=>p.home.householdId)).size,64);
+ assert.equal(scenario.people.filter(p=>p.safety==='SAFE').length,88);assert.equal(scenario.people.filter(p=>p.safety==='UNREPORTED').length,4);assert.equal(scenario.people.filter(p=>p.initialRescue).length,0);assert.equal(new Set(scenario.people.map(p=>p.home.plateauId)).size,64);assert.equal(new Set(scenario.people.map(p=>p.home.householdId)).size,64);
  assert.equal(start.body.roster.members.length,1);assert.equal(start.body.venue.placements.length,1);
- assert.deepEqual(scenario.communityLongitudeCuts,[135.7636,135.7643]);
- for(const c of scenario.communities){const residents=scenario.people.filter(p=>p.communityId===c.id);assert.equal(new Set(residents.map(p=>p.home.buildingId)).size,({'demo-west':16,'demo-central':14,'demo-east':17})[c.id]);assert.ok(residents.some(p=>p.safety==='SAFE'));assert.ok(residents.some(p=>p.safety==='UNREPORTED'));assert.ok(residents.some(p=>p.safety==='SOS'&&!p.initialRescue));}
+ assert.equal(scenario.communityLongitudeCuts.length,2);assert.ok(scenario.communityLongitudeCuts[0]<scenario.communityLongitudeCuts[1]);
+ for(const c of scenario.communities){const residents=scenario.people.filter(p=>p.communityId===c.id);assert.equal(new Set(residents.map(p=>p.home.buildingId)).size,({'demo-west':24,'demo-central':16,'demo-east':24})[c.id]);assert.ok(residents.some(p=>p.safety==='SAFE'));assert.ok(residents.some(p=>p.safety==='UNREPORTED'));assert.ok(residents.some(p=>p.safety==='SOS'&&!p.initialRescue));}
  assert.ok(scenario.people.every(p=>p.home.plateauId&&p.home.buildingId&&p.home.address&&p.communityId));
  assert.deepEqual(new Set(scenario.people.map(p=>p.safety)),new Set(['SAFE','SOS','UNREPORTED']));
  assert.ok(scenario.people.every(p=>!/[\u3040-\u30ff\u3400-\u9fff]/.test(p.note+p.name+p.home.room)));
@@ -246,7 +246,7 @@ test('administrator starts venue and forty named attendees join its existing inc
  const replay=await f.call('/venue/join',inputs[0]);assert.equal(replay.body.memberId,joined[0].memberId);
  const snapshot=f.get(admin.groupId).snapshot();assert.equal(snapshot.roster.members.length,41);
  assert.equal(snapshot.venue.placements.length,41);assert.equal(new Set(snapshot.venue.placements.map(p=>p.latitude+':'+p.longitude)).size,41);assert.equal(new Set(snapshot.venue.placements.map(p=>p.home.householdId)).size,41);assert.ok(snapshot.venue.placements.every(p=>p.communityId==='demo-central'&&p.home.plateauId));
- assert.equal(new Set(snapshot.venue.placements.map(p=>p.home.plateauId)).size,14);
+ assert.equal(new Set(snapshot.venue.placements.map(p=>p.home.plateauId)).size,41);
  assert.equal(f.get(admin.groupId).history('residents').length,0);
  const text=JSON.stringify(snapshot);assert.equal(text.includes(password),false);assert.equal(text.includes('passwordHash'),false);
 });
