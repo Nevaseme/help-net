@@ -1,3 +1,4 @@
+import {usDateTime,usTime} from './date-time.mjs';
 // UI state only. A successful durable write is never reclassified as a send failure.
 export class SaveFeedback {
  constructor(changed=()=>{}){this.changed=changed;this.busy=false;this.active=null;this.states=new Map();}
@@ -9,7 +10,7 @@ export class SaveFeedback {
   let saved=false;
   try{
    await persist();saved=true;
-   this.states.set(key,{status:'success',text:`${label}をこの端末に保存しました（${new Date().toLocaleTimeString('ja-JP')}）`});
+   this.states.set(key,{status:'success',text:`${label}をこの端末に保存しました（${usTime(Date.now())}）`});
    try{await publish();}catch{this.states.set(key,{status:'success',text:`${label}はこの端末に保存済みです。表示を開き直し、通信は再接続してください。`});}
   }catch(e){this.states.set(key,{status:'error',text:`保存できませんでした：${e.message||'保存先を確認してください'}。入力を確認して再試行してください。`});}
   finally{this.busy=false;this.active=null;this.changed();}

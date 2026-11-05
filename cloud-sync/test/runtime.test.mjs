@@ -1,0 +1,50 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtemp,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {build} from 'esbuild';
+import {Miniflare,convertV4MiniflareOptions} from 'miniflare';
+import {relayKey,signedItem} from './relay-helpers.mjs';
+
+test('real Worker RPC and SQLite survive runtime restart and isolate groups',async t=>{
+ const dir=await mkdtemp(join(tmpdir(),'pland-worker-'));
+ const bundle=await build({entryPoints:[fileURLToPath(new URL('../src/worker.mjs',import.meta.url))],bundle:true,format:'esm',write:false,external:['cloudflare:workers'],platform:'browser'});
+ // Installed workerd 1.20261023.1 supports through Oct 23; production uses current UTC Oct 29.
+ const options={...convertV4MiniflareOptions({name:'test-journal',modules:true,script:bundle.outputFiles[0].text,compatibilityDate:'2026-10-23',compatibilityFlags:['nodejs_compat'],durableObjects:{GROUPS:{className:'GroupJournal',useSQLite:true}},ratelimits:{SIGNUP_LIMITER:{namespace_id:'10302026',simple:{limit:30,period:60}}}}),resourcePersistencePath:dir,telemetry:{enabled:false}};
+ let mf=new Miniflare(options);t.after(async()=>{await mf.dispose();await rm(dir,{recursive:true,force:true});});
+ const call=async(path,body,token)=>{
+  const response=await mf.dispatchFetch(`https://sync.test/api/v1${path}`,{method:body?'POST':'GET',headers:{...(body?{'Content-Type':'application/json'}:{}),...(token?{Authorization:`Bearer ${token}`}:{})},...(body?{body:JSON.stringify(body)}:{})});
+  return {status:response.status,body:await response.json()};
+ };
+ const request={requestId:crypto.randomUUID(),deviceId:crypto.randomUUID(),activityName:'Admin',groupName:'Runtime',registrationToken:'d'.repeat(64)};
+ const created=await call('/groups',request);assert.equal(created.status,200,JSON.stringify(created.body));const a=created.body;
+ const key=await relayKey(),keyPath=`/groups/${a.groupId}/relay-keys`;
+ assert.equal((await call(keyPath,key.registration,a.token)).status,200);
+ assert.equal((await call(keyPath,key.registration,a.token)).status,200);
+ assert.equal((await call(keyPath,null)).status,401);
+ assert.equal((await call(keyPath,key.registration)).status,401);
+ assert.equal((await call(keyPath,key.registration,'f'.repeat(64))).status,401);
+ assert.equal((await mf.dispatchFetch(`https://sync.test/api/v1${keyPath}`,{method:'DELETE',headers:{Authorization:`Bearer ${a.token}`}})).status,405);
+ const invitation=await call(`/groups/${a.groupId}/invitations`,{},a.token);
+ const joined=await call(`/groups/${a.groupId}/join`,{deviceId:crypto.randomUUID(),activityName:'Relayer',code:invitation.body.code,registrationToken:'c'.repeat(64)});
+ assert.equal(joined.status,200);
+ const nearby=await call(`/groups/${a.groupId}/nearby`,null,a.token);assert.equal(nearby.status,200);assert.match(nearby.body.key,/^[a-f0-9]{64}$/);
+ assert.equal((await call(`/groups/${a.groupId}/nearby`,null,'f'.repeat(64))).status,401);
+ const record={groupId:a.groupId,originId:a.deviceId,revision:1,updatedAt:1,name:'本人',floor:'',room:'',latitude:35,longitude:135,safety:'SAFE'};
+ const saved=await call(`/groups/${a.groupId}/records`,{records:[{collection:'residents',record}]},a.token);assert.equal(saved.status,200,JSON.stringify(saved.body));
+ const relayed=await signedItem(key,'residents',{...record,revision:2,name:'中継記録'});
+ const forwarded=await call(`/groups/${a.groupId}/records`,{records:[relayed]},joined.body.token);assert.equal(forwarded.status,200,JSON.stringify(forwarded.body));
+ await mf.dispose();mf=new Miniflare(options);
+ const recovered=await call('/groups',request);assert.equal(recovered.body.memberId,a.memberId);
+ assert.deepEqual((await call(`/groups/${a.groupId}/nearby`,null,a.token)).body,nearby.body);
+ assert.deepEqual((await call(keyPath,null,joined.body.token)).body,{keys:[{deviceId:a.deviceId,...key.registration}]});
+ const relayedRetry=await call(`/groups/${a.groupId}/records`,{records:[relayed]},joined.body.token);
+ assert.equal(relayedRetry.body.acks[0].cursor,forwarded.body.acks[0].cursor);assert.equal(relayedRetry.body.acks[0].status,'duplicate');
+ const page=await call(`/groups/${a.groupId}/records?after=0`,null,a.token);assert.equal(page.status,200);assert.deepEqual(page.body.records[0].record,record);
+ const duplicate=await call(`/groups/${a.groupId}/records`,{records:[{collection:'residents',record}]},a.token);assert.equal(duplicate.body.acks[0].status,'duplicate');
+ const b=await call('/groups',{...request,requestId:crypto.randomUUID(),registrationToken:'e'.repeat(64)});assert.equal(b.status,200);
+ assert.equal((await call(`/groups/${b.body.groupId}/records?after=0`,null,a.token)).status,401);
+ assert.equal((await call(`/groups/${b.body.groupId}/records?after=0`,null,b.body.token)).body.records.length,0);
+});

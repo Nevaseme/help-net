@@ -13,7 +13,7 @@ import io.github.nevaseme.plandmk1.core.Safety
 fun Safety.label() = when (this) { Safety.SAFE -> "無事"; Safety.SOS -> "SOS"; Safety.UNREPORTED -> "安否未登録" }
 
 @Composable fun SectionTitle(text: String) {
-    Text(text, style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
+    Text(menuText(text), style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
 }
 
 @Composable fun SafetyBadge(safety: Safety) {
@@ -27,5 +27,5 @@ fun Safety.label() = when (this) { Safety.SAFE -> "無事"; Safety.SOS -> "SOS";
     Surface(shape = MaterialTheme.shapes.medium,
         color = if (error) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer,
         contentColor = if (error) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer,
-    ) { Text(text, modifier = Modifier.fillMaxWidth().padding(16.dp)) }
+    ) { Text(menuText(text), modifier = Modifier.fillMaxWidth().padding(16.dp)) }
 }

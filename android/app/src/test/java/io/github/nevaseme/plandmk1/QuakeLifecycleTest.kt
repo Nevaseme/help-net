@@ -12,6 +12,46 @@ class QuakeLifecycleTest {
         GroupMember(a,"班長",MemberRole.ADMIN,listOf(a,secondA)),
         GroupMember(b,"確認B",MemberRole.MEMBER,listOf(b)), GroupMember(c,"確認C",MemberRole.MEMBER,listOf(c))))
     private fun report(actor:String,time:Long=0)=QuakeEvent("trial",id(),actor,time,QuakeAction.REPORT,false,title="地震",area="試験地域")
+    private fun trainingStart(actor:String=a,time:Long=0)=QuakeEvent("trial",id(),actor,time,QuakeAction.valueOf("TRAINING_START"),true,title="明示訓練",area="試験地域")
+
+    @Test fun administratorStartsEarthquakeAndMemberCannotBypassReportQuorum(){
+        val e=report(a).copy(action=QuakeAction.ADMIN_START)
+        validateQuakeCommand(roster,emptyList(),e)
+        assertFalse(quakeStates(roster,listOf(e)).single().formation.training)
+        assertThrows(IllegalArgumentException::class.java){e.copy(actorDeviceId=b).validate(roster)}
+        assertThrows(IllegalArgumentException::class.java){e.copy(training=true).validate(roster)}
+        assertThrows(IllegalArgumentException::class.java){validateQuakeCommand(roster,listOf(e),e.copy(eventId=id(),operatedAt=1))}
+        assertTrue(quakeStates(roster,listOf(report(a))).isEmpty())
+    }
+    @Test fun administratorExplicitTrainingStartsWithoutChangingRealOrLegacyReportQuorum() {
+        val start=trainingStart()
+        validateQuakeCommand(roster,emptyList(),start)
+        val state=quakeStates(roster,listOf(start)).single()
+        assertEquals(start.eventId,state.formation.incidentId);assertTrue(state.formation.training);assertFalse(state.closed)
+        assertTrue(formationCandidates(roster,listOf(start)).isEmpty())
+        assertTrue(quakeStates(roster,listOf(report(a))).isEmpty())
+        assertTrue(formationCandidates(roster,listOf(report(a))).isEmpty())
+        assertTrue(formationCandidates(roster,listOf(report(a).copy(training=true))).isEmpty())
+        assertThrows(IllegalArgumentException::class.java) {validateQuakeCommand(roster,listOf(start),trainingStart(time=1))}
+    }
+    @Test fun explicitTrainingRejectsMemberAndActualDisasterFlag() {
+        assertThrows(IllegalArgumentException::class.java) {trainingStart(b).validate(roster)}
+        assertThrows(IllegalArgumentException::class.java) {trainingStart().copy(training=false).validate(roster)}
+        assertThrows(IllegalArgumentException::class.java) {trainingStart().copy(reportIds=listOf(id())).validate(roster)}
+    }
+    @Test fun parallelExplicitTrainingAliasesKeepAnswersAndEndAcrossDeliveryOrder() {
+        val first=trainingStart(time=10);val parallel=trainingStart(secondA,20)
+        val end=QuakeEvent("trial",id(),a,30,QuakeAction.END,true,parallel.eventId)
+        val history=listOf(first,parallel,end)
+        val state=quakeStates(roster,history).single()
+        assertTrue(state.closed);assertEquals(setOf(first.eventId,parallel.eventId),state.incidentIds)
+        assertEquals(listOf(state),quakeStates(roster,history.reversed()))
+        fun row(e:QuakeEvent)=IncidentEvent("trial",e.eventId,e.eventId,e.actorDeviceId,"管理者",1,e.operatedAt,IncidentKind.START,e.title,e.area,true)
+        val answer=IncidentEvent("trial",id(),parallel.eventId,b,"B",1,25,IncidentKind.ANSWER,training=true,safety=Safety.SAFE)
+        assertEquals(answer,managedIncidentOptions(listOf(row(first),row(parallel),answer),roster,history).single().answers[b])
+        val next=trainingStart(time=40);validateQuakeCommand(roster,history,next)
+        assertEquals(listOf(true,false),quakeStates(roster,history+next).map {it.closed})
+    }
 
     @Test fun rosterRoundTripAndDuplicateDeviceRejection() {
         assertEquals(roster,MemberRoster.decode(roster.encode()))

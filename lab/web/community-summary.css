@@ -1,0 +1,9 @@
+.area-incident-summary{margin:0 0 24px}
+.area-incident-summary h3{margin:12px 0;font-size:16px}
+.area-incident-summary table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:12px}
+.area-incident-summary th,.area-incident-summary td{padding:6px 2px;border-bottom:1px solid var(--line);text-align:center;overflow-wrap:anywhere}
+.area-incident-summary th:first-child{width:28%;text-align:left;padding-left:4px}
+.area-incident-summary thead,.area-incident-summary tbody tr:first-child{background:var(--surface)}
+.area-incident-summary tbody th{font-weight:600}
+.area-incident-summary td{font-weight:750;font-size:16px}
+.area-incident-summary button.text-button{display:block;width:100%;min-height:44px;padding:4px 0;border:0;background:transparent;color:var(--primary);font-size:16px;font-weight:750;border-radius:4px}

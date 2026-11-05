@@ -1,4 +1,4 @@
-# PWA・中継サーバー
+# Tasukeai PWA・中継サーバー
 
 同じWi-Fi内のAndroid・iPhone・PCで、安否や救助記録の同期・中継を試す環境。サーバーは情報を保存しない。
 

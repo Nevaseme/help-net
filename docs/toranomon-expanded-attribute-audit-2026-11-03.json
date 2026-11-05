@@ -1,0 +1,88 @@
+{
+  "scope": "Six additional mesh files sampled within 139.710,35.635,139.785,35.700. Not an exhaustive Tokyo audit.",
+  "counts": {
+    "buildingRecords": 11351,
+    "yearOfConstruction": 0,
+    "buildingStructureType": 0
+  },
+  "files": [
+    {
+      "code": "53393588",
+      "maxLod": 2,
+      "url": "https://assets.cms.plateau.reearth.io/assets/ea/d75459-6d62-4a1f-8081-317603bd5f8d/13103_minato-ku_pref_2025_citygml_1_op/udx/bldg/53393588_bldg_6697_op.gml",
+      "city": "13103",
+      "name": "港区",
+      "buildings": 2403,
+      "yearOfConstruction": 0,
+      "buildingStructureType": 0,
+      "storeysAboveGround": 2403,
+      "bytes": 44434611,
+      "sha256": "934c598eb18bdac5b3f255a9a1cd1f7290acfeb65617c6489dfb51b2bbaa8361"
+    },
+    {
+      "code": "53393568",
+      "maxLod": 2,
+      "url": "https://assets.cms.plateau.reearth.io/assets/ea/d75459-6d62-4a1f-8081-317603bd5f8d/13103_minato-ku_pref_2025_citygml_1_op/udx/bldg/53393568_bldg_6697_op.gml",
+      "city": "13103",
+      "name": "港区",
+      "buildings": 2421,
+      "yearOfConstruction": 0,
+      "buildingStructureType": 0,
+      "storeysAboveGround": 2421,
+      "bytes": 76984722,
+      "sha256": "b30787645f4920b8c2b3db8b4f7273d54504d9a3611a1a62daca7e1ec11139f6"
+    },
+    {
+      "code": "53394507",
+      "maxLod": 2,
+      "url": "https://assets.cms.plateau.reearth.io/assets/ea/d75459-6d62-4a1f-8081-317603bd5f8d/13103_minato-ku_pref_2025_citygml_1_op/udx/bldg/53394507_bldg_6697_op.gml",
+      "city": "13103",
+      "name": "港区",
+      "buildings": 1454,
+      "yearOfConstruction": 0,
+      "buildingStructureType": 0,
+      "storeysAboveGround": 1454,
+      "bytes": 36080682,
+      "sha256": "c6b90b7aec57793d2712247670ce3c2206129e0012d357d4f79ad5b546419050"
+    },
+    {
+      "code": "53393681",
+      "maxLod": 2,
+      "url": "https://assets.cms.plateau.reearth.io/assets/93/1f058b-e06b-445c-ae62-2e02cdf72849/13102_chuo-ku_pref_2025_citygml_1_op/udx/bldg/53393681_bldg_6697_op.gml",
+      "city": "13102",
+      "name": "中央区",
+      "buildings": 406,
+      "yearOfConstruction": 0,
+      "buildingStructureType": 0,
+      "storeysAboveGround": 406,
+      "bytes": 27267232,
+      "sha256": "1b416caa02b3a21463122398d2781783a9d355e1aaac678bb05002c0a68793db"
+    },
+    {
+      "code": "53394611",
+      "maxLod": 2,
+      "url": "https://assets.cms.plateau.reearth.io/assets/5d/dc07c5-ace7-465a-9c99-53f6d78f6164/13101_chiyoda-ku_pref_2025_citygml_1_op/udx/bldg/53394611_bldg_6697_op.gml",
+      "city": "13101",
+      "name": "千代田区",
+      "buildings": 1022,
+      "yearOfConstruction": 0,
+      "buildingStructureType": 0,
+      "storeysAboveGround": 1022,
+      "bytes": 166216449,
+      "sha256": "3448bec01ea015913fc2a5ac31e25831d667cd20d68e8d576d8627054d5c160e"
+    },
+    {
+      "code": "53394527",
+      "maxLod": 2,
+      "url": "https://assets.cms.plateau.reearth.io/assets/84/48ebed-93d8-4196-bdda-e1db9590d3d1/13104_shinjuku-ku_pref_2025_citygml_1_op/udx/bldg/53394527_bldg_6697_op.gml",
+      "city": "13104",
+      "name": "新宿区",
+      "buildings": 3645,
+      "yearOfConstruction": 0,
+      "buildingStructureType": 0,
+      "storeysAboveGround": 3645,
+      "bytes": 58180873,
+      "sha256": "24fd4057666e26f7c32124ea6ff8264ef149e31dddfb5fa3c965f2d7e9056a6e"
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+Public offline city-map snapshot. Source: https://openfreemap.org/
+Map data: OpenStreetMap contributors, ODbL https://www.openstreetmap.org/copyright
+Schema: OpenMapTiles https://openmaptiles.org/
+Fonts: Noto Sans, SIL Open Font License https://github.com/notofonts/noto-fonts
+Original URLs, file hashes and sizes are recorded in each map-manifest.json.

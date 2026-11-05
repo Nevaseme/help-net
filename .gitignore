@@ -55,3 +55,14 @@ AGENTS.md
 .DS_Store
 Thumbs.db
 Desktop.ini
+
+# User-maintained local notes and verification outputs.
+/plan.txt
+/add.txt
+/error.txt
+/firebase.txt
+/output/
+/tmp/
+/.agents/
+/.specify/
+/[{]console.error(e.message)

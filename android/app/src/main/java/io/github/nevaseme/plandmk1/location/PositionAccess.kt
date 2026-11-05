@@ -17,7 +17,10 @@ import io.github.nevaseme.plandmk1.PlanDApplication
 /** Uses Android's own permission/settings screens; no app-screen layout changes. */
 class PositionAccess(private val activity: ComponentActivity, private val app: PlanDApplication) {
     private val retry = PermissionRetry()
-    private var busy = false
+    val requesting = kotlinx.coroutines.flow.MutableStateFlow(false)
+    private var busy: Boolean
+        get() = requesting.value
+        set(value) { requesting.value = value }
     private var registered = false
     private var group: String? = null
     private val permissions = activity.activityResultRegistry.register("position-permissions", activity, ActivityResultContracts.RequestMultiplePermissions()) {

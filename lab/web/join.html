@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#00836c">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'">
+  <title>訓練に参加 · Tasukeai</title>
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/join.css">
+  <script defer src="/join-qrcode.js"></script>
+  <script type="module" src="/join.mjs"></script>
+</head>
+<body>
+  <header><a href="/" class="brand">Tasukeai</a><span>Android 訓練</span></header>
+  <main>
+    <section class="intro">
+      <p class="eyebrow">一緒に、つながりを確かめる</p>
+      <h1>訓練に参加</h1>
+      <p>Androidアプリを入れて、会場のグループに参加します。</p>
+      <p id="invite-state" class="notice" role="status" aria-live="polite">招待を確認しています…</p>
+    </section>
+    <section class="step" aria-labelledby="install-title">
+      <div class="step-heading"><span class="number">1</span><h2 id="install-title">アプリをインストール</h2></div>
+      <a id="apk-download" class="button" aria-disabled="true">APKをダウンロード</a>
+      <p id="release-state" class="hint" role="status" aria-live="polite">配布ファイルを確認しています…</p>
+      <p class="hint">ダウンロードしたAPKを開いてインストールします。Androidで許可を求められたら、この配布元を確認して進めてください。</p>
+      <details id="release-details" hidden><summary>配布ファイルの情報</summary><dl><dt>バージョン</dt><dd id="release-version"></dd><dt>サイズ</dt><dd id="release-size"></dd><dt>SHA-256</dt><dd id="release-sha" class="code"></dd></dl></details>
+    </section>
+    <section class="step" aria-labelledby="join-title">
+      <div class="step-heading"><span class="number">2</span><h2 id="join-title">同じグループに参加</h2></div>
+      <p>インストールが終わったら、このページに戻ってください。</p>
+      <a id="app-join" class="button" aria-disabled="true">インストール後に参加</a>
+      <p class="hint">アプリが開いたら表示名を入力し、参加します。初回の参加はインターネット接続中に行ってください。</p>
+      <details id="manual-invite" hidden><summary>アプリが開かないとき</summary><p class="hint">招待コードをコピーし、アプリのグループ参加画面に貼り付けてください。</p><label for="invite-code">招待コード</label><textarea id="invite-code" class="code" rows="3" readonly spellcheck="false"></textarea><button id="copy-invite" class="secondary" type="button">招待コードをコピー</button><p id="copy-state" role="status" aria-live="polite"></p></details>
+    </section>
+    <section class="step" aria-labelledby="offline-title">
+      <div class="step-heading"><span class="number">3</span><h2 id="offline-title">会場で共有を試す</h2></div>
+      <p>参加後、アプリで必要な権限を許可し、主催者の案内に沿って近くの端末との共有を試します。</p>
+      <p class="hint">このページだけでは参加や近くの端末との通信は完了しません。アプリ内の参加結果と共有状況を確認してください。</p>
+    </section>
+    <details id="invite-entry"><summary>招待コードを入力する</summary><p class="hint">招待がない場合は、主催者に参加用QRまたは招待コードをもらってください。</p><form id="invite-form"><label for="invite-input">主催者から受け取った招待コード</label><textarea id="invite-input" rows="3" autocomplete="off" spellcheck="false" required></textarea><button type="submit" class="secondary">招待を確認</button><p id="invite-input-state" role="status" aria-live="polite"></p></form></details>
+    <details id="qr-section" hidden><summary>会場に参加用QRを表示する</summary><p class="hint">このQRを読んだ人が、同じグループへの参加画面を開けます。参加者だけに提示してください。</p><div id="qr" role="img" aria-label="このグループへの参加用QR"></div><p id="qr-state" role="status"></p><button id="print-qr" type="button" class="secondary" disabled>参加用QRを印刷</button></details>
+    <noscript><p class="notice">招待の確認とAPKの取得にはJavaScriptを有効にしてください。</p></noscript>
+  </main>
+  <footer>参加ページ 1.0 · Android実装版への案内<br>招待コードはこのページからサーバーへ送信しません。</footer>
+</body>
+</html>

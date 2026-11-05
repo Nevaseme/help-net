@@ -31,17 +31,17 @@ fun LabPanel(model: PlanViewModel) {
     }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SectionTitle("iPhone・PCとの通信実験")
-        OutlinedTextField(url, { url = it }, label = { Text("実験サーバーのWSSアドレス") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri), singleLine = true, enabled = !state.active && !saving, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(token, { token = it }, label = { Text("実験用接続コード") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii), singleLine = true, enabled = !state.active && !saving, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(url, { url = it }, label = { Text(menuText("実験サーバーのWSSアドレス")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri), singleLine = true, enabled = !state.active && !saving, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(token, { token = it }, label = { Text(menuText("実験用接続コード")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii), singleLine = true, enabled = !state.active && !saving, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
         StatusFeedback(state.connection.text, busy = state.connection.phase == ConnectionPhase.CONNECTING)
-        state.phase?.let { Text("現在の経路：${if (it == "AB") "A ↔ B" else "B ↔ C"}") }
-        Text("相手が受け取った情報：${state.receipts}件")
+        state.phase?.let { Text(menuText("現在の経路：${if (it == "AB") "A ↔ B" else "B ↔ C"}")) }
+        Text(menuText("相手が受け取った情報：${state.receipts}件"))
         state.error?.let { StatusFeedback(it, true) }
-        if (state.active) OutlinedButton(onClick = { model.lab.stop() }, modifier = Modifier.fillMaxWidth()) { Text("実験通信を停止") }
+        if (state.active) OutlinedButton(onClick = { model.lab.stop() }, modifier = Modifier.fillMaxWidth()) { Text(menuText("実験通信を停止")) }
         else Button(enabled = !saving, onClick = {
             val name = "android.permission.ACCESS_LOCAL_NETWORK"
             if (Build.VERSION.SDK_INT >= 37 && ContextCompat.checkSelfPermission(context, name) != PackageManager.PERMISSION_GRANTED) permission.launch(name)
             else model.startLab(url, token)
-        }, modifier = Modifier.fillMaxWidth()) { Text("実験通信を開始") }
+        }, modifier = Modifier.fillMaxWidth()) { Text(menuText("実験通信を開始")) }
     }
 }

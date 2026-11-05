@@ -43,7 +43,7 @@ class EewDeliveryTest {
         assertNull(receiver.receive(packet(test = true), 100, allowDiagnostics = true))
         assertNull(receiver.receive(packet("prod-test", test = true, diagnostic = true), 200))
         val test = receiver.receive(packet("debug-test", serial = 2, test = true, diagnostic = true), 300, allowDiagnostics = true)!!
-        assertEquals("PlanD 受信試験", test.title)
+        assertEquals("Help Net 受信試験", test.title)
         assertTrue(test.tag.startsWith("eew:true:"))
     }
     @Test fun ignoresForeignEnvelopesAndBrokenPayloads() = withReceiver { receiver, store ->

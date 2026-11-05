@@ -37,6 +37,8 @@ fun ResidentMap(
     modifier: Modifier = Modifier,
     careLabels: Map<String, String> = emptyMap(),
     places: List<PlaceEvent> = emptyList(),incident: String="",onBuilding: (String)->Unit={},
+    selectedFootprint: io.github.nevaseme.plandmk1.buildings.BuildingGeometry?=null,
+    onCenterChanged: ((MapPoint)->Unit)?=null, initialZoom:Double=15.0, centerRequest:Long=0,
 ) {
     val context = LocalContext.current
     val supportsMap = remember(context) {
@@ -45,31 +47,44 @@ fun ResidentMap(
     }
     if (!supportsMap) {
         Box(modifier, contentAlignment = Alignment.Center) {
-            Text("この端末では地図を描画できません。住民一覧と対応記録は利用できます。住居の位置は設定の緯度・経度で登録してください。", Modifier.padding(16.dp))
+            Text(menuText("この端末では地図を描画できません。住民一覧と対応記録は利用できます。住居の位置は設定の緯度・経度で登録してください。"), Modifier.padding(16.dp))
         }
         return
     }
     val owner = LocalLifecycleOwner.current
-    val view = remember { MapView(context).also { it.onCreate(null) } }
+    val view = remember { PlanMapView(context).also { it.onCreate(null) } }
     var map by remember { mutableStateOf<MapLibreMap?>(null) }
     var ready by remember { mutableStateOf(false) }
     val latestResidents by rememberUpdatedState(residents)
     val latestCenter by rememberUpdatedState(center)
     val latestPicking by rememberUpdatedState(picking)
     val latestPick by rememberUpdatedState(onPick)
+    val latestCenterChanged by rememberUpdatedState(onCenterChanged)
     val latestSelect by rememberUpdatedState(onSelect)
     val latestBuildingSelect by rememberUpdatedState(onBuilding)
     val latestError by rememberUpdatedState(onError)
     val markerIds = remember { mutableMapOf<Long, String>() }
     val buildingIds=remember {mutableMapOf<Long,String>()}
 
+    LaunchedEffect(ready,selectedFootprint) {
+        if(!ready)return@LaunchedEffect
+        val style=map?.style?:return@LaunchedEffect
+        val data=selectedFootprint?.let {kotlinx.serialization.json.Json.encodeToString(io.github.nevaseme.plandmk1.buildings.BuildingGeometry.serializer(),it)}?:"{\"type\":\"FeatureCollection\",\"features\":[]}"
+        val source=style.getSourceAs<org.maplibre.android.style.sources.GeoJsonSource>("selected-building")
+        if(source!=null)source.setGeoJson(data) else {
+            style.addSource(org.maplibre.android.style.sources.GeoJsonSource("selected-building",data))
+            style.addLayer(org.maplibre.android.style.layers.FillLayer("selected-building-fill","selected-building").withProperties(org.maplibre.android.style.layers.PropertyFactory.fillColor("#3478d4"),org.maplibre.android.style.layers.PropertyFactory.fillOpacity(.35f),org.maplibre.android.style.layers.PropertyFactory.fillOutlineColor("#1756a9")))
+        }
+    }
+
     DisposableEffect(view, owner) {
         val observer = LifecycleEventObserver { _, event ->
-            when (event) {
+            if (!view.isDestroyed) when (event) {
                 Lifecycle.Event.ON_START -> view.onStart()
                 Lifecycle.Event.ON_RESUME -> view.onResume()
                 Lifecycle.Event.ON_PAUSE -> view.onPause()
                 Lifecycle.Event.ON_STOP -> view.onStop()
+                Lifecycle.Event.ON_DESTROY -> view.release()
                 else -> Unit
             }
         }
@@ -77,10 +92,19 @@ fun ResidentMap(
         view.addOnDidFailLoadingMapListener { latestError("地図を表示できません。未保存の地域では通信が必要です。一覧は引き続き利用できます") }
         view.getMapAsync { controller ->
             map = controller
-            controller.cameraPosition = CameraPosition.Builder().target(LatLng(latestCenter.latitude, latestCenter.longitude)).zoom(15.0).build()
+            controller.cameraPosition = CameraPosition.Builder().target(LatLng(latestCenter.latitude, latestCenter.longitude)).zoom(initialZoom).build()
             controller.uiSettings.isRotateGesturesEnabled = false
             controller.uiSettings.isTiltGesturesEnabled = false
+            // Loading and programmatic camera moves must not overwrite a newly
+            // searched address with the map's previous center.
+            var gestureMoving=false
+            controller.addOnCameraMoveStartedListener {reason->gestureMoving=reason==MapLibreMap.OnCameraMoveStartedListener.REASON_API_GESTURE}
+            controller.addOnCameraIdleListener {
+                if(gestureMoving)controller.cameraPosition.target?.let {latestCenterChanged?.invoke(MapPoint(it.latitude,it.longitude))}
+                gestureMoving=false
+            }
             controller.addOnMapClickListener { location ->
+                if(latestCenterChanged!=null){controller.cameraPosition=CameraPosition.Builder(controller.cameraPosition).target(location).build();latestCenterChanged?.invoke(MapPoint(location.latitude,location.longitude));return@addOnMapClickListener true}
                 if (latestPicking) { latestPick(MapPoint(location.latitude, location.longitude)); true } else false
             }
             controller.setOnMarkerClickListener { marker ->
@@ -92,17 +116,20 @@ fun ResidentMap(
         }
         onDispose {
             owner.lifecycle.removeObserver(observer)
-            view.onPause(); view.onStop(); view.onDestroy()
+            view.release()
             map = null
         }
     }
-    LaunchedEffect(map, center) {
+    LaunchedEffect(map, ready, center, centerRequest) {
+        if(!ready)return@LaunchedEffect
         map?.let { controller ->
             controller.cameraPosition = CameraPosition.Builder(controller.cameraPosition)
                 .target(LatLng(center.latitude, center.longitude)).build()
         }
     }
-    AndroidView(factory = { view }, modifier = modifier, update = {
+    // Rebuild annotations only when their data changes, not when a parent screen
+    // recomposes for connectivity, button state, or a different callback instance.
+    LaunchedEffect(map, ready, residents, careLabels, places, incident) {
         val controller = map
         if (ready && controller != null) {
             controller.clear(); markerIds.clear();buildingIds.clear()
@@ -135,5 +162,6 @@ fun ResidentMap(
                 buildingIds[marker.id]=building.buildingId
             }
         }
-    })
+    }
+    AndroidView(factory = { view }, modifier = modifier)
 }

@@ -17,6 +17,16 @@ async function setup(){
  return store;
 }
 
+test('display-scoped CSV excludes other residents while preserving public reports, including an empty allow-list',async()=>{
+ const store=await setup();
+ try{
+  await store.mergeResponse(event(30,{type:'REPORT',reportId:id(30),category:'Road obstruction',description:'Public report',latitude:35,longitude:139}));
+  const limited=await store.exportCsv(group,incident,{}, {allowedResidentIds:[id(1)]});
+  assert.ok(limited.includes('住民1'));assert.ok(!limited.includes(id(2)));assert.ok(!limited.includes(id(4)));assert.ok(limited.includes('Road obstruction'));
+  const empty=await store.exportCsv(group,incident,{}, {allowedResidentIds:[]});assert.equal(empty.trimEnd().split('\r\n').length,2);assert.ok(empty.includes('Road obstruction'));
+ }finally{store.close();}
+});
+
 test('CSV export reads durable records and hides safe and rescued names',async()=>{
  let store=await setup();const name=store.name;store.close();store=await Store.open(name,indexedDB);
  try{

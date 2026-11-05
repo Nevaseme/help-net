@@ -1,4 +1,4 @@
-# PlanD 緊急地震速報の中継
+# Help Net 緊急地震速報の中継
 
 2026-10-25：利用者の選択により上流をWolfxへ変更。Cloudflareから20分間の接続維持、21件のheartbeatと過去の最新速報1件の取得を確認した。AndroidもWolfxの解析・保存・通知に対応。新規地震速報の発表から端末到着までの実測は未実施。[Wolfx実装・検証](../docs/superpowers/plans/2026-10-25-wolfx-implementation.md)。P2Pの接続拒否とHTTP試験は[過去の調査](../docs/superpowers/plans/2026-10-25-fcm-reception-implementation.md)に記録する。
 

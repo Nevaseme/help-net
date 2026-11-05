@@ -1,0 +1,1 @@
+{"tilejson": "2.2.0", "tiles": ["asset://toranomon-risk-tiles/{z}/{x}/{y}.pbf"], "minzoom": 8, "maxzoom": 16, "bounds": [139.73779171125489, 35.656350185935715, 139.76240247196802, 35.67624752866467], "attribution": "東京都・国土交通省 PLATEAU / 内閣府 / PlanD独自試算"}

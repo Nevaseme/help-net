@@ -11,6 +11,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
 import kotlin.math.abs
 import kotlin.math.floor
+import kotlin.math.round
 
 @Serializable
 data class BuildingGeometry(val type: String, val coordinates: List<List<List<List<Double>>>>)
@@ -35,12 +36,16 @@ data class BuildingAssessment(
     val rates: BuildingDamageRates?,
     val modelId: String,
     val limitations: List<String>,
-)
+) {
+    // Keep building.status/reasons: a high-rise assumed zero is not a measured result.
+    val riskLevel: BuildingRiskLevel
+        get() = BuildingRiskLevel.fromFullDamageRate(rates?.full)
+}
 
 /** Read-only public reference data. Never writes or joins residents' records by inferred IDs.
  * All file work runs on IO; at most two meshes are cached. No network is used.
  */
-class BuildingAssessmentRepository(private val openAsset: (String) -> InputStream) {
+class BuildingAssessmentRepository(private val additionalPackages:List<String> = emptyList(), private val openAsset: (String) -> InputStream) {
     private val json=Json { ignoreUnknownKeys=true }
     private val lock=Mutex()
     private var index: JsonObject?=null
@@ -56,8 +61,14 @@ class BuildingAssessmentRepository(private val openAsset: (String) -> InputStrea
     }
     private fun indexLocked(): JsonObject = index ?: json.parseToJsonElement(read("index.json").decodeToString()).jsonObject.also {
         require(it.getValue("schemaVersion").jsonPrimitive.int==1) { "Unsupported building dataset schema" }
-        index=it
-    }
+        val chunks=it.getValue("chunks").jsonArray.toMutableList()
+        for(packagePrefix in additionalPackages) {
+            val extra=json.parseToJsonElement(openAsset(packagePrefix+"index.json").use { stream->stream.readBytes().decodeToString() }).jsonObject
+            require(extra["schemaVersion"]==it["schemaVersion"] && extra["modelId"]==it["modelId"] && extra["modelSha256"]==it["modelSha256"])
+            chunks+=extra.getValue("chunks").jsonArray.map { c->JsonObject(c.jsonObject+ ("assetPrefix" to JsonPrimitive(packagePrefix))) }
+        }
+        index=JsonObject(it+("chunks" to JsonArray(chunks)))
+    }.let { index!! }
     private fun modelLocked(): JsonObject = model ?: run {
         val idx=indexLocked()
         json.parseToJsonElement(verified(read("model.json"),idx.getValue("modelSha256").jsonPrimitive.content).decodeToString()).jsonObject.also {
@@ -69,7 +80,7 @@ class BuildingAssessmentRepository(private val openAsset: (String) -> InputStrea
         cache.remove(mesh)?.let { cache[mesh]=it; return it }
         val item=indexLocked().getValue("chunks").jsonArray.map { it.jsonObject }
             .firstOrNull { it.getValue("mesh").jsonPrimitive.content==mesh } ?: return emptyList()
-        val bytes=verified(read(item.getValue("file").jsonPrimitive.content),item.getValue("sha256").jsonPrimitive.content)
+        val bytes=verified(openAsset((item["assetPrefix"]?.jsonPrimitive?.content?:prefix)+item.getValue("file").jsonPrimitive.content).use {it.readBytes()},item.getValue("sha256").jsonPrimitive.content)
         val text=GZIPInputStream(bytes.inputStream()).bufferedReader().use { it.readText() }
         val chunk=json.parseToJsonElement(text).jsonObject
         require(chunk.getValue("mesh").jsonPrimitive.content==mesh)
@@ -81,6 +92,15 @@ class BuildingAssessmentRepository(private val openAsset: (String) -> InputStrea
 
     suspend fun metadata(): JsonObject = withContext(Dispatchers.IO) { lock.withLock { indexLocked() } }
     suspend fun mesh(code: String): List<AssessedBuilding> = withContext(Dispatchers.IO) { lock.withLock { chunkLocked(code) } }
+
+    /** Registered identifiers are authoritative; a footprint/nearby building must not replace them. */
+    suspend fun registeredBuilding(id:String,latitude:Double,longitude:Double):AssessedBuilding? = withContext(Dispatchers.IO) {
+        lock.withLock {
+            indexLocked().getValue("chunks").jsonArray.map {it.jsonObject}.filter {item->
+                item["bbox"]?.takeUnless {it==JsonNull}?.jsonArray?.map {it.jsonPrimitive.double}?.let {contains(it,longitude,latitude)}==true
+            }.firstNotNullOfOrNull {item->chunkLocked(item.getValue("mesh").jsonPrimitive.content).find {it.id==id}}
+        }
+    }
 
     /** Returns every containing footprint (including overlapping models); no nearest-building guess.
      * Empty means no matching published footprint, not zero damage. Unknown rates remain null.
@@ -107,7 +127,10 @@ class BuildingAssessmentRepository(private val openAsset: (String) -> InputStrea
                 }.map { building ->
                     val rates=building.profile?.let { profile ->
                         val curve=curves.getValue(profile).jsonObject
-                        val position=(instrumentalIntensity-5)*10
+                        val rawPosition=(instrumentalIntensity-5)*10
+                        // Decimal grid points (e.g. 6.3) must use the exact table value.
+                        val nearest=round(rawPosition)
+                        val position=if(abs(rawPosition-nearest)<1e-10) nearest else rawPosition
                         val lo=floor(position).toInt().coerceAtMost(19)
                         val fraction=position-lo
                         fun interpolate(key: String): Double {

@@ -1,11 +1,20 @@
+import {validateSearchReference} from './home-registration.mjs';
+import {sameRecord} from './managed-records.mjs';
 const uuid=/^[0-9a-fA-F-]{36}$/;
 const require=(ok,message)=>{if(!ok)throw Error(message);};
 export const BUILDING_ACTIONS={CHECKING:'確認中',NEEDS_HELP:'要対応',COMPLETED:'対応完了の記録',RECHECK:'再確認が必要',REVOKED:'記録を撤回'};
-const fields=['groupId','eventId','authorId','authorName','sequence','createdAt','kind','buildingId','unitId','incidentId','label','latitude','longitude','action','scope','unresolved','note','supersedes'];
+const fields=['groupId','eventId','authorId','authorName','sequence','createdAt','kind','buildingId','unitId','incidentId','label','latitude','longitude','action','scope','unresolved','note','supersedes','locationReference'];
 export function normalizePlace(e){return {buildingId:null,unitId:null,incidentId:null,label:'',latitude:null,longitude:null,action:null,scope:'',unresolved:'',note:'',supersedes:null,...Object.fromEntries(fields.filter(k=>Object.hasOwn(e,k)).map(k=>[k,e[k]]))};}
-export const samePlace=(a,b)=>JSON.stringify(normalizePlace(a))===JSON.stringify(normalizePlace(b));
+export const samePlace=(a,b)=>sameRecord(normalizePlace(a),normalizePlace(b));
 export function validatePlace(input){
  const e=normalizePlace(input);
+ if(Object.hasOwn(e,'locationReference')){
+  const r=e.locationReference;
+  require(e.kind==='BUILDING'&&r&&typeof r==='object'&&!Array.isArray(r)&&Object.keys(r).every(k=>['address','plateauId','dataset','searchReference'].includes(k)),'建物の住所情報が不正です');
+  if(r.searchReference!==undefined)validateSearchReference(r.searchReference);
+  require(typeof r.address==='string'&&r.address.trim()&&r.address.length<=240,'住所を240文字以内で入力してください');
+  require((r.plateauId===null&&r.dataset===null)||[r.plateauId,r.dataset].every(x=>typeof x==='string'&&x.trim()&&x.length<=160),'建物データの対応が不正です');
+ }
  require(/^[A-Za-z0-9_-]{1,40}$/.test(e.groupId)&&[e.eventId,e.authorId].every(x=>typeof x==='string'&&uuid.test(x)),'建物記録のIDが不正です');
  require([e.buildingId,e.unitId,e.incidentId,e.supersedes].every(x=>x===null||typeof x==='string'&&uuid.test(x)),'関連先のIDが不正です');
  require(Number.isSafeInteger(e.sequence)&&e.sequence>0&&Number.isSafeInteger(e.createdAt)&&e.createdAt>=0,'建物記録の更新情報が不正です');

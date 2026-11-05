@@ -10,6 +10,36 @@ class SituationPresentationTest {
     private fun person(id: String, state: MapSafety = MapSafety.SOS, age: Long = 0) =
         MapPerson(id, "試験の名前", state, MapPoint(32.79, 130.819), now - age)
 
+    @Test fun residenceFloorsHaveLocalizedUnitsWithoutDuplicatingOrRewritingDescriptions() {
+        val cases = listOf(
+            Triple("2", "2階", "Floor 2"), Triple("2階", "2階", "Floor 2"), Triple("２", "2階", "Floor 2"),
+            Triple("B1", "地下1階", "Floor -1"), Triple("地下2階", "地下2階", "Floor -2"), Triple("-1", "地下1階", "Floor -1"),
+            Triple("", "", ""), Triple("  ", "", ""), Triple("屋上", "屋上", "屋上"),
+            Triple("Floor 2", "Floor 2", "Floor 2"), Triple("2階の奥", "2階の奥", "2階の奥"),
+            Triple("2147483648", "2147483648", "2147483648"), Triple("-2147483648", "地下2147483648階", "Floor -2147483648"),
+        )
+        for ((input, ja, en) in cases) {
+            assertEquals(input, ja, residenceFloorLabel(input, "ja"))
+            assertEquals(input, en, residenceFloorLabel(input, "en"))
+            assertEquals(input, ja, residenceFloorLabel(input, "ja"))
+        }
+    }
+
+    @Test fun bedroomFormattingPreservesRoomTextAndStillRespectsPrivacy() {
+        val resident = Resident("g", "a", 1, 10, "対象者", 32.79, 130.819, "2", "窓側の寝室", Safety.SOS)
+        val ja = residentMapPerson(resident, emptyList(), emptyList())
+        val en = residentMapPerson(resident, emptyList(), emptyList(), language = "en")
+        assertEquals("2階・窓側の寝室", ja.bedroom)
+        assertEquals("Floor 2・窓側の寝室", en.bedroom)
+        assertEquals("2", resident.floor)
+        assertEquals("Not registered", residentMapPerson(resident.copy(floor = "", room = ""), emptyList(), emptyList(), language = "en").bedroom)
+        for (state in listOf(MapSafety.SAFE, MapSafety.RESCUED, MapSafety.UNANSWERED)) {
+            assertEquals("", projectPersonPrivacy(en.copy(state = state), now, now).bedroom)
+        }
+        assertEquals("", projectPersonPrivacy(en.copy(point = MapPoint(32.79, 130.819), acquiredAt = now), now, now).bedroom)
+        assertEquals(en.bedroom, projectPersonPrivacy(en, now, now).bedroom)
+    }
+
     @Test fun lastPositionRemainsVisibleWhenOldButMissingPositionIsUnknown() {
         assertTrue(person("a", age = 3 * DAY).hasPosition(now))
         assertTrue(person("b", age = 3 * DAY + 1).hasPosition(now))
@@ -33,7 +63,7 @@ class SituationPresentationTest {
 
     @Test fun zoomSplitsClustersAndSafeFilterDoesNotRemoveSOS() {
         val people = listOf(person("a"), person("b", MapSafety.SAFE).copy(point = MapPoint(32.7903, 130.8193)))
-        assertEquals(1, mapClusters(people, 14.0, true, now).size)
+        assertEquals(1, mapClusters(people, 13.9, true, now).size)
         assertEquals(2, mapClusters(people, 16.0, true, now).size)
         assertEquals(listOf("a"), mapClusters(people, 14.0, false, now).flatMap { it.people }.map { it.id })
         assertEquals("old", mapClusters(listOf(person("old", age = 4 * DAY)), 14.0, true, now).single().people.single().id)
@@ -71,10 +101,10 @@ class SituationPresentationTest {
         val people = MapSafety.entries.map { person(it.name, it).copy(point = MapPoint(0.0, 0.0)) } +
             person("near").copy(point = MapPoint(.00386, 0.0)) +
             person("far").copy(point = MapPoint(.1, 0.0))
-        val clusters = mapClusters(people, 14.0, true, now)
+        val clusters = mapClusters(people, 13.9, true, now)
         assertEquals(listOf(1, 5), clusters.map { it.people.size }.sorted())
         assertEquals(people.map { it.id }.sorted(), clusters.flatMap { it.people }.map { it.id }.sorted())
-        assertEquals(6, mapClusters(people, 16.0, true, now).size)
+        assertEquals(6, mapClusters(people, 14.0, true, now).size)
     }
 
     @Test fun rescueRemainsEffectiveWithAnOlderCheckingRecordAndRevocationHistory() {

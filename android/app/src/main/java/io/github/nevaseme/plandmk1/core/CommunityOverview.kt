@@ -1,0 +1,40 @@
+package io.github.nevaseme.plandmk1.core
+
+import kotlinx.serialization.Serializable
+
+@Serializable data class CommunityName(val id:String,val nameJa:String,val nameEn:String)
+@Serializable data class CommunityPerson(val id:String,val name:String,val communityId:String?,val status:String,val fictional:Boolean=false,val buildingId:String?=null)
+@Serializable data class CommunityMaterial(val name:String,val unit:String,var shortfall:Double=0.0,var conflict:Boolean=false)
+@Serializable data class CommunityRow(val id:String,val nameJa:String,val nameEn:String,var total:Int=0,var fictional:Int=0,var safe:Int=0,var sos:Int=0,var rescued:Int=0,var unreported:Int=0,var injured:Int=0,var injuryUnknown:Int=0,var reports:Int=0,val materials:MutableList<CommunityMaterial> = mutableListOf())
+@Serializable data class CommunityReport(val version:Int=1,val id:String,val issuedAt:Long,val language:String,val groupId:String,val groupName:String,val incidentId:String,val demo:Boolean,val rows:List<CommunityRow>,val people:List<CommunityPerson>,val sourceIds:List<String>)
+fun demoCommunityFor(longitude:Double,cuts:List<Double>?=null):String? {
+ val boundaries=cuts?:listOf(135.760,135.7615)
+ require(boundaries.size==2&&boundaries.all {it.isFinite()}&&boundaries[0]<boundaries[1])
+ return if(!longitude.isFinite())null else if(longitude<boundaries[0])"demo-west" else if(longitude<boundaries[1])"demo-central" else "demo-east"
+}
+fun communityInjury(changes:List<ResponseChange>,id:String)=changes.filterIsInstance<ResponseChange.Injury>().filter {it.target==ResponseTarget(TargetKind.PERSON,id)}.map {it.state}.distinct().singleOrNull()?:InjuryState.UNKNOWN
+fun communityOverview(people:List<CommunityPerson>,changes:List<ResponseChange>,communities:List<CommunityName>):List<CommunityRow>{
+ val rows=communities.associate {it.id to CommunityRow(it.id,it.nameJa,it.nameEn)}.toMutableMap()
+ fun region(id:String?)=id?.takeIf {candidate->communities.any {it.id==candidate}}?:communities.singleOrNull()?.id?:"unknown"
+ fun get(id:String?):CommunityRow {val key=region(id);return rows.getOrPut(key){CommunityRow(key,"未分類","Unassigned")}}
+ val personRegions=mutableMapOf<String,String>()
+ for(p in people.distinctBy {it.id}){val r=get(p.communityId);personRegions[p.id]=r.id;r.total++;if(p.fictional)r.fictional++;when(p.status){"SAFE"->r.safe++;"SOS"->r.sos++;"RESCUED"->r.rescued++;else->r.unreported++};when(communityInjury(changes,p.id)){InjuryState.INJURED->r.injured++;InjuryState.UNKNOWN->r.injuryUnknown++;else->Unit}}
+ val reportRegions=mutableMapOf<String,String>()
+ for((id,reports)in changes.filterIsInstance<ResponseChange.Report>().filter {!it.cancelled}.groupBy {it.reportId}){val ids=reports.map {region(it.regionIds.firstOrNull())}.distinct();val r=get(ids.singleOrNull());r.reports++;reportRegions[id]=r.id}
+ for(revisions in changes.filterIsInstance<ResponseChange.Material>().groupBy {it.requestId}.values){
+  val c=revisions.first();val id=if(c.target.kind==TargetKind.PERSON)personRegions[c.target.id]else reportRegions[c.target.id];if(id==null)continue
+  for(compatible in revisions.filterNot {it.cancelled}.groupBy {it.name to it.unit}.values){
+   val value=compatible.first();val amount=compatible.maxOf {it.shortfall};if(amount==0.0)continue
+   val r=get(id);val m=r.materials.find {it.name==value.name&&it.unit==value.unit}?:CommunityMaterial(value.name,value.unit).also {r.materials.add(it)}
+   m.shortfall+=amount;m.conflict=m.conflict||revisions.size>1
+  }
+ }
+ return rows.values.toList()
+}
+fun communityLabel(key:String,en:Boolean):String {val labels=mapOf("title" to ("町内会の状況" to "Neighborhood overview"),"total" to ("人数" to "People"),"fictional" to ("住民" to "Residents"),"safe" to ("無事" to "Safe"),"sos" to ("SOS" to "SOS"),"rescued" to ("救助済み" to "Rescued"),"unreported" to ("応答なし" to "No response"),"injured" to ("負傷者" to "Injured"),"injuryUnknown" to ("負傷状況不明" to "Injury unknown"),"reports" to ("通報" to "Reports"),"materials" to ("不足資材" to "Material shortfalls"),"none" to ("記録なし" to "None recorded"),"issue" to ("レポートを発行" to "Issue report"),"saved" to ("発行済みレポート" to "Issued reports"),"injury" to ("負傷情報" to "Injury information"),"UNKNOWN" to ("不明" to "Unknown"),"INJURED" to ("負傷あり" to "Injured"),"UNINJURED" to ("負傷なし" to "Not injured"),"demo" to ("訓練用の町内会" to "Drill neighborhoods"),"conflict" to ("同時更新あり・最大の不足数を表示" to "Concurrent updates — largest shortfall shown"));return labels[key]?.let {if(en)it.second else it.first}?:key}
+fun communityCounts(row:CommunityRow)=listOf("total" to row.total,"safe" to row.safe,"sos" to row.sos,"rescued" to row.rescued,"unreported" to row.unreported,"injured" to row.injured,"injuryUnknown" to row.injuryUnknown,"reports" to row.reports)
+fun communityReportHtml(report:CommunityReport):String {
+ fun escape(v:String)=v.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;").replace("\"","&quot;").replace("'","&#39;")
+ val en=report.language=="en";fun label(key:String)=communityLabel(key,en)
+ return "<!doctype html><html lang='${if(en)"en" else "ja"}'><meta charset='utf-8'><meta name='viewport' content='width=device-width'><title>${label("title")}</title><style>body{font:16px system-ui;line-height:1.6;margin:24px;color:#172b35}table{border-collapse:collapse;width:100%}td,th{border:1px solid #c6d1d6;padding:8px;text-align:left}section{break-inside:avoid;margin:24px 0}pre{white-space:pre-wrap;overflow-wrap:anywhere}</style><h1>${label("title")}</h1><p>${escape(report.groupName)} · ${usDateTime(report.issuedAt)}</p>"+(if(report.demo)"<p>${label("demo")}</p>" else "")+report.rows.joinToString(""){r->"<section><h2>${escape(if(en)r.nameEn else r.nameJa)}</h2><table>"+communityCounts(r).joinToString(""){(k,v)->"<tr><th>${label(k)}</th><td>$v</td></tr>"}+"</table><h3>${label("materials")}</h3>"+r.materials.joinToString(""){m->"<p>${escape(m.name)}: ${m.shortfall} ${escape(m.unit)}${if(m.conflict)" (${label("conflict")})" else ""}</p>"}.ifBlank {"<p>${label("none")}</p>"}+"</section>"}+"</html>"
+}

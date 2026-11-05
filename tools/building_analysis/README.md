@@ -48,6 +48,34 @@ python tools/building_analysis/audit_reference_agreement.py --assets android/app
 
 Android `BuildingAssessmentRepository` は通信せずに2メッシュまでをキャッシュし、範囲で絞ってから外形・内周で点を照合する。重なる建物は全件返し、最寄りの1棟へ勝手に割り当てない。評価不明はnullであり被害率0ではない。`PlanViewModel.assessBuildingsAt` から利用できる。
 
-既存住民・手入力建物のIDやRoomデータは変更しない。現在は読込・検索APIまで。画面の新規表示、強中弱への変換、想定地震シナリオとの紐付けは行っていない。独自試算であり、個別建物の耐震診断や立入り可否判定として使うものではない。
+既存住民・手入力建物のIDやRoomデータは変更しない。検索APIの結果には `riskLevel` を付ける（全壊率10%未満LOW、10%以上40%未満MEDIUM、40%以上HIGH、属性不足UNKNOWN）。これは利用者が承認したPlanD独自の分類で、公式の危険度区分ではない。通常の地図では、承認済みの事前想定・計測震度6.2で全壊率を表示する。速報から表示震度を切り替える連携は本変更には含めない。独自試算であり、個別建物の耐震診断や立入り可否判定として使うものではない。
 
 加工者はPlanD。建物原資料は京都市・国土交通省 Project PLATEAU、被害関数原図は内閣府。公式結果と誤認させないよう、出典と加工内容を成果物に保持する。[PLATEAU利用条件](https://www.mlit.go.jp/plateau/site-policy/)・[内閣府防災情報のページの利用条件](https://www.bousai.go.jp/notice.html)を参照。
+
+
+## 全域地図用タイル
+
+`map-requirements.txt` のライブラリで `build_map_tiles.py` を実行し、全収録建物の外形・穴・被害曲線分類からMVTを生成する。外部配信サービスは不要。`verify_map_tiles.py` は最高詳細度の全タイルを読み、元データの建物ID・分類が一致し、広域タイルが平均値の区画ではなく建物輪郭であることを検査する。
+
+- `kyoto-risk-tiles/tiles.json`: オフラインのタイル参照。
+- ズーム8〜13: 簡略化した建物外形を曲線分類ごとに着色。地域平均の四角形は描かない。0.01px²未満の形状は省略し、拡大時に詳細形状へ戻る。広域タップはその地点へ拡大する。
+- ズーム14〜16とそれ以上: 建物外形。建物ID・曲線分類・築年・構造・階数・仮定フラグを保持する。
+- 数値は既存の曲線から計算し、震度変更時は地図の描画式を更新する。建物外形は再生成しない。
+- 地図はネイティブキャッシュを利用する。広域タイルを追加で先読みする処理は止め、急な移動時に重い粗いタイルと表示中のタイルを同時に処理しない。数十万棟のJSONをUIスレッドで解析しない。
+- 全ズームでMapLibre Nativeと同じ8192の座標格子へ、形状の整合性を保って丸める。単純な頂点ごとの四捨五入は、細い辺の交差や外周・穴の逆転を生むため使用しない。`tile_quantization.py` と、符号化後に読み戻した全ポリゴンの検査で担保する。
+
+実機・エミュレーター試験は `BuildingRiskMapTest`。通常画面と同じ `SituationScreen` を使う専用のdebug Activityで、住民・災害データを変更しない。画面点灯・ロック解除の状態で実行する。性能測定用のActivityはreleaseには含めない。
+
+vivoでComposeのテスト起動が進まない場合は `BuildingRiskDeviceTest` に `externalLaunch=true` を渡し、待受開始後にADBから `.diagnostics.BuildingMapBenchmarkActivity` を開く。画面はdebug限定かつDUMP権限で保護している。結果は端末のアプリ専用外部フォルダー `risk-map-performance.json` に保存する。計測条件・実測値は `docs/superpowers/plans/2026-10-26-kyoto-fast-map.md` に記録する。
+
+広域外形は `footprint_overview.py` で生成する。簡略化を元形状の内部に制限し、中庭・道路を埋めない。`test_footprint_overview.py` に形状検査を置く。変更後の検証記録は `docs/superpowers/plans/2026-10-26-kyoto-footprint-overview.md`。
+
+既存の検証済み `.implementation/map-staging.sqlite` を使って形状の丸めだけを更新する場合は、`rebuild_quantized_tiles.py`、続いて `verify_map_tiles.py` を実行する。再生成は作業用ディレクトリーで行い、全タイルの読み戻し検査が成功してから配布用データを置き換える。評価モデルの数値は変更しない。
+
+起動直後の京都移動・拡大中の画面離脱は `RapidMapNavigationTest` で検証する。描画完了を待ってから離脱する試験だけでは、図形分割処理の完了待ちによるANRを検出できない。vivoでは `externalLaunch=true` の待受後、debug Activityを `--ez navigationTest true` で起動する。
+
+通常画面の地図は `RetainedMapContent` でタブ間に一つ保持する。非表示中は配置・描画・地図用の時刻更新を停止し、Activity終了時に解放する。切替試験は同じMapViewの再使用と非表示中の描画停止も確認する。Activity再生成の解放確認は `BuildingRiskZoomTest#recreatingMapReleasesOldView` で行う。
+
+
+### 住所・施設名検索データ（2026-11-01）
+市パッケージ・背景地図マニフェストを生成した後、`build_city_places.py` を実行する。既存の検証済み z14 タイルキャッシュから自治体境界内の名前付き POI を抽出し、公開用 `places.json.gz`、Android 同梱 gzip、両方の `city.json` を更新する。京都24,287件・熱海697件。住所は ABR、施設名は OSM/OpenMapTiles/OpenFreeMap の別データであり、施設名を住所欄へ自動登録しない。POI が全建物名を網羅するものではない。元タイルの SHA-256 と境界包含を検証する。地図パッケージを再生成したら施設索引も再生成する。

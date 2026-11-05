@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {mapBuildingFeatures} from '../web/building-details.mjs';
+import {installWhenMapReady} from '../web/building-risk.mjs';
+import {communityReportHtml} from '../web/community-overview.mjs';
+import {imagePagesPdf} from '../web/report-pdf.mjs';
+test('tapped building retains its footprint for selected outline',()=>{const geometry={type:'Polygon',coordinates:[[[135,35],[135.1,35],[135.1,35.1],[135,35]]]};assert.deepEqual(mapBuildingFeatures([{source:'kyoto-risk',sourceLayer:'buildings',properties:{bid:'building'},geometry}])[0].geometry,geometry);});
+test('registered outlines wait for asynchronous map source installation',async()=>{let ready,installed=false,settled=false;const map={isStyleLoaded:()=>false,once:(event,fn)=>{assert.equal(event,'load');ready=fn;}};const work=installWhenMapReady(map,()=>{installed=true;}).then(()=>{settled=true;});await Promise.resolve();assert.equal(installed,false);assert.equal(settled,false);ready();await work;assert.equal(installed,true);assert.equal(settled,true);});
+test('report preserves IDs in data but never renders them to the reader',()=>{for(const language of ['ja','en']){const report={language,groupName:'Team',issuedAt:1,demo:true,id:'INTERNAL-REPORT',incidentId:'INTERNAL-INCIDENT',sourceIds:['INTERNAL-SOURCE'],rows:[]};const html=communityReportHtml(report);assert.doesNotMatch(html,/INTERNAL|Source record|集計元|デモ|demo/i);assert.equal(report.sourceIds[0],'INTERNAL-SOURCE');}});
+test('PDF page object offsets and binary image lengths remain valid',()=>{const pdf=imagePagesPdf([Uint8Array.from([255,216,255,217]),Uint8Array.from([255,216,255,217])]);const text=new TextDecoder().decode(pdf);assert.match(text,/\/Count 2/);const xref=Number(text.match(/startxref\n(\d+)/)[1]);assert.equal(new TextDecoder().decode(pdf.slice(xref,xref+4)),'xref');const rows=text.slice(text.indexOf('0000000000 65535 f')).split('\n').slice(1,9);for(const [i,row]of rows.entries()){const offset=Number(row.slice(0,10));assert.ok(new TextDecoder().decode(pdf.slice(offset,offset+12)).startsWith(`${i+1} 0 obj`));}});

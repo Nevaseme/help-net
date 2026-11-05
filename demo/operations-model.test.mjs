@@ -1,0 +1,141 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {CATEGORIES,REGIONS,seedCases,filterCases,summarizeCases,caseCategory,casesCsv,saveMaterial,cancelReport,restoreReport,workSummary,updateWorkProgress,startWork,isAssignedToOthers} from './operations-model.mjs';
+
+const sample=[
+  {id:'a',category:'SOS',regionIds:['east','east-ward'],assignees:[]},
+  {id:'b',category:'道路閉塞',regionIds:['central'],assignees:['self','north']},
+  {id:'c',category:'建物倒壊',regionIds:['west'],assignees:['north']},
+  {id:'d',category:'火災',regionIds:[],assignees:[]}
+];
+test('region totals equal the four categories and expose exactly the matching case IDs',()=>{
+  const city=summarizeCases(sample,'city');
+  assert.equal(city.total,3);
+  assert.deepEqual(city.counts,{'SOS':1,'道路閉塞':1,'建物倒壊':1,'その他':0});
+  assert.equal(summarizeCases(sample,'east-ward').total,2);
+  assert.deepEqual(summarizeCases(sample,'east').ids,['a']);
+  assert.deepEqual(summarizeCases(sample,'city','道路閉塞').ids,['b']);
+  assert.deepEqual(summarizeCases(sample,'unassigned').ids,['d']);
+  assert.equal(summarizeCases(sample,'all').total,4);
+  for(const region of ['all','unassigned',...REGIONS.map(r=>r.id)]){
+    const summary=summarizeCases(sample,region);
+    assert.equal(Object.values(summary.counts).reduce((a,b)=>a+b,0),summary.total);
+    for(const type of CATEGORIES)assert.equal(summarizeCases(sample,region,type).total,summary.counts[type]);
+  }
+});
+test('repeated IDs and multiple region memberships never inflate a parent total',()=>{
+  const duplicate={...sample[0],regionIds:['east','central']};
+  assert.equal(summarizeCases([...sample,duplicate],'city').total,3);
+  assert.equal(summarizeCases([...sample,duplicate],'east-ward').total,2);
+  assert.equal(summarizeCases([...sample,duplicate],'central').total,2);
+});
+test('assignment filters count cases once and all includes other responders',()=>{
+  assert.deepEqual(filterCases(sample,'none').map(r=>r.id),['a','d']);
+  assert.deepEqual(filterCases(sample,'mine').map(r=>r.id),['b']);
+  assert.equal(filterCases(sample,'all').length,4);
+  assert.equal(caseCategory('通行止め'),'その他');
+});
+test('category and region corrections immediately change matching totals',()=>{
+  const rows=structuredClone(sample);
+  rows[1].category='建物倒壊';rows[1].regionIds=['west'];
+  assert.equal(summarizeCases(rows,'east-ward','道路閉塞').total,0);
+  assert.equal(summarizeCases(rows,'west','建物倒壊').total,2);
+});
+test('seed supports all categories and counts every SOS person once',()=>{
+  const rows=seedCases([{id:'p0',name:'架空の人',s:'sos',memo:'助けて'},{id:'p1',s:'safe'}]);
+  assert.equal(rows.filter(r=>r.category==='SOS').length,1);
+  assert.ok(CATEGORIES.every(type=>rows.some(r=>caseCategory(r.category)===type)));
+});
+test('material updates validate quantities and keep the original unit',()=>{
+  const row={materials:[]};
+  saveMaterial(row,{id:'m',name:'水',unit:'本',needed:3,arranged:1});
+  assert.equal(row.materials[0].shortfall,2);
+  assert.throws(()=>saveMaterial(row,{id:'m',name:'水',unit:'箱',needed:3,arranged:1}));
+  assert.throws(()=>saveMaterial(row,{id:'n',name:'水',unit:'本',needed:-1,arranged:1}));
+});
+test('CSV uses the same cases and protects quotes, newlines, formula text and safe names',()=>{
+  const csv=casesCsv([{...sample[0],title:'=1+1',description:'一行\n二行',materials:[],history:[],status:'未対応',personId:'p'}],[{id:'p',s:'safe'}]);
+  assert.ok(csv.startsWith('\uFEFF'));
+  assert.ok(!csv.includes('=1+1'));
+  const other=casesCsv([{...sample[1],title:'=1+1',description:'一行\n二行',materials:[],history:[],status:'未対応'}]);
+  assert.ok(other.includes("'=1+1"));assert.ok(other.includes('一行\n二行'));assert.ok(other.endsWith('\r\n'));
+});
+
+test('cancelling retains the report and its history but excludes it from queues, totals and CSV',()=>{
+  const rows=structuredClone(sample);const row=rows[1];row.history=[{text:'対応を開始'}];
+  cancelReport(row,'重複した通報のため');
+  assert.equal(rows.length,4);
+  assert.equal(row.history[0].text,'対応を開始');
+  assert.equal(row.history.at(-1).text,'通報を取り消し：重複した通報のため');
+  assert.equal(filterCases(rows,'all').length,3);
+  assert.equal(summarizeCases(rows,'all').total,3);
+  assert.equal(summarizeCases(rows,'city','道路閉塞').total,0);
+  assert.ok(!casesCsv(rows).includes('"b"'));
+  restoreReport(row);
+  assert.equal(filterCases(rows,'mine').length,1);
+  assert.equal(summarizeCases(rows,'all').total,4);
+  assert.ok(casesCsv(rows).includes('"b"'));
+  assert.equal(row.history.at(-1).text,'通報の取り消しを戻す');
+});
+test('cancellation requires a reason and does not alter a personal SOS answer',()=>{
+  assert.throws(()=>cancelReport({...sample[1]},''));
+  assert.throws(()=>cancelReport({...sample[0],personId:'p0'},'間違い'));
+});
+test('work status and assigned team have distinct labels',()=>{
+  assert.deepEqual(workSummary({status:'未対応',assignees:['north']}),{status:'未対応',assignment:'担当：北班'});
+  assert.deepEqual(workSummary({status:'対応中',assignees:['self','north']}),{status:'対応中',assignment:'担当：自分・北班'});
+  assert.deepEqual(workSummary({status:'未対応',assignees:[]}),{status:'未対応',assignment:'担当者無し'});
+});
+
+test('four-stage progress survives CSV export without changing category totals or assignment',()=>{
+  const rows=seedCases([]);const row=rows.find(r=>r.id==='building-1');
+  const before=summarizeCases(rows);
+  for(const status of ['未対応','対応予定','対応中','対応済み']){
+    updateWorkProgress(row,status,status==='対応済み'?'現地確認と必要な措置を完了':'');
+    assert.equal(workSummary(row).status,status);
+    assert.ok(casesCsv(rows).includes('"'+status+'"'));
+    assert.deepEqual(summarizeCases(rows),before);
+    assert.deepEqual(row.assignees,['north']);
+  }
+  assert.throws(()=>updateWorkProgress(row,'対応済み',''),/結果/);
+  assert.throws(()=>updateWorkProgress(row,'未知の状態',''),/対応状況/);
+  assert.equal(row.status,'対応済み');
+  updateWorkProgress(row,'未対応','再確認が必要');
+  assert.equal(row.status,'未対応');
+});
+
+test('starting planned work adds self once and marks it in progress',()=>{
+  const row={status:'対応予定',assignees:['north']};
+  startWork(row);startWork(row);
+  assert.equal(row.status,'対応中');
+  assert.deepEqual(row.assignees,['north','self']);
+  const assigned={status:'対応予定',assignees:['self']};startWork(assigned);
+  assert.equal(assigned.status,'対応中');assert.deepEqual(assigned.assignees,['self']);
+});
+
+test('new fixtures show all four stages while previous comparisons retain three stages',()=>{
+  const rows=seedCases([],{fourStage:true});
+  assert.deepEqual(new Set(rows.map(r=>r.status)),new Set(['未対応','対応予定','対応中','対応済み']));
+  assert.ok(rows.filter(r=>r.status==='対応済み').every(r=>r.result));
+  assert.ok(!seedCases([]).some(r=>r.status==='対応予定'));
+  const row=rows.find(r=>r.status==='対応予定');
+  cancelReport(row,'重複');restoreReport(row);
+  assert.equal(row.status,'対応予定');
+});
+
+test('non-assignee notice follows current assignment and permits progress updates',()=>{
+  assert.equal(isAssignedToOthers({assignees:[]}),false);
+  assert.equal(isAssignedToOthers({assignees:['self']}),false);
+  assert.equal(isAssignedToOthers({assignees:['north','self']}),false);
+  const row={assignees:['north','contact'],status:'対応予定'};
+  assert.equal(isAssignedToOthers(row),true);
+  updateWorkProgress(row,'対応中','現地を確認');
+  assert.equal(row.status,'対応中');
+  assert.deepEqual(row.assignees,['north','contact']);
+  startWork(row);
+  assert.equal(isAssignedToOthers(row),false);
+  row.assignees=row.assignees.filter(id=>id!=='self');
+  assert.equal(isAssignedToOthers(row),true);
+  row.assignees=[];
+  assert.equal(isAssignedToOthers(row),false);
+});

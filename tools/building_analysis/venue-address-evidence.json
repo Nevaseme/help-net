@@ -1,0 +1,750 @@
+{
+  "version": 1,
+  "scope": "Kyoto Gosho south / Karasuma Oike demo only",
+  "bbox": [
+    135.758,
+    35.011,
+    135.767,
+    35.018
+  ],
+  "precision": "verified-building-address",
+  "limitations": [
+    "Published building addresses cross-checked by building name and footprint overlap; not cadastral boundary or land-title verification.",
+    "No private occupant data or real room numbers are used.",
+    "OSM building-use tags can differ from current use; independent residential evidence is recorded where available."
+  ],
+  "geometrySource": {
+    "url": "https://api.openstreetmap.org/api/0.6/map?bbox=135.758,35.011,135.767,35.018",
+    "retrievedDate": "2026-11-04",
+    "sha256": "020a8d6872a345c110af3d2c7c673b4900345f1398b029e6fbc2d60c47a8be09",
+    "attribution": "© OpenStreetMap contributors",
+    "license": "ODbL-1.0",
+    "licenseUrl": "https://www.openstreetmap.org/copyright"
+  },
+  "buildings": [
+    {
+      "name": "藤和シティスクエア烏丸丸太町",
+      "address": "京都府京都市中京区少将井町245-1",
+      "buildingUse": "residential-mixed-use",
+      "addressSources": [
+        {
+          "url": "https://www.kyokenro.or.jp/wp/wp-content/themes/kyokenro/pdf/sinai_4nakagyo2025.pdf",
+          "title": "京都府建設労働組合 実施医療機関一覧",
+          "kind": "official-tenant-directory",
+          "checkedDate": "2026-11-04",
+          "fact": "藤和シティスクエア烏丸丸太町 / 京都府京都市中京区少将井町245-1"
+        }
+      ],
+      "osm": {
+        "type": "way",
+        "id": 205732547,
+        "version": 3,
+        "timestamp": "2023-12-08T16:40:22Z",
+        "name": "藤和シティスクエア烏丸丸太町高橋ビル",
+        "buildingTag": "apartments",
+        "url": "https://www.openstreetmap.org/way/205732547",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                135.759119,
+                35.0152403
+              ],
+              [
+                135.7592366,
+                35.0152416
+              ],
+              [
+                135.7592398,
+                35.0151892
+              ],
+              [
+                135.7594113,
+                35.0151879
+              ],
+              [
+                135.7594129,
+                35.0151
+              ],
+              [
+                135.7591818,
+                35.0150966
+              ],
+              [
+                135.7591543,
+                35.0151651
+              ],
+              [
+                135.7591205,
+                35.0151692
+              ],
+              [
+                135.759119,
+                35.0152403
+              ]
+            ]
+          ]
+        }
+      },
+      "expectedPlateauId": "bldg_c51cd4bd-c944-4aa9-ba2a-0a4dec75c68d"
+    },
+    {
+      "name": "藤和シティホームズ室町御池",
+      "address": "京都府京都市中京区御池之町301",
+      "buildingUse": "apartments",
+      "addressSources": [
+        {
+          "url": "https://www.daikyo-anabuki.co.jp/building/TO00046467",
+          "title": "大京穴吹不動産 建物情報",
+          "kind": "real-estate-building-record",
+          "checkedDate": "2026-11-04",
+          "fact": "藤和シティホームズ室町御池 / 京都府京都市中京区御池之町301"
+        }
+      ],
+      "osm": {
+        "type": "way",
+        "id": 330542689,
+        "version": 4,
+        "timestamp": "2026-10-27T02:46:15Z",
+        "name": "藤和シティホームズ室町御池",
+        "buildingTag": "apartments",
+        "url": "https://www.openstreetmap.org/way/330542689",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                135.7583574,
+                35.0118505
+              ],
+              [
+                135.7581119,
+                35.011853
+              ],
+              [
+                135.7581144,
+                35.0120183
+              ],
+              [
+                135.7583599,
+                35.0120158
+              ],
+              [
+                135.7583574,
+                35.0118505
+              ]
+            ]
+          ]
+        }
+      },
+      "expectedPlateauId": "bldg_64f3a398-3aa4-465c-8e99-a5d87663c6c5"
+    },
+    {
+      "name": "エデン御池",
+      "address": "京都府京都市中京区御池之町302",
+      "buildingUse": "apartments",
+      "addressSources": [
+        {
+          "url": "https://www.homes.co.jp/archive/b-12010496/",
+          "title": "LIFULL HOME’S 建物情報",
+          "kind": "real-estate-building-record",
+          "checkedDate": "2026-11-04",
+          "fact": "エデン御池 / 京都府京都市中京区御池之町302"
+        }
+      ],
+      "osm": {
+        "type": "way",
+        "id": 330542699,
+        "version": 3,
+        "timestamp": "2026-10-27T02:46:15Z",
+        "name": "エデン御池",
+        "buildingTag": "apartments",
+        "url": "https://www.openstreetmap.org/way/330542699",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                135.7583732,
+                35.0118474
+              ],
+              [
+                135.7583729,
+                35.0118041
+              ],
+              [
+                135.7580696,
+                35.0118055
+              ],
+              [
+                135.7580699,
+                35.0118488
+              ],
+              [
+                135.7583732,
+                35.0118474
+              ]
+            ]
+          ]
+        }
+      },
+      "expectedPlateauId": "bldg_5159aa1e-eacd-4583-8013-136eb8baa5b4"
+    },
+    {
+      "name": "プレサンス京都烏丸御池",
+      "address": "京都府京都市中京区御池之町306",
+      "buildingUse": "apartments",
+      "addressSources": [
+        {
+          "url": "https://www.mansiondb.jp/detail/2390",
+          "title": "京都マンションデータバンク",
+          "kind": "condominium-management-directory",
+          "checkedDate": "2026-11-04",
+          "fact": "プレサンス京都烏丸御池 / 京都府京都市中京区御池之町306"
+        }
+      ],
+      "osm": {
+        "type": "way",
+        "id": 330542724,
+        "version": 4,
+        "timestamp": "2026-10-27T02:46:15Z",
+        "name": "プレザンス京都烏丸御池",
+        "buildingTag": "apartments",
+        "url": "https://www.openstreetmap.org/way/330542724",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                135.7581154,
+                35.0118015
+              ],
+              [
+                135.7583497,
+                35.0117992
+              ],
+              [
+                135.7583486,
+                35.0117227
+              ],
+              [
+                135.7581143,
+                35.011725
+              ],
+              [
+                135.7581154,
+                35.0118015
+              ]
+            ]
+          ]
+        }
+      },
+      "expectedPlateauId": "bldg_893f35bf-165c-4d95-ac64-c0720579ba93"
+    },
+    {
+      "name": "アスヴェル京都御所前Ⅱ",
+      "address": "京都府京都市中京区俵屋町292",
+      "buildingUse": "residential-mixed-use",
+      "addressSources": [
+        {
+          "url": "https://www.pola.co.jp/support/faq/esthe/images/001.pdf",
+          "title": "POLA 公式店舗一覧",
+          "kind": "official-tenant-directory",
+          "checkedDate": "2026-11-04",
+          "fact": "アスヴェル京都御所前Ⅱ / 京都府京都市中京区俵屋町292"
+        }
+      ],
+      "osm": {
+        "type": "way",
+        "id": 440395226,
+        "version": 1,
+        "timestamp": "2016-09-02T19:09:56Z",
+        "name": "アスヴェル京都御所前２",
+        "buildingTag": "office",
+        "url": "https://www.openstreetmap.org/way/440395226",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                135.7640221,
+                35.014882
+              ],
+              [
+                135.7642496,
+                35.014881
+              ],
+              [
+                135.7642484,
+                35.0146842
+              ],
+              [
+                135.7641357,
+                35.0146847
+              ],
+              [
+                135.7641358,
+                35.0147103
+              ],
+              [
+                135.7641061,
+                35.0147105
+              ],
+              [
+                135.7641062,
+                35.0147253
+              ],
+              [
+                135.764081,
+                35.0147254
+              ],
+              [
+                135.7640813,
+                35.0147757
+              ],
+              [
+                135.7640214,
+                35.0147759
+              ],
+              [
+                135.7640221,
+                35.014882
+              ]
+            ]
+          ]
+        }
+      },
+      "expectedPlateauId": "bldg_f9e81382-0fe2-40f5-a4dc-c60d6a533183"
+    },
+    {
+      "name": "グランドパルティールⅢ",
+      "address": "京都府京都市中京区俵屋町293-1",
+      "buildingUse": "apartments",
+      "addressSources": [
+        {
+          "url": "https://www.choei-mm.com/room/detail_0657.html",
+          "title": "長栄マンスリーマンション受付センター",
+          "kind": "property-operator",
+          "checkedDate": "2026-11-04",
+          "fact": "グランドパルティールⅢ / 京都府京都市中京区俵屋町293-1"
+        }
+      ],
+      "osm": {
+        "type": "way",
+        "id": 440395228,
+        "version": 1,
+        "timestamp": "2016-09-02T19:09:57Z",
+        "name": "グランドパルティールⅢ",
+        "buildingTag": "office",
+        "url": "https://www.openstreetmap.org/way/440395228",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                135.764257,
+                35.0146857
+              ],
+              [
+                135.7642593,
+                35.0148938
+              ],
+              [
+                135.7643178,
+                35.0148933
+              ],
+              [
+                135.7643154,
+                35.0146853
+              ],
+              [
+                135.764257,
+                35.0146857
+              ]
+            ]
+          ]
+        }
+      },
+      "expectedPlateauId": "bldg_4c60cbba-e1ae-4ceb-9133-8f3da62ab9d2"
+    },
+    {
+      "name": "ソレイユ御所南",
+      "address": "京都府京都市中京区俵屋町298-1",
+      "buildingUse": "apartments",
+      "addressSources": [
+        {
+          "url": "https://www.homes.co.jp/archive/b-12016749/",
+          "title": "LIFULL HOME’S 建物情報",
+          "kind": "real-estate-building-record",
+          "checkedDate": "2026-11-04",
+          "fact": "ソレイユ御所南 / 京都府京都市中京区俵屋町298-1"
+        }
+      ],
+      "osm": {
+        "type": "way",
+        "id": 440395229,
+        "version": 1,
+        "timestamp": "2016-09-02T19:09:57Z",
+        "name": "ソレイユ御所南",
+        "buildingTag": "yes",
+        "url": "https://www.openstreetmap.org/way/440395229",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                135.7645846,
+                35.0146909
+              ],
+              [
+                135.764679,
+                35.0146894
+              ],
+              [
+                135.7646807,
+                35.0147611
+              ],
+              [
+                135.7646407,
+                35.0147617
+              ],
+              [
+                135.7646424,
+                35.0148336
+              ],
+              [
+                135.7646193,
+                35.0148339
+              ],
+              [
+                135.7646207,
+                35.0148938
+              ],
+              [
+                135.7645894,
+                35.0148943
+              ],
+              [
+                135.7645846,
+                35.0146909
+              ]
+            ]
+          ]
+        }
+      },
+      "expectedPlateauId": "bldg_f6bb2e96-5544-4ff6-bf98-07508b48dfa6"
+    },
+    {
+      "name": "リソシエ京都御苑南",
+      "address": "京都府京都市中京区俵屋町296",
+      "buildingUse": "apartments",
+      "addressSources": [
+        {
+          "url": "https://www.daikyo-anabuki.co.jp/building/TO00038938",
+          "title": "大京穴吹不動産 建物情報",
+          "kind": "real-estate-building-record",
+          "checkedDate": "2026-11-04",
+          "fact": "リソシエ京都御苑南 / 京都府京都市中京区俵屋町296"
+        }
+      ],
+      "osm": {
+        "type": "way",
+        "id": 440395230,
+        "version": 1,
+        "timestamp": "2016-09-02T19:09:57Z",
+        "name": "リソシエ京都御苑南",
+        "buildingTag": "office",
+        "url": "https://www.openstreetmap.org/way/440395230",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                135.7644587,
+                35.0145267
+              ],
+              [
+                135.7644605,
+                35.0148375
+              ],
+              [
+                135.7645665,
+                35.0148371
+              ],
+              [
+                135.7645654,
+                35.0146486
+              ],
+              [
+                135.7646873,
+                35.0146482
+              ],
+              [
+                135.7646869,
+                35.0145792
+              ],
+              [
+                135.7647235,
+                35.0145791
+              ],
+              [
+                135.7647232,
+                35.0145256
+              ],
+              [
+                135.7644587,
+                35.0145267
+              ]
+            ]
+          ]
+        }
+      },
+      "expectedPlateauId": "bldg_9056fafd-ea0d-448e-8c78-cda561d3a207"
+    },
+    {
+      "name": "サニーフォレスト",
+      "address": "京都府京都市中京区高宮町219",
+      "buildingUse": "residential-mixed-use",
+      "addressSources": [
+        {
+          "url": "https://sudare.co.jp/buy/dealer/",
+          "title": "井上スダレ 公式取扱店一覧",
+          "kind": "official-tenant-directory",
+          "checkedDate": "2026-11-04",
+          "fact": "サニーフォレスト / 京都府京都市中京区高宮町219"
+        }
+      ],
+      "osm": {
+        "type": "way",
+        "id": 475095532,
+        "version": 2,
+        "timestamp": "2026-05-22T04:39:15Z",
+        "name": "サニーフォレスト",
+        "buildingTag": "apartments",
+        "url": "https://www.openstreetmap.org/way/475095532",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                135.762325,
+                35.011168
+              ],
+              [
+                135.7623751,
+                35.011168
+              ],
+              [
+                135.7623751,
+                35.0110477
+              ],
+              [
+                135.762325,
+                35.0110477
+              ],
+              [
+                135.762325,
+                35.011168
+              ]
+            ]
+          ]
+        }
+      },
+      "expectedPlateauId": "bldg_1732f51b-260e-46ae-a3b1-a153ec2cf374"
+    },
+    {
+      "name": "ローレルコート御所南",
+      "address": "京都府京都市中京区守山町156-3",
+      "buildingUse": "apartments",
+      "addressSources": [
+        {
+          "url": "https://www.city.kyoto.lg.jp/kankyo/cmsfiles/contents/0000122/122684/R080325_hoshutennkenn.pdf",
+          "title": "京都市 浄化槽保守点検業者登録簿",
+          "kind": "municipal-tenant-directory",
+          "checkedDate": "2026-11-04",
+          "fact": "ローレルコート御所南 / 京都府京都市中京区守山町156-3"
+        }
+      ],
+      "osm": {
+        "type": "way",
+        "id": 476102293,
+        "version": 4,
+        "timestamp": "2026-03-02T11:07:10Z",
+        "name": "ローレルコート御所南",
+        "buildingTag": "apartments",
+        "url": "https://www.openstreetmap.org/way/476102293",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                135.7650738,
+                35.0113137
+              ],
+              [
+                135.7653765,
+                35.0113136
+              ],
+              [
+                135.7653764,
+                35.0112572
+              ],
+              [
+                135.765333,
+                35.0112572
+              ],
+              [
+                135.7653329,
+                35.011175
+              ],
+              [
+                135.7653769,
+                35.011175
+              ],
+              [
+                135.7653768,
+                35.0110598
+              ],
+              [
+                135.7650737,
+                35.0110599
+              ],
+              [
+                135.7650738,
+                35.0113137
+              ]
+            ]
+          ]
+        }
+      },
+      "expectedPlateauId": "bldg_23fd9cbf-9770-4899-8d3f-248fdf81f457"
+    },
+    {
+      "name": "ザ・京都レジデンス御所南",
+      "address": "京都府京都市中京区毘沙門町546",
+      "buildingUse": "apartments",
+      "addressSources": [
+        {
+          "url": "https://c21-life.com/catalog_shosai/1815/",
+          "title": "センチュリー21ライフ住宅販売 建物情報",
+          "kind": "real-estate-building-record",
+          "checkedDate": "2026-11-04",
+          "fact": "ザ・京都レジデンス御所南 / 京都府京都市中京区毘沙門町546"
+        }
+      ],
+      "osm": {
+        "type": "way",
+        "id": 1188593278,
+        "version": 1,
+        "timestamp": "2023-07-10T07:43:21Z",
+        "name": "ザ京都レジデンス御所南",
+        "buildingTag": "apartments",
+        "url": "https://www.openstreetmap.org/way/1188593278",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                135.7665423,
+                35.0167337
+              ],
+              [
+                135.7665424,
+                35.0164966
+              ],
+              [
+                135.7666992,
+                35.0164966
+              ],
+              [
+                135.7666992,
+                35.0164583
+              ],
+              [
+                135.7668595,
+                35.0164583
+              ],
+              [
+                135.7668594,
+                35.0167585
+              ],
+              [
+                135.7670681,
+                35.0167586
+              ],
+              [
+                135.767068,
+                35.0168253
+              ],
+              [
+                135.7667136,
+                35.0168252
+              ],
+              [
+                135.7667136,
+                35.0167338
+              ],
+              [
+                135.7665423,
+                35.0167337
+              ]
+            ]
+          ]
+        }
+      },
+      "expectedPlateauId": "bldg_09bfe191-8c89-45bd-adc2-c7a0cb597124"
+    },
+    {
+      "name": "THOUSE",
+      "address": "京都府京都市中京区六丁目290",
+      "buildingUse": "residential-mixed-use",
+      "addressSources": [
+        {
+          "url": "https://www.homes.co.jp/archive/b-12039502/",
+          "title": "LIFULL HOME’S 建物情報",
+          "kind": "real-estate-building-record",
+          "checkedDate": "2026-11-04",
+          "fact": "THOUSE / 京都府京都市中京区六丁目290"
+        }
+      ],
+      "osm": {
+        "type": "way",
+        "id": 440395236,
+        "version": 1,
+        "timestamp": "2016-09-02T19:09:57Z",
+        "name": "ＴＨＯＵＳＥ",
+        "buildingTag": "office",
+        "url": "https://www.openstreetmap.org/way/440395236",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                135.7639625,
+                35.0146816
+              ],
+              [
+                135.7639628,
+                35.0147677
+              ],
+              [
+                135.7640731,
+                35.0147674
+              ],
+              [
+                135.7640727,
+                35.0146813
+              ],
+              [
+                135.7639625,
+                35.0146816
+              ]
+            ]
+          ]
+        }
+      },
+      "expectedPlateauId": "bldg_864fb232-5cda-4d18-a803-2a36a82cc88a"
+    }
+  ]
+}

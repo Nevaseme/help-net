@@ -1,0 +1,349 @@
+{
+  "buildings": 5033,
+  "geometryBuildings": 5033,
+  "withoutGeometry": 0,
+  "repairedGeometry": 0,
+  "profileCounts": {
+    "?": 4901,
+    "highrise-zero": 132
+  },
+  "modelSha256": "2f64fc5e4fb18778a9016f5a629c571a130934a73a8e9e5629126ac0df03be6b",
+  "sourceIndexSha256": "d13267bdbadf4cd38d6e358f8e2550251706b6c05335befa5f52cc943d87d0cf",
+  "tiles": [
+    {
+      "file": "14/14551/6451.pbf",
+      "bytes": 1696,
+      "sha256": "323a931555182049a526f08c84be4aa9238e3c6416066237390b0a8aabc416d6"
+    },
+    {
+      "file": "14/14551/6452.pbf",
+      "bytes": 131473,
+      "sha256": "a39e471d823afc2a79941341f7cc33727f4667a1fda67b84c152f21a6623eb7c"
+    },
+    {
+      "file": "14/14551/6453.pbf",
+      "bytes": 278,
+      "sha256": "e09870ca7462ef4644e09e5f6fb7e0af3845afac1e4cbaff7e2f65494694c5df"
+    },
+    {
+      "file": "14/14552/6451.pbf",
+      "bytes": 1455,
+      "sha256": "3b532200baf46d1f0cfd5af295d49dfcc63e5e59a697274e915384d8f5219e47"
+    },
+    {
+      "file": "14/14552/6452.pbf",
+      "bytes": 306143,
+      "sha256": "3af36228ea5dcf336fdc380e445e6aba541c722ed991184ecd4465678a73870b"
+    },
+    {
+      "file": "14/14552/6453.pbf",
+      "bytes": 933,
+      "sha256": "d04e2ef6cca0e23f5977d606c563885d0832279aad0774a78ab0a00335118a71"
+    },
+    {
+      "file": "15/29103/12903.pbf",
+      "bytes": 1646,
+      "sha256": "0314372bfc8bb06cfd17cedcbd2785ccc1e1ac07da1d960678fab06b00feb259"
+    },
+    {
+      "file": "15/29103/12904.pbf",
+      "bytes": 53894,
+      "sha256": "dacdfc907b99730f6461a10a30727cc026a7a81d9423781853ca62f269ec0328"
+    },
+    {
+      "file": "15/29103/12905.pbf",
+      "bytes": 80806,
+      "sha256": "d71aaaca22111f589b90b68b3150254aa1c5b815530d35f71cf4695563a3169b"
+    },
+    {
+      "file": "15/29103/12906.pbf",
+      "bytes": 269,
+      "sha256": "23aec7486b18d480a9773293d6feaed09b8c15dd7640144717cc8fc1b5bc4857"
+    },
+    {
+      "file": "15/29104/12903.pbf",
+      "bytes": 708,
+      "sha256": "90725b9af7227a829f7a87ac02728fcf38e084bd2ce2738cecfa2eeda0087ca0"
+    },
+    {
+      "file": "15/29104/12904.pbf",
+      "bytes": 87581,
+      "sha256": "920f42003e1a27a6e2cba7174ffedc590428ec335d2619a5390b70fda76a9dd4"
+    },
+    {
+      "file": "15/29104/12905.pbf",
+      "bytes": 171957,
+      "sha256": "9093bc2ca3e063c2ec1c7d2cd3f3a32a2887547b0da6c5a318e005c4d286236a"
+    },
+    {
+      "file": "15/29104/12906.pbf",
+      "bytes": 491,
+      "sha256": "68de452b672a4393fb1cbfadb5d2ce9f7999ffb1ea9013e4916e68a0c8a647d1"
+    },
+    {
+      "file": "15/29105/12903.pbf",
+      "bytes": 869,
+      "sha256": "458e61e75283419ab924308ee5a0140b81940e8a2dc01dd67d58d098a9275f14"
+    },
+    {
+      "file": "15/29105/12904.pbf",
+      "bytes": 28806,
+      "sha256": "1b3fa126717c84d8a9fede0ab370bfd9db380d059e18c944abb26695d5209770"
+    },
+    {
+      "file": "15/29105/12905.pbf",
+      "bytes": 32345,
+      "sha256": "2697c9326af00c2cbeda12ab0658c5c6a31b7b018351b5fe4ab8813bf715c5d4"
+    },
+    {
+      "file": "15/29105/12906.pbf",
+      "bytes": 561,
+      "sha256": "53e1d3c6616a0f99e3be4be9f60f4102632187db05b7aac9c674fca6ad962d47"
+    },
+    {
+      "file": "16/58206/25807.pbf",
+      "bytes": 1022,
+      "sha256": "0ce272f076cfcc8eef72ce5a3ba92ddd5270c12e2aa77ac8c59743e855a586ab"
+    },
+    {
+      "file": "16/58206/25808.pbf",
+      "bytes": 15388,
+      "sha256": "a5bcb54ef681d200a6eadca77f1759c62a03390e36617f515c0d17127506bb22"
+    },
+    {
+      "file": "16/58206/25809.pbf",
+      "bytes": 14856,
+      "sha256": "9575bb45222ef54d1317aaac3a12052c68ed288e7eabef0b18a6c412c80b06f8"
+    },
+    {
+      "file": "16/58206/25810.pbf",
+      "bytes": 6997,
+      "sha256": "0757849c3f4e3eb4e0bfa7c73148b2dbe08ddb6439c13701929844cb2e5b13bc"
+    },
+    {
+      "file": "16/58206/25811.pbf",
+      "bytes": 19578,
+      "sha256": "f7ed8f5dc343b9b9ebda29f72aa4c5647ba7d9c61d049a73163bbb2263f54317"
+    },
+    {
+      "file": "16/58206/25812.pbf",
+      "bytes": 163,
+      "sha256": "7311c7ac09122c7c8e20b76a5d5fa57888d075513eeefd354bd14338c40e092f"
+    },
+    {
+      "file": "16/58207/25807.pbf",
+      "bytes": 750,
+      "sha256": "c41a01011e02ecd9253e6487b7c780364e0b24db7ddb6cfa79d07e72e23d7111"
+    },
+    {
+      "file": "16/58207/25808.pbf",
+      "bytes": 9913,
+      "sha256": "50e6c988d542462168616860bfe4e5c7383675298b7f1da819b749dccaa93dcc"
+    },
+    {
+      "file": "16/58207/25809.pbf",
+      "bytes": 18894,
+      "sha256": "1769529688c46d3a9e7182b17c7f3aa5439faf34f75f9f65d3044d65171c0305"
+    },
+    {
+      "file": "16/58207/25810.pbf",
+      "bytes": 22745,
+      "sha256": "2f17ce214227b301a1d651d47da8acce8b784f31ee4bb24aae0f8edf1679c681"
+    },
+    {
+      "file": "16/58207/25811.pbf",
+      "bytes": 36024,
+      "sha256": "02d21be1952ec6886086e77bef4fee2d5ca8205142c62ab18d610fde4d3d1ca8"
+    },
+    {
+      "file": "16/58207/25812.pbf",
+      "bytes": 189,
+      "sha256": "5ab0dbfe489d9bb63d14025bc258cc11797a929ab749e6d8817f4ffa39fd0a19"
+    },
+    {
+      "file": "16/58208/25807.pbf",
+      "bytes": 259,
+      "sha256": "f521e4f7cac1f9d47a933de62242103d7e0c412ab571df6279e492fb906604ba"
+    },
+    {
+      "file": "16/58208/25808.pbf",
+      "bytes": 6083,
+      "sha256": "e9e9624bfec134e93f981432f25545e7761ee6d63685354d0b9161cad97d13ab"
+    },
+    {
+      "file": "16/58208/25809.pbf",
+      "bytes": 28648,
+      "sha256": "45ed432251d52c61d3278053ac3be08c88c83f7f34413f56cd059c879e1a303f"
+    },
+    {
+      "file": "16/58208/25810.pbf",
+      "bytes": 41697,
+      "sha256": "e64351869720ebd4044d42b8550453aa7f93caa244e905add4b8af60ef825009"
+    },
+    {
+      "file": "16/58208/25811.pbf",
+      "bytes": 21745,
+      "sha256": "c52fed0e7bb7ff900c4178a15c8e935a96a26f261b8c18681b6f560c5d4e6936"
+    },
+    {
+      "file": "16/58208/25812.pbf",
+      "bytes": 522,
+      "sha256": "d09f60217c561cfb6ac35f119fa74a29ec0c0acb07415674bb5f7da392ef9dcd"
+    },
+    {
+      "file": "16/58209/25807.pbf",
+      "bytes": 537,
+      "sha256": "3eecb2d10647ef3d6bf0b34a7dfdaa0239f94db5ec9f2bd05efdfcbe2d22d433"
+    },
+    {
+      "file": "16/58209/25808.pbf",
+      "bytes": 7756,
+      "sha256": "0375f1ea1695e8d71c2d44f4c77fe847c2f62fdf8e7e49f354849269a51df187"
+    },
+    {
+      "file": "16/58209/25809.pbf",
+      "bytes": 50531,
+      "sha256": "632043b99f5110d32f9c2bb991506b3f3ae3d533bf9079c31398e3db67995645"
+    },
+    {
+      "file": "16/58209/25810.pbf",
+      "bytes": 63898,
+      "sha256": "c5921195b0a61477c82d3513dd1dd43e6becf16eb8bbcbe418eacdeffbae9f04"
+    },
+    {
+      "file": "16/58209/25811.pbf",
+      "bytes": 54133,
+      "sha256": "4c641be4e2639b8770935f767fd13d9ef1ae7f0d2959815d8ed47c8fcf195379"
+    },
+    {
+      "file": "16/58210/25807.pbf",
+      "bytes": 890,
+      "sha256": "1e2ab5661b98a02c6ee31188f4db9de5907ea9cc7e1522987820dce2a738128a"
+    },
+    {
+      "file": "16/58210/25808.pbf",
+      "bytes": 11565,
+      "sha256": "d63bc468c4c29fa5195425d7a19fe1c1a92772d8dbf7aadca7ffe4f0c16c426e"
+    },
+    {
+      "file": "16/58210/25809.pbf",
+      "bytes": 18624,
+      "sha256": "b53b1e01b3cfc26aa714e81f72f9a347ef9852a42fc650e5e0ccfaf5fcb720f6"
+    },
+    {
+      "file": "16/58210/25810.pbf",
+      "bytes": 24641,
+      "sha256": "086b6f3c824732c364832c1c6808d3a9cf45e8d4a6f50f4cb2abffafe6a06d4e"
+    },
+    {
+      "file": "16/58210/25811.pbf",
+      "bytes": 8934,
+      "sha256": "386677dc6ddb2717e4e53904f04a0d578d885a9f126593f2203495d1f46e2c64"
+    },
+    {
+      "file": "16/58210/25812.pbf",
+      "bytes": 568,
+      "sha256": "aab9b059c4da98a19ea6847dcc74682bf378aba83855c8c006bfd7221c45af28"
+    },
+    {
+      "file": "8/227/100.pbf",
+      "bytes": 4776,
+      "sha256": "8ce1eb41812cc6dfdeb34d18cac0dfdcd0608a9626b99462a42924a96d8b60ee"
+    },
+    {
+      "file": "9/454/201.pbf",
+      "bytes": 16032,
+      "sha256": "1f9f0a89bfc382ef6200000f65778ea9a7232c362eeab763ff25aa84b904798d"
+    },
+    {
+      "file": "10/909/403.pbf",
+      "bytes": 41569,
+      "sha256": "3e508aafde4cd47e31b3ebaca913ee3018bbc4e5df01b55682e7576a10191fbf"
+    },
+    {
+      "file": "11/1818/806.pbf",
+      "bytes": 18779,
+      "sha256": "0d0509dba16cd09553c8a9b33c1fe07cf72876856c08abf944e4bd587546c732"
+    },
+    {
+      "file": "11/1819/806.pbf",
+      "bytes": 41441,
+      "sha256": "4711323ebb5b0b31db53e8010d803e3d5117c95eb1ff869fb9e74b42d39f3dd5"
+    },
+    {
+      "file": "12/3637/1612.pbf",
+      "bytes": 395,
+      "sha256": "5c7c3f1ea0b8411ad0d24475890070e20d252cf3ba115d69be8cb5cd830b2b7b"
+    },
+    {
+      "file": "12/3637/1613.pbf",
+      "bytes": 23740,
+      "sha256": "dfff0e52a1a8cdd37c3fd57951989f7061d77c93bc9e05ea85e4f263b2116e55"
+    },
+    {
+      "file": "12/3638/1612.pbf",
+      "bytes": 329,
+      "sha256": "4c746c679567c07ac532b20fb6a721e5541b9966314ced7cb0f44a4733852bf6"
+    },
+    {
+      "file": "12/3638/1613.pbf",
+      "bytes": 51373,
+      "sha256": "187572ac67bf8deb5b5835d2b379f6b8ebb8afda957de6e16152fed827c59541"
+    },
+    {
+      "file": "13/7275/3225.pbf",
+      "bytes": 451,
+      "sha256": "4d3a93f3cf4b24f778e11ba90c3bdbbb7733c5690e07ea37657cbae252a051fa"
+    },
+    {
+      "file": "13/7275/3226.pbf",
+      "bytes": 27080,
+      "sha256": "95ad05bdccf1e2af15cffd0c198b564c3887e9dd1db170458ecae4b413aad88f"
+    },
+    {
+      "file": "13/7276/3225.pbf",
+      "bytes": 354,
+      "sha256": "5aa97436572bbf9aaa58fb80880d3afc4f9cae16e5eb423c8f8f4f37362e9e95"
+    },
+    {
+      "file": "13/7276/3226.pbf",
+      "bytes": 57263,
+      "sha256": "bbb8da62c273ba41b7c67d3a1856ae2ffb41e57577126490f58d3ce86f3e863c"
+    },
+    {
+      "file": "16/58209/25812.pbf",
+      "bytes": 18,
+      "sha256": "8d123eaa26a1020914daad0d550d52b769d2c6f1e482233fc62081294ae6b05a"
+    }
+  ],
+  "bytes": 1673061,
+  "overview": "simplified individual footprints grouped by assessment profile; no area average; sub-0.01-pixel-squared shapes omitted",
+  "overviewStats": {
+    "8": {
+      "tiles": 1,
+      "simplifiedBuildingTileOccurrences": 414
+    },
+    "9": {
+      "tiles": 1,
+      "simplifiedBuildingTileOccurrences": 1395
+    },
+    "10": {
+      "tiles": 1,
+      "simplifiedBuildingTileOccurrences": 3637
+    },
+    "11": {
+      "tiles": 2,
+      "simplifiedBuildingTileOccurrences": 4670
+    },
+    "12": {
+      "tiles": 4,
+      "simplifiedBuildingTileOccurrences": 5043
+    },
+    "13": {
+      "tiles": 4,
+      "simplifiedBuildingTileOccurrences": 5064
+    }
+  },
+  "overviewExtent": 8192,
+  "extent": 8192
+}

@@ -1,0 +1,270 @@
+{
+  "version": "1.5.12",
+  "versionCode": 25,
+  "unitTests": {
+    "tests": 10,
+    "failures": 0
+  },
+  "sheet": {
+    "baselineMovementPx": 106.81564,
+    "fixedMovementPx": 0,
+    "types": 2,
+    "heightsPerType": 7
+  },
+  "recreation": {
+    "cyclesPerDevice": 3,
+    "emulatorPassed": true,
+    "vivoPassed": true,
+    "checks": [
+      "destroy before surface detach",
+      "main thread responds",
+      "risk features restored"
+    ]
+  },
+  "zoom": {
+    "emulator": [
+      {
+        "requestedZoom": 12,
+        "actualZoom": 12,
+        "features": 119,
+        "layerMaxZoom": "Infinity"
+      },
+      {
+        "requestedZoom": 13,
+        "actualZoom": 13,
+        "features": 946,
+        "layerMaxZoom": "Infinity"
+      },
+      {
+        "requestedZoom": 13.9,
+        "actualZoom": 13.9,
+        "features": 364,
+        "layerMaxZoom": "Infinity"
+      },
+      {
+        "requestedZoom": 14,
+        "actualZoom": 14,
+        "features": 13508,
+        "layerMaxZoom": "Infinity"
+      },
+      {
+        "requestedZoom": 14.1,
+        "actualZoom": 14.100000000000001,
+        "features": 20144,
+        "layerMaxZoom": "Infinity"
+      },
+      {
+        "requestedZoom": 14.5,
+        "actualZoom": 14.500000000000002,
+        "features": 12110,
+        "layerMaxZoom": "Infinity"
+      },
+      {
+        "requestedZoom": 15,
+        "actualZoom": 15,
+        "features": 8945,
+        "layerMaxZoom": "Infinity"
+      },
+      {
+        "requestedZoom": 15.5,
+        "actualZoom": 15.500000000000002,
+        "features": 2269,
+        "layerMaxZoom": "Infinity"
+      },
+      {
+        "requestedZoom": 16,
+        "actualZoom": 16,
+        "features": 924,
+        "layerMaxZoom": "Infinity"
+      },
+      {
+        "requestedZoom": 16.8,
+        "actualZoom": 16.8,
+        "features": 281,
+        "layerMaxZoom": "Infinity"
+      },
+      {
+        "requestedZoom": 18,
+        "actualZoom": 18,
+        "features": 53,
+        "layerMaxZoom": "Infinity"
+      },
+      {
+        "requestedZoom": 20,
+        "actualZoom": 20,
+        "features": 3,
+        "layerMaxZoom": "Infinity"
+      },
+      {
+        "requestedZoom": 22,
+        "actualZoom": 22,
+        "features": 2,
+        "layerMaxZoom": "Infinity"
+      },
+      {
+        "requestedZoom": 13.9,
+        "actualZoom": 13.9,
+        "features": 364,
+        "layerMaxZoom": "Infinity"
+      },
+      {
+        "requestedZoom": 14.1,
+        "actualZoom": 14.100000000000001,
+        "features": 20144,
+        "layerMaxZoom": "Infinity"
+      },
+      {
+        "requestedZoom": 16.8,
+        "actualZoom": 16.8,
+        "features": 281,
+        "layerMaxZoom": "Infinity"
+      }
+    ],
+    "vivo": [
+      {
+        "requestedZoom": 12,
+        "actualZoom": 12,
+        "features": 2080,
+        "layerMaxZoom": "Infinity"
+      },
+      {
+        "requestedZoom": 13,
+        "actualZoom": 13,
+        "features": 721,
+        "layerMaxZoom": "Infinity"
+      },
+      {
+        "requestedZoom": 13.9,
+        "actualZoom": 13.9,
+        "features": 330,
+        "layerMaxZoom": "Infinity"
+      },
+      {
+        "requestedZoom": 14,
+        "actualZoom": 14,
+        "features": 18186,
+        "layerMaxZoom": "Infinity"
+      },
+      {
+        "requestedZoom": 14.1,
+        "actualZoom": 14.100000000000001,
+        "features": 16148,
+        "layerMaxZoom": "Infinity"
+      },
+      {
+        "requestedZoom": 14.5,
+        "actualZoom": 14.500000000000002,
+        "features": 8381,
+        "layerMaxZoom": "Infinity"
+      },
+      {
+        "requestedZoom": 15,
+        "actualZoom": 15,
+        "features": 3946,
+        "layerMaxZoom": "Infinity"
+      },
+      {
+        "requestedZoom": 15.5,
+        "actualZoom": 15.500000000000002,
+        "features": 1601,
+        "layerMaxZoom": "Infinity"
+      },
+      {
+        "requestedZoom": 16,
+        "actualZoom": 16,
+        "features": 678,
+        "layerMaxZoom": "Infinity"
+      },
+      {
+        "requestedZoom": 16.8,
+        "actualZoom": 16.8,
+        "features": 203,
+        "layerMaxZoom": "Infinity"
+      },
+      {
+        "requestedZoom": 18,
+        "actualZoom": 18,
+        "features": 37,
+        "layerMaxZoom": "Infinity"
+      },
+      {
+        "requestedZoom": 20,
+        "actualZoom": 20,
+        "features": 2,
+        "layerMaxZoom": "Infinity"
+      },
+      {
+        "requestedZoom": 22,
+        "actualZoom": 22,
+        "features": 1,
+        "layerMaxZoom": "Infinity"
+      },
+      {
+        "requestedZoom": 13.9,
+        "actualZoom": 13.9,
+        "features": 330,
+        "layerMaxZoom": "Infinity"
+      },
+      {
+        "requestedZoom": 14.1,
+        "actualZoom": 14.100000000000001,
+        "features": 16148,
+        "layerMaxZoom": "Infinity"
+      },
+      {
+        "requestedZoom": 16.8,
+        "actualZoom": 16.8,
+        "features": 203,
+        "layerMaxZoom": "Infinity"
+      }
+    ]
+  },
+  "vivoIdle": [
+    {
+      "seconds": 0,
+      "frames": 298,
+      "pssKiB": 257635,
+      "samePixels": true
+    },
+    {
+      "seconds": 30,
+      "frames": 298,
+      "pssKiB": 261986,
+      "samePixels": true
+    },
+    {
+      "seconds": 60,
+      "frames": 298,
+      "pssKiB": 261902,
+      "samePixels": true
+    },
+    {
+      "seconds": 90,
+      "frames": 298,
+      "pssKiB": 262001,
+      "samePixels": true
+    },
+    {
+      "seconds": 120,
+      "frames": 298,
+      "pssKiB": 261864,
+      "samePixels": true
+    },
+    {
+      "seconds": 150,
+      "frames": 298,
+      "pssKiB": 262034,
+      "samePixels": true
+    },
+    {
+      "seconds": 180,
+      "frames": 298,
+      "pssKiB": 261887,
+      "samePixels": true
+    }
+  ],
+  "limitations": [
+    "Original color disappearance not reproduced in Kyoto; observed normal map was outside Kyoto.",
+    "Three minute idle test is not an indefinite stability guarantee."
+  ]
+}

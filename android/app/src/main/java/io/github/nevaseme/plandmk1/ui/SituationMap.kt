@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -19,6 +20,11 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import io.github.nevaseme.plandmk1.MapPoint
 import io.github.nevaseme.plandmk1.R
 import io.github.nevaseme.plandmk1.maps.OfflineMapRepository
+import io.github.nevaseme.plandmk1.buildings.BuildingMapModel
+import io.github.nevaseme.plandmk1.buildings.BuildingRiskOverlay
+import io.github.nevaseme.plandmk1.buildings.BuildingMapCoverage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.maplibre.android.annotations.IconFactory
 import org.maplibre.android.annotations.Icon
 import org.maplibre.android.annotations.Marker
@@ -36,9 +42,15 @@ import kotlin.math.*
 
 class SituationCamera {
     internal var map: MapLibreMap? = null
+    var cancelLocationCenter:()->Unit = {}
     fun zoom(delta: Double) { map?.let { it.animateCamera(CameraUpdateFactory.zoomTo((it.cameraPosition.zoom + delta).coerceIn(2.0, 20.0))) } }
     fun move(point: MapPoint, zoom: Double = 16.8) { map?.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(point.latitude, point.longitude), zoom)) }
+    fun showKyoto() {
+        val bounds=LatLngBounds.Builder().include(LatLng(BuildingMapCoverage.NORTH,BuildingMapCoverage.EAST)).include(LatLng(BuildingMapCoverage.SOUTH,BuildingMapCoverage.WEST)).build()
+        map?.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds,48))
+    }
 }
+data class MapReport(val id:String,val point:MapPoint,val urgency:io.github.nevaseme.plandmk1.core.Urgency)
 
 @Suppress("DEPRECATION")
 @Composable
@@ -48,18 +60,28 @@ fun SituationMap(
     onPerson: (MapPerson) -> Unit, onHome: (MapHome) -> Unit,
     onOverlapping: (List<MapPerson>) -> Unit, onError: () -> Unit,
     modifier: Modifier = Modifier,
+    tsunamiResult:io.github.nevaseme.plandmk1.tsunami.TsunamiComputedResult? = null,
+    assessmentIntensity: Double = BuildingMapModel.DEFAULT_INTENSITY,
+    onOverview: (Boolean) -> Unit = {},
+    onCoverage: (Boolean) -> Unit = {},
+    onReportPoint: ((MapPoint) -> Unit)? = null,
+    reports:List<MapReport> = emptyList(),onReport: (String)->Unit = {}, initialZoom:Double=16.8,
+    registeredBuildingIds:List<String> = emptyList(),neighborhoods:List<MapNeighborhood> = emptyList(),onNeighborhood:(String)->Unit={},
+    currentLocation:io.github.nevaseme.plandmk1.location.PositionFix?=null,selectedHome:MapHome?=null,
 ) {
     val context = LocalContext.current
     val supports = remember { (context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager).deviceConfigurationInfo.reqGlEsVersion >= 0x30000 }
     if (!supports) {
-        Box(modifier, contentAlignment = Alignment.Center) { Text("地図を表示できません。メニューの住民一覧を利用できます。", Modifier.padding(24.dp)) }
+        Box(modifier, contentAlignment = Alignment.Center) { Text(menuText("地図を表示できません。メニューの住民一覧を利用できます。"), Modifier.padding(24.dp)) }
         return
     }
     val owner = LocalLifecycleOwner.current
-    val view = remember { MapView(context).also { it.onCreate(null); it.setMaximumFps(60) } }
+    val mapVisible = LocalMapVisible.current
+    val latestMapVisible by rememberUpdatedState(mapVisible)
+    val view = remember { PlanMapView(context).also { it.tag="situation-map";it.onCreate(null); it.setMaximumFps(60) } }
     var controller by remember { mutableStateOf<MapLibreMap?>(null) }
     var ready by remember { mutableStateOf(false) }
-    var zoom by rememberSaveable { mutableDoubleStateOf(16.8) }
+    var zoom by rememberSaveable { mutableDoubleStateOf(initialZoom) }
     var latitude by rememberSaveable { mutableDoubleStateOf(center.latitude) }
     var longitude by rememberSaveable { mutableDoubleStateOf(center.longitude) }
     val latestPeople by rememberUpdatedState(people)
@@ -70,29 +92,102 @@ fun SituationMap(
     val latestError by rememberUpdatedState(onError)
     val latestSafe by rememberUpdatedState(showSafe)
     val latestNow by rememberUpdatedState(now)
+    val latestIntensity by rememberUpdatedState(assessmentIntensity)
+    val latestOverview by rememberUpdatedState(onOverview)
+    val latestCoverage by rememberUpdatedState(onCoverage)
+    val latestReportPoint by rememberUpdatedState(onReportPoint)
+    val latestReport by rememberUpdatedState(onReport)
+    val latestTsunami by rememberUpdatedState(tsunamiResult)
+    val tsunamiEnglish by rememberUpdatedState(LocalUiLanguage.current=="en")
+    val neighborhoodMarkers=remember {mutableMapOf<Long,String>()}
+    val neighborhoodRendered=remember {mutableListOf<Marker>()}
+    val neighborhoodImages=remember {mutableMapOf<String,String>()}
+    val neighborhoodAnimations=remember {mutableMapOf<String,android.animation.ValueAnimator>()}
+    DisposableEffect(Unit){onDispose{neighborhoodAnimations.values.forEach {it.cancel()}}}
+    val latestNeighborhood by rememberUpdatedState(onNeighborhood)
+    val neighborhoodEnglish=LocalUiLanguage.current=="en"
+    var riskModel by remember { mutableStateOf<BuildingMapModel?>(null) }
+    val latestRiskModel by rememberUpdatedState(riskModel)
     val markers = remember { mutableMapOf<Long, MapCluster>() }
     val renderedMarkers = remember { mutableListOf<Marker>() }
     val iconCache = remember { mutableMapOf<String, Icon>() }
 
+    LaunchedEffect(Unit) {
+        if (!preview) riskModel = withContext(Dispatchers.IO) {
+            context.assets.open("kyoto-building-assessment/model.json").bufferedReader().use { BuildingMapModel.parse(it.readText()) }
+        }
+    }
+    LaunchedEffect(ready, riskModel, assessmentIntensity) {
+        val model=riskModel ?: return@LaunchedEffect
+        if(ready) controller?.style?.let {BuildingRiskOverlay.install(it,model,assessmentIntensity)}
+    }
+
+    LaunchedEffect(ready,selectedHome) {
+        val map=controller?:return@LaunchedEffect
+        if(!ready)return@LaunchedEffect
+        map.style?.let { style ->
+            for(source in listOf("kyoto-risk","toranomon-risk")) {
+                if(style.getSource(source)==null)continue
+                val id="$source-selected"
+                val layer=(style.getLayer(id) as? org.maplibre.android.style.layers.LineLayer)
+                    ?: org.maplibre.android.style.layers.LineLayer(id,source).withSourceLayer("buildings").apply {
+                        minZoom=14f;setProperties(lineColor("#155eef"),lineWidth(4f));style.layers.firstOrNull {it is org.maplibre.android.style.layers.SymbolLayer}?.let {style.addLayerBelow(this,it.id)}?:style.addLayer(this)
+                    }
+                layer.setFilter(eq(get("bid"),literal(selectedHome?.plateauId?:"")))
+            }
+        }
+        map.setPadding(0,0,0,if(selectedHome!=null)(view.height*.52).roundToInt()else 0)
+        selectedHome?.let {home->
+            map.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(home.point.latitude,home.point.longitude),18.0))
+        }
+    }
+    LaunchedEffect(ready,riskModel,registeredBuildingIds){if(ready)controller?.style?.let {style->
+        for(source in listOf("kyoto-risk","toranomon-risk")){if(style.getSource(source)==null)continue
+            val id="$source-registered";val layer=(style.getLayer(id) as? org.maplibre.android.style.layers.LineLayer)?:org.maplibre.android.style.layers.LineLayer(id,source).withSourceLayer("buildings").apply{minZoom=14f;setProperties(lineColor("#087f8c"),lineWidth(3f));style.layers.firstOrNull {it is org.maplibre.android.style.layers.SymbolLayer}?.let {style.addLayerBelow(this,it.id)}?:style.addLayer(this)}
+            layer.setFilter(raw("""["in",["get","bid"],["literal",${org.json.JSONArray(registeredBuildingIds)}]]"""))
+        }
+    }}
+    LaunchedEffect(ready,tsunamiResult) {
+        if(ready)controller?.style?.let {style ->
+            io.github.nevaseme.plandmk1.tsunami.TsunamiOverlay.update(style,tsunamiResult)
+        }
+    }
+    LaunchedEffect(ready,currentLocation){if(ready)controller?.style?.let {drawCurrentMapLocation(it,currentLocation)}}
     DisposableEffect(view, owner) {
-        val observer = LifecycleEventObserver { _, event -> when (event) {
-            Lifecycle.Event.ON_START -> view.onStart()
-            Lifecycle.Event.ON_RESUME -> view.onResume()
+        val observer = LifecycleEventObserver { _, event -> if (!view.isDestroyed) when (event) {
+            Lifecycle.Event.ON_START -> if(latestMapVisible) view.onStart()
+            Lifecycle.Event.ON_RESUME -> if(latestMapVisible) view.onResume()
             Lifecycle.Event.ON_PAUSE -> view.onPause()
             Lifecycle.Event.ON_STOP -> view.onStop()
+            Lifecycle.Event.ON_DESTROY -> view.release()
             else -> Unit
         } }
         owner.lifecycle.addObserver(observer)
         view.addOnDidFailLoadingMapListener { latestError() }
         view.getMapAsync { map ->
             controller = map; camera.map = map
+            map.addOnCameraMoveStartedListener {reason->if(reason==MapLibreMap.OnCameraMoveStartedListener.REASON_API_GESTURE)camera.cancelLocationCenter()}
             map.cameraPosition = CameraPosition.Builder().target(LatLng(latitude, longitude)).zoom(zoom).build()
             map.uiSettings.apply { isRotateGesturesEnabled = false; isTiltGesturesEnabled = false; isCompassEnabled = false }
+            // Tile caching is enabled by default. The redundant renderer-backed
+            // setter stalled this UI callback during rapid map recreation.
+            // A coarser Kyoto tile contains hundreds of thousands of footprints.
+            // Loading it alongside the visible tiles doubles work during a jump.
+            map.setPrefetchZoomDelta(0)
             map.addOnCameraIdleListener {
                 zoom = map.cameraPosition.zoom
+                latestOverview(zoom < 14)
+                val bounds = map.projection.visibleRegion.latLngBounds
+                latestCoverage(BuildingMapCoverage.intersects(bounds.latitudeSouth,bounds.longitudeWest,bounds.latitudeNorth,bounds.longitudeEast))
                 map.cameraPosition.target?.let { latitude = it.latitude; longitude = it.longitude }
             }
             map.setOnMarkerClickListener { marker ->
+                // Location-picking mode takes precedence over opening any existing marker.
+                latestReportPoint?.let { pick ->
+                    pick(MapPoint(marker.position.latitude, marker.position.longitude))
+                    return@setOnMarkerClickListener true
+                }
+                neighborhoodMarkers[marker.id]?.let {latestNeighborhood(it);return@setOnMarkerClickListener true}
                 markers[marker.id]?.let { cluster ->
                     if (cluster.people.size == 1) {
                         val person = latestPeople.find { it.id == cluster.people.single().id } ?: cluster.people.single()
@@ -113,6 +208,39 @@ fun SituationMap(
                 true
             }
             map.addOnMapClickListener { point ->
+                latestReportPoint?.let {it(MapPoint(point.latitude,point.longitude));return@addOnMapClickListener true}
+                if(latestTsunami!=null) {
+                    val cell=map.queryRenderedFeatures(map.projection.toScreenLocation(point),"tsunami-depth-fill").firstOrNull()
+                    if(cell!=null) {
+                        android.widget.Toast.makeText(context,tsunamiText("depth",tsunamiEnglish)+" ${String.format(java.util.Locale.US,"%.2f",cell.getNumberProperty("max_depth_m").toDouble())}m",android.widget.Toast.LENGTH_SHORT).show()
+                        return@addOnMapClickListener true
+                    }
+                }
+                val model=latestRiskModel
+                val wide=map.cameraPosition.zoom<14
+                val risk=if(model!=null && !wide) map.queryRenderedFeatures(map.projection.toScreenLocation(point),BuildingRiskOverlay.BUILDINGS,BuildingRiskOverlay.OVERVIEW,"toranomon-risk-buildings","toranomon-risk-overview").firstOrNull() else null
+                if(model!=null && wide) {
+                    camera.move(MapPoint(point.latitude,point.longitude),16.8)
+                    true
+                } else if(risk!=null && model!=null) {
+                    fun number(key:String)=risk.getNumberProperty(key).toDouble()
+                    val rate=model.percent(risk.getStringProperty("p"),latestIntensity)
+                    val strength=rate?.let {if(it<10)0 else if(it<40)1 else 2}
+                    val structure=when(risk.getStringProperty("structure")) {"601"->"木造・土蔵造";"602"->"SRC造";"603"->"RC造";"604"->"鉄骨造";"605"->"軽量鉄骨造";"606"->"組積造";"610"->"非木造";else->"不明"}
+                    val assessed=MapHome(risk.getStringProperty("bid"),"",MapPoint(point.latitude,point.longitude),
+                        built=number("year").toInt().takeIf {it>0},material=structure,
+                        floors=number("floors").toInt().takeIf {it>0},rating=strength,
+                        fullDamagePercent=rate,assessmentIntensity=latestIntensity,
+                        assessmentAssumed=risk.getStringProperty("s")=="assumed",plateauId=risk.getStringProperty("bid"))
+                    val rings=when(val g=risk.geometry()) {
+                        is org.maplibre.geojson.Polygon -> listOf(g.coordinates())
+                        is org.maplibre.geojson.MultiPolygon -> g.coordinates()
+                        else -> emptyList()
+                    }.map { polygon -> polygon.map { ring -> ring.map { MapPoint(it.latitude(),it.longitude()) } } }
+                    val registered=latestHomes.firstOrNull { h -> rings.any {insideFootprint(h.point,it)} }
+                    latestHome(if(registered==null)assessed else assessed.copy(id=registered.id,address=registered.address,point=registered.point))
+                    true
+                } else {
                 val features = map.queryRenderedFeatures(map.projection.toScreenLocation(point), "building")
                 if (features.isEmpty()) false else {
                     val polygons = features.flatMap { feature -> when (val geometry = feature.geometry()) {
@@ -122,8 +250,9 @@ fun SituationMap(
                     } }.map { rings -> rings.map { ring -> ring.map { MapPoint(it.latitude(), it.longitude()) } } }
                     val registered = latestHomes.firstOrNull { home -> polygons.any { insideFootprint(home.point, it) } }
                     if (registered != null) latestHome(registered)
-                    else latestHome(MapHome("selected", "選択した建物", MapPoint(point.latitude, point.longitude)))
+                    else latestHome(MapHome("selected", "", MapPoint(point.latitude, point.longitude)))
                     true
+                }
                 }
             }
             map.setStyle(OfflineMapRepository.STYLE) { style ->
@@ -155,11 +284,78 @@ fun SituationMap(
         onDispose {
             owner.lifecycle.removeObserver(observer)
             camera.map = null; controller = null
-            view.onPause(); view.onStop(); view.onDestroy()
+            view.release()
             renderedMarkers.clear(); markers.clear(); iconCache.clear()
         }
     }
-    AndroidView(factory = { view }, modifier = modifier)
+    SideEffect {
+        if (mapVisible && owner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+            view.visibility = android.view.View.VISIBLE
+            view.onStart()
+            if(owner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) view.onResume()
+        } else {
+            view.onPause()
+            view.onStop()
+            view.visibility = android.view.View.INVISIBLE
+        }
+    }
+    Box(modifier.then(Modifier.clipToBounds())) {
+        AndroidView(factory = { view }, modifier = Modifier.matchParentSize())
+        if(ready) controller?.let { map ->
+            ReportMapMarkers(map,reports,Modifier.matchParentSize()) { report ->
+                latestReportPoint?.invoke(report.point) ?: latestReport(report.id)
+            }
+        }
+    }
+    LaunchedEffect(ready,neighborhoods,neighborhoodEnglish,people,reports,showSafe,zoom,latitude,longitude) {
+        val map=controller?:return@LaunchedEffect
+        if(!ready)return@LaunchedEffect
+        val liveNeighborhoods=neighborhoods.map {it.row.id}.toSet()
+        neighborhoodRendered.filter {neighborhoodMarkers[it.id] !in liveNeighborhoods}.toList().forEach {marker->neighborhoodAnimations.remove(neighborhoodMarkers[marker.id])?.cancel();map.removeMarker(marker);neighborhoodRendered.remove(marker);neighborhoodMarkers.remove(marker.id)}
+        val d=context.resources.displayMetrics.density.toDouble()
+        val occupied=people.filter {it.point!=null&&(showSafe||it.state !in setOf(MapSafety.SAFE,MapSafety.RESCUED))}.mapNotNull {it.point}.map {p->val q=map.projection.toScreenLocation(LatLng(p.latitude,p.longitude));LabelRect(q.x/d-32,q.y/d-44,64.0,88.0)}.toMutableList()
+        occupied.addAll(reports.map {p->val q=map.projection.toScreenLocation(LatLng(p.point.latitude,p.point.longitude));LabelRect(q.x/d-26,q.y/d-26,52.0,52.0)})
+        neighborhoods.forEach {n->n.point?.let {point->
+            val d=context.resources.displayMetrics.density
+            val bitmap=Bitmap.createBitmap((148*d).roundToInt(),(100*d).roundToInt(),Bitmap.Config.ARGB_8888)
+            val canvas=Canvas(bitmap);canvas.scale(d,d);val paint=Paint(Paint.ANTI_ALIAS_FLAG)
+            paint.color=Color.WHITE;canvas.drawRoundRect(1f,1f,147f,99f,10f,10f,paint)
+            paint.color=0xFF183447.toInt();paint.textSize=12f;paint.typeface=Typeface.create("sans-serif",Typeface.BOLD)
+            canvas.drawText(if(neighborhoodEnglish)n.row.nameEn else n.row.nameJa,8f,21f,paint)
+            paint.textSize=11f;paint.typeface=Typeface.create("sans-serif",Typeface.NORMAL)
+            canvas.drawText("SOS ${n.row.sos} · ${if(neighborhoodEnglish)"No response" else "応答なし"} ${n.row.unreported}",8f,44f,paint)
+            canvas.drawText("${if(neighborhoodEnglish)"Safe" else "無事"} ${n.row.safe} · ${if(neighborhoodEnglish)"Rescued" else "救助済み"} ${n.row.rescued}",8f,65f,paint)
+            canvas.drawText("${if(neighborhoodEnglish)"High urgency" else "高緊急度"} ${n.activeHigh}",8f,86f,paint)
+            val origin=map.projection.toScreenLocation(LatLng(point.latitude,point.longitude))
+            if(origin.x<0||origin.y<0||origin.x>view.width||origin.y>view.height){
+                neighborhoodAnimations.remove(n.row.id)?.cancel()
+                neighborhoodRendered.find {neighborhoodMarkers[it.id]==n.row.id}?.let {marker->map.removeMarker(marker);neighborhoodRendered.remove(marker);neighborhoodMarkers.remove(marker.id)}
+                neighborhoodImages.remove(n.row.id)
+                bitmap.recycle();return@let
+            }
+            val existing=neighborhoodRendered.find {neighborhoodMarkers[it.id]==n.row.id}
+            val previous=existing?.position?.let {map.projection.toScreenLocation(it)}?.let {LabelRect(it.x/d.toDouble()-74,it.y/d.toDouble()-100,148.0,100.0)}
+            val rect=placeMapLabel(origin.x/d.toDouble(),origin.y/d.toDouble(),view.width/d.toDouble(),view.height/d.toDouble(),occupied,previous=previous);occupied+=rect
+            val placed=map.projection.fromScreenLocation(PointF(((rect.x+rect.w/2)*d).toFloat(),((rect.y+rect.h)*d).toFloat()))
+            val signature="${n.row}:$neighborhoodEnglish:${n.activeHigh}"
+            if(existing==null){
+                val marker=map.addMarker(MarkerOptions().position(placed).icon(IconFactory.getInstance(context).fromBitmap(bitmap)))
+                neighborhoodRendered.add(marker);neighborhoodMarkers[marker.id]=n.row.id
+            }else{
+                if(neighborhoodImages[n.row.id]!=signature)existing.icon=IconFactory.getInstance(context).fromBitmap(bitmap)
+                neighborhoodAnimations.remove(n.row.id)?.cancel()
+                val from=existing.position
+                if(abs(from.latitude-placed.latitude)+abs(from.longitude-placed.longitude)>1e-8){
+                    neighborhoodAnimations[n.row.id]=android.animation.ValueAnimator.ofFloat(0f,1f).apply {
+                        duration=180
+                        addUpdateListener {val progress=(it.animatedValue as Float).toDouble();existing.position=LatLng(from.latitude+(placed.latitude-from.latitude)*progress,from.longitude+(placed.longitude-from.longitude)*progress)}
+                        start()
+                    }
+                }
+            }
+            neighborhoodImages[n.row.id]=signature
+        }}
+    }
     LaunchedEffect(ready, people, showSafe, zoom, now) {
         val map = controller ?: return@LaunchedEffect
         if (!ready) return@LaunchedEffect
@@ -170,12 +366,12 @@ fun SituationMap(
         val usedIcons = mutableSetOf<String>()
         clusters.forEachIndexed { index, cluster ->
             val bubble = zoom < INDIVIDUAL_ZOOM
-            val key = if (bubble) cluster.counts.toString() else personMarkerKey(cluster.people.single(), now)
+            val key = UiMessages.text(context,"無事") + if (bubble) cluster.counts.toString() else personMarkerKey(cluster.people.single(), now)
             usedIcons += key
             val icon = iconCache.getOrPut(key) { IconFactory.getInstance(context).fromBitmap(mapMarkerBitmap(context, cluster, bubble, now)) }
             val p = cluster.point
             val position = LatLng(p.latitude, p.longitude)
-            val label = if (bubble) cluster.counts.joinToString("、") { "${it.first.label}${it.second}人" } else "${cluster.people.single().publicName}、${cluster.people.single().state.label}"
+            val label = if (bubble) cluster.counts.joinToString("、") { "${UiMessages.text(context,it.first.label)} ${it.second}" } else "${cluster.people.single().publicName}、${UiMessages.text(context,cluster.people.single().state.label)}"
             val marker = reuse[index]?.let(previous::get)?.apply {
                 if (this.icon != icon) this.icon = icon
                 if (this.position != position) this.position = position
@@ -204,7 +400,7 @@ private fun mapMarkerBitmap(context: Context, cluster: MapCluster, bubble: Boole
         cluster.counts.forEachIndexed { i, (state, count) ->
             drawState(canvas, paint, state, 21f, 22f + i * 30, 13f)
             paint.color = 0xFF142B42.toInt(); paint.textSize = 17f; paint.textAlign = Paint.Align.LEFT; paint.typeface = Typeface.create("sans-serif", Typeface.BOLD)
-            canvas.drawText("${count}人", 40f, 28f + i * 30, paint)
+            canvas.drawText(if(UiMessages.text(context,"無事")=="Safe") "$count" else "${count}人", 40f, 28f + i * 30, paint)
         }
     } else {
         val p = cluster.people.single()
@@ -239,7 +435,7 @@ internal fun drawState(canvas: Canvas, paint: Paint, state: MapSafety, x: Float,
             paint.style = Paint.Style.FILL
         }
         MapSafety.RESCUED -> {
-            // Match the adopted demo's user-check silhouette, distinct from the safe checkmark.
+            // Match the adopted drill's user-check silhouette, distinct from the safe checkmark.
             canvas.drawCircle(x - radius * .18f, y - radius * .35f, radius * .29f, paint)
             canvas.drawPath(Path().apply {
                 moveTo(x - radius * .73f, y + radius * .48f)

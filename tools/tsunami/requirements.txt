@@ -1,0 +1,2 @@
+# Isolate with: python -m pip install --only-binary=:all: --target .implementation/tsunami-deps -r tools/tsunami/requirements.txt
+anuga==3.3.10

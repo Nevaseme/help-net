@@ -1,4 +1,6 @@
-# PlanD Mk1
+# Help Net Androidアプリ
+
+アプリ表示名はHelp Net。パッケージなどの内部識別名には互換性のためPlanDを残している。
 
 安否・SOS、救助の対応記録、Nearbyでの共有、オフライン地図を備えたAndroidアプリ。
 

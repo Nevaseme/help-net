@@ -1,0 +1,8 @@
+.map-overview-version .ops-map-report{width:44px;height:44px;display:flex;align-items:center;justify-content:center;padding:0;border:0;border-radius:0;background:transparent;color:#155eef}
+.map-overview-version .ops-map-report .visibility-report-icon{width:32px;height:32px;object-fit:contain;filter:drop-shadow(0 0 2px #fff)}
+.map-overview-version .ops-map-report i{font-size:30px;text-shadow:0 0 3px #fff}
+.town-safety-counts{display:grid;grid-template-columns:1fr 1fr;gap:0 20px;margin:0}.town-safety-counts>div{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #d6e0e8;padding:14px 0}
+.town-safety-counts dt{font-size:14px;color:#536478}.town-safety-counts dd{font-size:24px;font-weight:750;margin:0}.town-safety-counts small{font-size:13px;font-weight:500;margin-left:4px}
+.town-operation-summary{padding:18px 0 8px}.town-urgent{display:flex;align-items:center;justify-content:space-between;margin:0!important;font-size:15px!important}.town-urgent>span{display:flex;align-items:center;gap:6px}.town-urgent i,.town-urgent strong{color:#b42318}.town-urgent strong{font-size:24px}.town-urgent small{font-size:13px;margin-left:5px}
+.town-open-note{margin:3px 0 16px!important;color:#697586;font-size:12px!important}.town-shortage-state{display:flex;align-items:center;gap:6px;margin:0!important;font-size:15px!important}.town-shortage-state strong{margin-left:auto}.town-shortage-state i{color:#536478;font-size:22px}
+.town-materials{margin:0 0 22px}.town-materials>div{display:flex;justify-content:space-between;padding:13px 0;border-bottom:1px solid #d6e0e8}.town-materials dt{font-size:15px}.town-materials dd{font-size:21px;font-weight:750;margin:0}.town-materials small{font-size:14px;font-weight:500;margin-left:6px}

@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="ja">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Help Net に参加</title>
+<main style="max-width:32rem;margin:10vh auto;padding:1.5rem;font:1rem/1.6 system-ui">
+  <h1>Help Net</h1>
+  <p id="guide">ブラウザから参加できます。</p>
+  <a id="web" href="https://tasukeai-sync.tomodachi-takumi.workers.dev/">
+    ブラウザで参加する
+  </a>
+</main>
+<script>
+  const ua = navigator.userAgent;
+  if (/Android/i.test(ua)) {
+    document.getElementById('guide').textContent =
+      'Androidアプリは配布準備中です。ブラウザから参加できます。';
+  } else if (/iPhone|iPad|iPod/i.test(ua)) {
+    location.replace(document.getElementById('web').href);
+  }
+</script>
+</html>

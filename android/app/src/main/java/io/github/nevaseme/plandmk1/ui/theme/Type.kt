@@ -6,8 +6,13 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
+@OptIn(androidx.compose.ui.text.ExperimentalTextApi::class)
+val ApprovedFont = FontFamily((listOf(400,500,600,700,750,800,850,900)).map { weight ->
+    androidx.compose.ui.text.font.Font(io.github.nevaseme.plandmk1.R.font.noto_sans_jp,weight=FontWeight(weight),variationSettings=androidx.compose.ui.text.font.FontVariation.Settings(androidx.compose.ui.text.font.FontVariation.weight(weight)))
+})
+
 private fun type(size:Int,line:Int,weight:FontWeight=FontWeight.Normal)=TextStyle(
-    fontFamily=FontFamily.SansSerif,fontSize=size.sp,lineHeight=line.sp,fontWeight=weight,letterSpacing=0.sp)
+    fontFamily=ApprovedFont,fontSize=size.sp,lineHeight=line.sp,fontWeight=weight,letterSpacing=0.sp)
 
 val Typography=Typography(
     headlineMedium=type(28,36,FontWeight.SemiBold),headlineSmall=type(24,32,FontWeight.SemiBold),

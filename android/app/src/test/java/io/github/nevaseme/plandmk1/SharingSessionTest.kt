@@ -14,6 +14,17 @@ import java.util.UUID
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SharingSessionTest {
+    @Test fun automaticWaitsWithoutPeersAndResumesAfterRadioReturnsInBackground() = runTest {
+        val p=Port();var ended=0
+        val s=SharingSession("demo",UUID.randomUUID().toString(),p,Store(),backgroundScope,{}, {ended++},automatic=true)
+        s.start("自分");runCurrent();s.setForeground(false);runCurrent()
+        assertEquals(0,ended)
+        s.setRadiosReady(false);runCurrent();advanceTimeBy(65_000);runCurrent()
+        assertEquals(1,p.starts);assertEquals(0,ended)
+        s.setRadiosReady(true);runCurrent();assertEquals(2,p.starts)
+        p.join("A");runCurrent();p.leave("A");runCurrent();assertEquals(0,ended)
+        s.stop();assertEquals(1,ended)
+    }
     @Test fun preservesPermissionRecoveryWhenFailedTransportEndsSession() = runTest {
         val port = Port(); var latest = NearbyState()
         val session = SharingSession("demo", UUID.randomUUID().toString(), port, Store(), backgroundScope, { latest = it }, {})

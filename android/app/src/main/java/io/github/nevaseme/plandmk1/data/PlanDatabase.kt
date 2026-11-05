@@ -76,8 +76,10 @@ data class PlaceRow(val groupId: String,val eventId: String,val payload: String)
     @Insert(onConflict=OnConflictStrategy.ABORT) suspend fun put(row: PlaceRow)
 }
 
-@Database(entities = [ResidentRow::class, CareEventRow::class, IncidentRow::class, PlaceRow::class, PhonePositionRow::class, SosMemoRow::class, RosterRow::class, QuakeRow::class, ResponseRow::class], version = 7, exportSchema = true)
+@Database(entities = [ResidentRow::class, CareEventRow::class, IncidentRow::class, PlaceRow::class, PhonePositionRow::class, SosMemoRow::class, RosterRow::class, QuakeRow::class, ResponseRow::class, RelayProofRow::class, DeviceRecordRow::class], version = 9, exportSchema = true)
 abstract class PlanDatabase : RoomDatabase() {
+    abstract fun deviceRecords(): DeviceRecordDao
+    abstract fun relayProofs(): RelayProofDao
     abstract fun responses(): ResponseDao
     abstract fun quakes(): QuakeDao
     abstract fun localSituation(): LocalSituationDao
@@ -86,6 +88,12 @@ abstract class PlanDatabase : RoomDatabase() {
     abstract fun residents(): ResidentDao
     abstract fun careEvents(): CareEventDao
     companion object {
+        val MIGRATION_8_9 = object : Migration(8,9) {override fun migrate(db:SupportSQLiteDatabase) {db.execSQL("CREATE TABLE IF NOT EXISTS `device_records` (`groupId` TEXT NOT NULL, `eventId` TEXT NOT NULL, `payload` TEXT NOT NULL, PRIMARY KEY(`groupId`, `eventId`))")}}
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS `relay_proofs` (`groupId` TEXT NOT NULL, `identity` TEXT NOT NULL, `revision` INTEGER NOT NULL, `bodyHash` TEXT NOT NULL, `payload` TEXT NOT NULL, PRIMARY KEY(`groupId`, `identity`))")
+            }
+        }
         val MIGRATION_6_7 = object : Migration(6, 7) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("CREATE TABLE IF NOT EXISTS `response_events` (`groupId` TEXT NOT NULL, `eventId` TEXT NOT NULL, `payload` TEXT NOT NULL, PRIMARY KEY(`groupId`, `eventId`))")
@@ -120,6 +128,7 @@ abstract class PlanDatabase : RoomDatabase() {
 }
 
 class RoomRecordStore(private val db: PlanDatabase,private val localDeviceId:String?=null) : RecordStore {
+    override suspend fun rosterRevision(groupId:String)=QuakeStore(db).roster(groupId)?.revision?:0
     override suspend fun quakeEvents(groupId:String)=QuakeStore(db).events(groupId)
     override suspend fun responseEvents(groupId:String)=ResponseStore(db).events(groupId)
     override suspend fun mergeQuake(event:QuakeEvent):Boolean=db.withTransaction {
@@ -169,11 +178,16 @@ class RoomRecordStore(private val db: PlanDatabase,private val localDeviceId:Str
         }
     }
 
-    suspend fun answerWithMemo(event: IncidentEvent, memo: String): IncidentEvent = db.withTransaction {
+    suspend fun answerWithMemo(event: IncidentEvent, memo: String, venue: io.github.nevaseme.plandmk1.demo.VenueSession? = null): IncidentEvent = db.withTransaction {
         require(event.kind == IncidentKind.ANSWER)
         require(memo.length <= SOS_MEMO_LIMIT) { "SOSメモは${SOS_MEMO_LIMIT}文字以内で入力してください" }
         require(event.safety == Safety.SOS || memo.isEmpty())
-        require(get(event.groupId, event.authorId) != null) { "先に自分の情報を登録してください" }
+        val venueMember=venue?.takeIf {it.active(event.groupId,event.incidentId)}?.let {session->
+            session.validate(checkNotNull(QuakeStore(db).roster(event.groupId)))
+            session.placements.any {it.deviceId==event.authorId&&it.name==event.authorName}
+        }==true
+        val member=QuakeStore(db).roster(event.groupId)?.members?.find {event.authorId in it.deviceIds}
+        require(get(event.groupId, event.authorId) != null || venueMember || member?.activityName==event.authorName) { "先に自分の情報を登録してください" }
         appendIncident(event).also { answer ->
             if (answer.safety == Safety.SOS) saveSosMemo(answer.groupId, answer.incidentId, answer.authorId, answer.eventId, memo, answer.createdAt)
         }
@@ -191,7 +205,7 @@ class RoomRecordStore(private val db: PlanDatabase,private val localDeviceId:Str
         }
     }
     suspend fun appendPlace(event: PlaceEvent): PlaceEvent=db.withTransaction {
-        require(get(event.groupId,event.authorId)!=null) {"先に自分の情報を登録してください"}
+        require(get(event.groupId,event.authorId)!=null||QuakeStore(db).roster(event.groupId)?.members?.any {event.authorId in it.deviceIds}==true) {"先にグループへ参加してください"}
         if(event.kind==PlaceKind.CARE)requireActiveManagedIncident(event.groupId,checkNotNull(event.incidentId))
         val quakes=QuakeStore(db);val roster=quakes.roster(event.groupId);val history=quakes.events(event.groupId)
         fun canonical(id:String?)=canonicalIncidentId(roster,history,id)
@@ -221,10 +235,24 @@ class RoomRecordStore(private val db: PlanDatabase,private val localDeviceId:Str
         if(event.kind==IncidentKind.END) require(view.start.authorId==event.authorId) { "終了できるのは開始した人だけです" }
         if(event.kind==IncidentKind.CARE && event.supersedes!=null) {
             val old=view.care.find { it.eventId==event.supersedes }
-            require(old!=null && old.authorId==event.authorId && old.subjectId==event.subjectId) { "同じ災害の自分の記録だけ訂正できます" }
+            require(old!=null && canCorrectCare(event.care(),old,quakeStore.roster(event.groupId))) { "同じ災害の自分の記録、または管理者による救助取り消しだけ訂正できます" }
         }
         val sequence=Math.addExact(rows.filter { it.incidentId==event.incidentId && it.authorId==event.authorId }.maxOfOrNull { it.sequence } ?: 0,1)
         event.copy(sequence=sequence).also { mergeIncident(it) }
+    }
+    /** One transaction keeps concurrent rescue heads from being only partly revoked. */
+    suspend fun revokeRescues(groupId:String,incidentId:String,subjectId:String,authorId:String,authorName:String,createdAt:Long):List<CareEvent> = db.withTransaction {
+        requireActiveManagedIncident(groupId,incidentId)
+        val quakeStore=QuakeStore(db)
+        val roster=quakeStore.roster(groupId)
+        val quakes=quakeStore.events(groupId)
+        val canonical=canonicalIncidentId(roster,quakes,incidentId)
+        val view=managedIncidentOptions(incidents(groupId),roster,quakes).find {it.start.eventId==canonical}
+        require(view!=null&&!view.closed) {"開始中の災害を選んでください"}
+        rescueRecordsToRevoke(view.care,roster,groupId,subjectId,authorId).map {previous->
+            appendIncident(IncidentEvent(groupId,java.util.UUID.randomUUID().toString(),incidentId,authorId,authorName,1,createdAt,
+                IncidentKind.CARE,subjectId=subjectId,action=CareAction.REVOKED,note="救助完了の記録を訂正",supersedes=previous.eventId)).care()
+        }
     }
     fun observeEvents(groupId: String) = db.careEvents().observe(groupId).map { it.map(CareEventRow::record) }
     override suspend fun events(groupId: String) = db.careEvents().all(groupId).map(CareEventRow::record)
@@ -243,6 +271,18 @@ class RoomRecordStore(private val db: PlanDatabase,private val localDeviceId:Str
         val previous = db.residents().get(record.groupId, record.originId)
         if (previous != null && previous.revision >= record.revision) false
         else { db.residents().put(ResidentRow.from(record)); true }
+    }
+    suspend fun assignOwnHome(event:PlaceEvent):PlaceEvent=db.withTransaction {
+        if(event.buildingId!=null){val b=placeBuildings(places(event.groupId)).find{it.buildingId==event.buildingId}?:error("建物が未受信です")
+            val room=placeUnits(places(event.groupId),b.buildingId!!).find{it.unitId==event.unitId}?.label.orEmpty()
+            updateOwn(event.groupId,event.authorId){old->checkNotNull(old).copy(latitude=b.latitude!!,longitude=b.longitude!!,floor="",room=room)}
+        };appendPlace(event)
+    }
+    suspend fun updateOwnWithHome(candidate:Resident,reference:BuildingLocationReference):Resident=db.withTransaction {
+        candidate.validate();reference.validate()
+        val profile=updateOwn(candidate.groupId,candidate.originId){old->candidate.copy(safety=old?.safety?:Safety.UNREPORTED)}
+        homeRegistrationEvents(profile,reference,places(profile.groupId),System.currentTimeMillis()).forEach {mergePlace(it)}
+        profile
     }
     suspend fun updateOwn(group: String, id: String, transform: (Resident?) -> Resident): Resident = db.withTransaction {
         val previous = get(group, id)

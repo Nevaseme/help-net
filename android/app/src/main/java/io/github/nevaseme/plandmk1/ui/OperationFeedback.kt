@@ -5,6 +5,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -20,9 +21,13 @@ fun StatusFeedback(text: String, error: Boolean = false, busy: Boolean = false) 
     if (text.isBlank()) return
     Surface(color = if (error) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer,
         shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite }) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-            Text(text)
+        Box {
+            Text(menuText(text), modifier = Modifier.padding(12.dp))
+            // Background sync must not insert a row and shift every control below this card.
+            if (busy) LinearProgressIndicator(
+                Modifier.align(Alignment.BottomCenter).padding(horizontal = 12.dp, vertical = 4.dp)
+                    .fillMaxWidth().height(4.dp)
+            )
         }
     }
 }
@@ -31,6 +36,6 @@ fun StatusFeedback(text: String, error: Boolean = false, busy: Boolean = false) 
 fun OperationFeedback(model: PlanViewModel, key: String) {
     val states by model.saveStates.collectAsStateWithLifecycle()
     val state = states[key] ?: return
-    val time = state.savedAt?.let { "\n保存時刻：${DateFormat.getTimeInstance().format(Date(it))}" }.orEmpty()
+    val time = state.savedAt?.let { "\n保存時刻：${io.github.nevaseme.plandmk1.core.usTime(it)}" }.orEmpty()
     StatusFeedback(state.text + time, state.phase == SavePhase.ERROR, state.phase == SavePhase.SAVING)
 }

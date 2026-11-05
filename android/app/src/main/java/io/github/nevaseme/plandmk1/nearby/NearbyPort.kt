@@ -8,6 +8,11 @@ interface NearbyPort {
     var onDisconnected: (String) -> Unit
     var onBytes: (String, ByteArray) -> Unit
     fun start(name: String)
+    fun configureAutomatic(link: GroupLink) { }
+    /** Retry discovery after a radio change without closing authenticated links. */
+    fun refreshDiscovery() { }
+    /** Separate discovery permission from the ability to keep an existing data link. */
+    fun setDiscoveryAllowed(allowed: Boolean) { }
     fun setVisible(visible: Boolean)
     fun stop()
     fun connect(peer: Peer)

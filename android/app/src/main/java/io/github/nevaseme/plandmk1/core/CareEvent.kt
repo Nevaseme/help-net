@@ -21,10 +21,23 @@ data class CareEvent(
     }
 }
 
-fun currentCareEvents(events: List<CareEvent>): List<CareEvent> {
+fun canRevokeRescue(roster:MemberRoster?,groupId:String,authorId:String) =
+    roster?.takeIf {it.groupId==groupId}?.members?.any {it.role==MemberRole.ADMIN&&authorId in it.deviceIds}==true
+
+fun canCorrectCare(event:CareEvent,previous:CareEvent,roster:MemberRoster?):Boolean =
+    event.groupId==previous.groupId&&event.subjectId==previous.subjectId&&
+        (event.authorId==previous.authorId || (event.action==CareAction.REVOKED&&previous.action==CareAction.RESCUED&&canRevokeRescue(roster,event.groupId,event.authorId)))
+
+fun rescueRecordsToRevoke(events:List<CareEvent>,roster:MemberRoster?,groupId:String,subjectId:String,authorId:String):List<CareEvent> {
+    require(canRevokeRescue(roster,groupId,authorId)) {"救助の取り消しは管理者だけが行えます"}
+    return currentCareEvents(events.filter {it.groupId==groupId&&it.subjectId==subjectId},roster)
+        .filter {it.action==CareAction.RESCUED}.sortedWith(compareBy<CareEvent> {it.createdAt}.thenBy {it.eventId})
+}
+
+fun currentCareEvents(events: List<CareEvent>,roster:MemberRoster?=null): List<CareEvent> {
     val byId = events.associateBy { it.eventId }
     val replaced = events.filter { e -> byId[e.supersedes]?.let {
-        it.groupId == e.groupId && it.authorId == e.authorId && it.subjectId == e.subjectId
+        canCorrectCare(e,it,roster)
     } == true }.mapNotNull { it.supersedes }.toSet()
     return events.filter { it.eventId !in replaced }
 }

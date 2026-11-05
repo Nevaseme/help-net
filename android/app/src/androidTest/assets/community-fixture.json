@@ -1,0 +1,879 @@
+{
+  "envelope": {
+    "groupId": "b630ad7a-214c-4bc5-be04-564970ea2a5e",
+    "groupName": "Fictional device verification",
+    "rosterRevision": 1,
+    "roster": {
+      "groupId": "b630ad7a-214c-4bc5-be04-564970ea2a5e",
+      "members": [
+        {
+          "activityName": "Demo organizer",
+          "deviceIds": [
+            "6bb1f7b9-1fa0-4960-89a4-40455d604e18"
+          ],
+          "memberId": "0fa57bae-2ee1-4ab4-900f-d34ed328d919",
+          "role": "ADMIN"
+        }
+      ],
+      "version": 1
+    },
+    "rosterHistory": [
+      {
+        "revision": 1,
+        "roster": {
+          "groupId": "b630ad7a-214c-4bc5-be04-564970ea2a5e",
+          "members": [
+            {
+              "activityName": "Demo organizer",
+              "deviceIds": [
+                "6bb1f7b9-1fa0-4960-89a4-40455d604e18"
+              ],
+              "memberId": "0fa57bae-2ee1-4ab4-900f-d34ed328d919",
+              "role": "ADMIN"
+            }
+          ],
+          "version": 1
+        }
+      }
+    ],
+    "venue": {
+      "version": 1,
+      "mode": "VENUE_DEMO",
+      "positionMode": "KYOTO",
+      "startedAt": 1793661813629,
+      "groupId": "b630ad7a-214c-4bc5-be04-564970ea2a5e",
+      "sessionId": "590299a4-53d0-4519-9b5f-a2aa0973534c",
+      "incidentId": "590299a4-53d0-4519-9b5f-a2aa0973534c",
+      "areaId": "kyoto-gosho-south",
+      "areaName": "御所南〜烏丸御池",
+      "closed": false,
+      "scenario": {
+        "version": 1,
+        "sessionId": "590299a4-53d0-4519-9b5f-a2aa0973534c",
+        "communities": [
+          {
+            "id": "demo-west",
+            "nameJa": "御所南西町内会（デモ）",
+            "nameEn": "Gosho South West (demo)"
+          },
+          {
+            "id": "demo-central",
+            "nameJa": "御所南中央町内会（デモ）",
+            "nameEn": "Gosho South Central (demo)"
+          },
+          {
+            "id": "demo-east",
+            "nameJa": "御所南東町内会（デモ）",
+            "nameEn": "Gosho South East (demo)"
+          }
+        ],
+        "people": [
+          {
+            "deviceId": "40e2b936-4480-405f-be7d-64231659781d",
+            "name": "Alex Morgan",
+            "safety": "SAFE",
+            "injury": "UNINJURED",
+            "note": "",
+            "communityId": "demo-west",
+            "home": {
+              "buildingId": "0352ecfe-cbf5-4705-bad1-3a8856ed63d8",
+              "plateauId": "bldg_0352ecfe-cbf5-4705-bad1-3a8856ed63d8",
+              "address": "京都府京都市中京区巴町付近",
+              "latitude": 35.01501582081535,
+              "longitude": 135.75892849497916,
+              "floor": "1",
+              "room": "Bedroom at the back",
+              "addressPrecision": "nearby-town",
+              "addressDistanceM": 23.8
+            }
+          },
+          {
+            "deviceId": "2040f8e1-b721-49c2-b5d5-5cc9d212efa6",
+            "name": "Jamie Taylor",
+            "safety": "SAFE",
+            "injury": "UNINJURED",
+            "note": "",
+            "communityId": "demo-central",
+            "home": {
+              "buildingId": "02773132-c4d5-4d13-9d8a-55bed28e497b",
+              "plateauId": "bldg_02773132-c4d5-4d13-9d8a-55bed28e497b",
+              "address": "京都府京都市中京区壺屋町付近",
+              "latitude": 35.01443565687089,
+              "longitude": 135.76076535036444,
+              "floor": "2",
+              "room": "Bedroom facing the street",
+              "addressPrecision": "nearby-town",
+              "addressDistanceM": 17.5
+            }
+          },
+          {
+            "deviceId": "08ef17d1-0b21-4b5f-99f2-0f43c345b693",
+            "name": "Sam Rivera",
+            "safety": "SAFE",
+            "injury": "UNINJURED",
+            "note": "",
+            "communityId": "demo-east",
+            "home": {
+              "buildingId": "0aa9621d-a90c-4c9d-9b82-bfad4c4420b0",
+              "plateauId": "bldg_0aa9621d-a90c-4c9d-9b82-bfad4c4420b0",
+              "address": "京都府京都市中京区塀之内町付近",
+              "latitude": 35.0159063896862,
+              "longitude": 135.76180883665157,
+              "floor": "3",
+              "room": "Bedroom at the back",
+              "addressPrecision": "nearby-town",
+              "addressDistanceM": 36.1
+            }
+          },
+          {
+            "deviceId": "984cd576-0c6a-4ea9-b302-0f066722c22a",
+            "name": "Jordan Lee",
+            "safety": "SAFE",
+            "injury": "UNINJURED",
+            "note": "",
+            "communityId": "demo-west",
+            "home": {
+              "buildingId": "11eddc7a-e6e1-4766-9d4e-162f3bc42094",
+              "plateauId": "bldg_11eddc7a-e6e1-4766-9d4e-162f3bc42094",
+              "address": "京都府京都市中京区亀屋町付近",
+              "latitude": 35.0164243317825,
+              "longitude": 135.75887261773292,
+              "floor": "1",
+              "room": "Bedroom facing the street",
+              "addressPrecision": "nearby-town",
+              "addressDistanceM": 28.4
+            }
+          },
+          {
+            "deviceId": "b5b43746-4f44-4e84-bd2f-b6bc52bd48dd",
+            "name": "Casey Brown",
+            "safety": "UNREPORTED",
+            "injury": "UNKNOWN",
+            "note": "",
+            "communityId": "demo-central",
+            "home": {
+              "buildingId": "05119df0-7c37-4331-a04d-74a7597267ab",
+              "plateauId": "bldg_05119df0-7c37-4331-a04d-74a7597267ab",
+              "address": "京都府京都市中京区三本木五丁目東洞院通竹屋町付近",
+              "latitude": 35.01596638169309,
+              "longitude": 135.76063552193125,
+              "floor": "2",
+              "room": "Bedroom at the back",
+              "addressPrecision": "nearby-town",
+              "addressDistanceM": 48.7
+            }
+          },
+          {
+            "deviceId": "62060e5d-472c-4e57-a5a3-f569826fb53f",
+            "name": "Riley Chen",
+            "safety": "UNREPORTED",
+            "injury": "UNKNOWN",
+            "note": "",
+            "communityId": "demo-east",
+            "home": {
+              "buildingId": "17a003f3-8b04-4d0c-b890-2b9932a78a79",
+              "plateauId": "bldg_17a003f3-8b04-4d0c-b890-2b9932a78a79",
+              "address": "京都府京都市中京区楠町付近",
+              "latitude": 35.01530991399137,
+              "longitude": 135.7617491395496,
+              "floor": "3",
+              "room": "Bedroom facing the street",
+              "addressPrecision": "nearby-town",
+              "addressDistanceM": 31.4
+            }
+          },
+          {
+            "deviceId": "64421ac4-6a37-4af4-81ba-bc479929d2ca",
+            "name": "Avery Wilson",
+            "safety": "UNREPORTED",
+            "injury": "UNKNOWN",
+            "note": "",
+            "communityId": "demo-west",
+            "home": {
+              "buildingId": "31372866-0d1c-4e98-9b45-19c64f10bb47",
+              "plateauId": "bldg_31372866-0d1c-4e98-9b45-19c64f10bb47",
+              "address": "京都府京都市中京区巴町付近",
+              "latitude": 35.01461326947467,
+              "longitude": 135.75900147640004,
+              "floor": "1",
+              "room": "Bedroom at the back",
+              "addressPrecision": "nearby-town",
+              "addressDistanceM": 35.4
+            }
+          },
+          {
+            "deviceId": "d4a9eb5b-6f42-412f-826b-457cccaf2563",
+            "name": "Cameron Davis",
+            "safety": "UNREPORTED",
+            "injury": "UNKNOWN",
+            "note": "",
+            "communityId": "demo-central",
+            "home": {
+              "buildingId": "16cbbb06-7d64-4348-ab76-bedc72d948f4",
+              "plateauId": "bldg_16cbbb06-7d64-4348-ab76-bedc72d948f4",
+              "address": "京都府京都市中京区松屋町付近",
+              "latitude": 35.01336020343554,
+              "longitude": 135.76145731989135,
+              "floor": "2",
+              "room": "Bedroom facing the street",
+              "addressPrecision": "nearby-town",
+              "addressDistanceM": 41.5
+            }
+          },
+          {
+            "deviceId": "e111680f-68cb-421f-bff1-2859cbb190ad",
+            "name": "Robin Patel",
+            "safety": "SOS",
+            "injury": "INJURED",
+            "note": "I need help. The doorway is blocked.",
+            "communityId": "demo-east",
+            "home": {
+              "buildingId": "1a931661-f9fa-4ae6-844a-734259df3556",
+              "plateauId": "bldg_1a931661-f9fa-4ae6-844a-734259df3556",
+              "address": "京都府京都市中京区天守町付近",
+              "latitude": 35.01418103278442,
+              "longitude": 135.76217221260313,
+              "floor": "3",
+              "room": "Bedroom at the back",
+              "addressPrecision": "nearby-town",
+              "addressDistanceM": 31.4
+            }
+          },
+          {
+            "deviceId": "8b0ed9b3-9bd9-4f09-891f-2d6511d9f737",
+            "name": "Drew Martin",
+            "safety": "SOS",
+            "injury": "UNKNOWN",
+            "note": "I need help. The doorway is blocked.",
+            "communityId": "demo-west",
+            "home": {
+              "buildingId": "33844078-f4b1-41d7-a06f-9d4ac6deebb7",
+              "plateauId": "bldg_33844078-f4b1-41d7-a06f-9d4ac6deebb7",
+              "address": "京都府京都市中京区真如堂町付近",
+              "latitude": 35.014177321236346,
+              "longitude": 135.75991635776205,
+              "floor": "1",
+              "room": "Bedroom facing the street",
+              "addressPrecision": "nearby-town",
+              "addressDistanceM": 25.5
+            }
+          },
+          {
+            "deviceId": "90744980-b399-4328-940c-f1a01c77f498",
+            "name": "Quinn Anderson",
+            "safety": "SOS",
+            "injury": "INJURED",
+            "note": "I need help. The doorway is blocked.",
+            "communityId": "demo-central",
+            "home": {
+              "buildingId": "16e1e155-e093-43b7-80cc-ba9650d00e96",
+              "plateauId": "bldg_16e1e155-e093-43b7-80cc-ba9650d00e96",
+              "address": "京都府京都市中京区少将井御旅町付近",
+              "latitude": 35.01524085398438,
+              "longitude": 135.76007245723565,
+              "floor": "2",
+              "room": "Bedroom at the back",
+              "addressPrecision": "nearby-town",
+              "addressDistanceM": 25.7
+            }
+          },
+          {
+            "deviceId": "c007b6c3-d2aa-46e6-abc0-f6a2aed1884b",
+            "name": "Skyler Thompson",
+            "safety": "SOS",
+            "injury": "UNKNOWN",
+            "note": "I need help. The doorway is blocked.",
+            "communityId": "demo-east",
+            "home": {
+              "buildingId": "1e8deed4-a8fa-43e2-9917-85e24eada826",
+              "plateauId": "bldg_1e8deed4-a8fa-43e2-9917-85e24eada826",
+              "address": "京都府京都市中京区鍵屋町付近",
+              "latitude": 35.0127543694569,
+              "longitude": 135.76151835672204,
+              "floor": "3",
+              "room": "Bedroom facing the street",
+              "addressPrecision": "nearby-town",
+              "addressDistanceM": 23.6
+            }
+          }
+        ]
+      },
+      "recoveryAvailable": true,
+      "inactiveMemberIds": [],
+      "placements": [
+        {
+          "sessionId": "590299a4-53d0-4519-9b5f-a2aa0973534c",
+          "deviceId": "6bb1f7b9-1fa0-4960-89a4-40455d604e18",
+          "memberId": "0fa57bae-2ee1-4ab4-900f-d34ed328d919",
+          "name": "Demo organizer",
+          "slotId": 0,
+          "latitude": 35.015207839609175,
+          "longitude": 135.7625010708334,
+          "home": {
+            "buildingId": "79e1e069-d162-44f9-ac03-9ae43dec97e7",
+            "plateauId": "bldg_79e1e069-d162-44f9-ac03-9ae43dec97e7",
+            "address": "京都府京都市中京区福屋町付近",
+            "latitude": 35.015207839609175,
+            "longitude": 135.7625010708334,
+            "floor": "",
+            "room": "",
+            "addressPrecision": "nearby-town",
+            "addressDistanceM": 40.9
+          },
+          "source": "DEMO_ASSIGNED"
+        }
+      ]
+    },
+    "municipality": null
+  },
+  "records": [
+    {
+      "collection": "quakes",
+      "record": {
+        "action": "TRAINING_START",
+        "actorDeviceId": "6bb1f7b9-1fa0-4960-89a4-40455d604e18",
+        "area": "御所南〜烏丸御池",
+        "endedIncidentIds": [],
+        "eventId": "590299a4-53d0-4519-9b5f-a2aa0973534c",
+        "groupId": "b630ad7a-214c-4bc5-be04-564970ea2a5e",
+        "operatedAt": 1793661813648,
+        "reportIds": [],
+        "targetId": null,
+        "title": "会場デモ",
+        "training": true
+      },
+      "rosterRevision": 1
+    },
+    {
+      "collection": "responses",
+      "record": {
+        "actorDeviceId": "6bb1f7b9-1fa0-4960-89a4-40455d604e18",
+        "change": {
+          "category": "ROAD_BLOCKED",
+          "description": "Fallen masonry blocks the narrow street. Keep pedestrians away.",
+          "latitude": 35.01501582081535,
+          "longitude": 135.75892849497916,
+          "regionIds": [
+            "demo-west"
+          ],
+          "reportId": "3a540847-af9e-4c0e-bba4-af0585d4655b",
+          "type": "REPORT"
+        },
+        "eventId": "3a540847-af9e-4c0e-bba4-af0585d4655b",
+        "groupId": "b630ad7a-214c-4bc5-be04-564970ea2a5e",
+        "incidentId": "590299a4-53d0-4519-9b5f-a2aa0973534c",
+        "operatedAt": 1793661813629,
+        "replaces": [],
+        "sequence": 1
+      },
+      "rosterRevision": 1
+    },
+    {
+      "collection": "responses",
+      "record": {
+        "actorDeviceId": "6bb1f7b9-1fa0-4960-89a4-40455d604e18",
+        "change": {
+          "arranged": 1,
+          "name": "Crowbars",
+          "needed": 4,
+          "requestId": "ed67999b-67d5-4365-b1de-bfe508fce359",
+          "target": {
+            "id": "3a540847-af9e-4c0e-bba4-af0585d4655b",
+            "kind": "REPORT"
+          },
+          "type": "MATERIAL",
+          "unit": "pieces"
+        },
+        "eventId": "ed67999b-67d5-4365-b1de-bfe508fce359",
+        "groupId": "b630ad7a-214c-4bc5-be04-564970ea2a5e",
+        "incidentId": "590299a4-53d0-4519-9b5f-a2aa0973534c",
+        "operatedAt": 1793661813629,
+        "replaces": [],
+        "sequence": 2
+      },
+      "rosterRevision": 1
+    },
+    {
+      "collection": "responses",
+      "record": {
+        "actorDeviceId": "6bb1f7b9-1fa0-4960-89a4-40455d604e18",
+        "change": {
+          "reason": "People may enter an obstructed street.",
+          "target": {
+            "id": "3a540847-af9e-4c0e-bba4-af0585d4655b",
+            "kind": "REPORT"
+          },
+          "type": "PRIORITY",
+          "urgency": "HIGH"
+        },
+        "eventId": "0750b9ed-7843-4107-a944-f7e6e0713bc3",
+        "groupId": "b630ad7a-214c-4bc5-be04-564970ea2a5e",
+        "incidentId": "590299a4-53d0-4519-9b5f-a2aa0973534c",
+        "operatedAt": 1793661813629,
+        "replaces": [],
+        "sequence": 3
+      },
+      "rosterRevision": 1
+    },
+    {
+      "collection": "responses",
+      "record": {
+        "actorDeviceId": "6bb1f7b9-1fa0-4960-89a4-40455d604e18",
+        "change": {
+          "category": "WATER_OUTAGE",
+          "description": "Water supply is interrupted. Drinking water is needed.",
+          "latitude": 35.01443565687089,
+          "longitude": 135.76076535036444,
+          "regionIds": [
+            "demo-central"
+          ],
+          "reportId": "fec7e6bb-7923-4bdc-a3b0-cb1b99bd588e",
+          "type": "REPORT"
+        },
+        "eventId": "fec7e6bb-7923-4bdc-a3b0-cb1b99bd588e",
+        "groupId": "b630ad7a-214c-4bc5-be04-564970ea2a5e",
+        "incidentId": "590299a4-53d0-4519-9b5f-a2aa0973534c",
+        "operatedAt": 1793661813629,
+        "replaces": [],
+        "sequence": 4
+      },
+      "rosterRevision": 1
+    },
+    {
+      "collection": "responses",
+      "record": {
+        "actorDeviceId": "6bb1f7b9-1fa0-4960-89a4-40455d604e18",
+        "change": {
+          "arranged": 40,
+          "name": "Drinking water",
+          "needed": 120,
+          "requestId": "0219dd72-5799-4fb5-8026-f21a3bfc7060",
+          "target": {
+            "id": "fec7e6bb-7923-4bdc-a3b0-cb1b99bd588e",
+            "kind": "REPORT"
+          },
+          "type": "MATERIAL",
+          "unit": "litres"
+        },
+        "eventId": "0219dd72-5799-4fb5-8026-f21a3bfc7060",
+        "groupId": "b630ad7a-214c-4bc5-be04-564970ea2a5e",
+        "incidentId": "590299a4-53d0-4519-9b5f-a2aa0973534c",
+        "operatedAt": 1793661813629,
+        "replaces": [],
+        "sequence": 5
+      },
+      "rosterRevision": 1
+    },
+    {
+      "collection": "responses",
+      "record": {
+        "actorDeviceId": "6bb1f7b9-1fa0-4960-89a4-40455d604e18",
+        "change": {
+          "reason": "A neighborhood response is needed.",
+          "target": {
+            "id": "fec7e6bb-7923-4bdc-a3b0-cb1b99bd588e",
+            "kind": "REPORT"
+          },
+          "type": "PRIORITY",
+          "urgency": "MEDIUM"
+        },
+        "eventId": "54f1dd82-c1f2-44de-bb74-3b0ef89c785b",
+        "groupId": "b630ad7a-214c-4bc5-be04-564970ea2a5e",
+        "incidentId": "590299a4-53d0-4519-9b5f-a2aa0973534c",
+        "operatedAt": 1793661813629,
+        "replaces": [],
+        "sequence": 6
+      },
+      "rosterRevision": 1
+    },
+    {
+      "collection": "responses",
+      "record": {
+        "actorDeviceId": "6bb1f7b9-1fa0-4960-89a4-40455d604e18",
+        "change": {
+          "result": "A team is checking available water supplies.",
+          "status": "IN_PROGRESS",
+          "target": {
+            "id": "fec7e6bb-7923-4bdc-a3b0-cb1b99bd588e",
+            "kind": "REPORT"
+          },
+          "type": "PROGRESS"
+        },
+        "eventId": "0b4d55ac-787d-47a0-922d-fe093338699a",
+        "groupId": "b630ad7a-214c-4bc5-be04-564970ea2a5e",
+        "incidentId": "590299a4-53d0-4519-9b5f-a2aa0973534c",
+        "operatedAt": 1793661813629,
+        "replaces": [],
+        "sequence": 7
+      },
+      "rosterRevision": 1
+    },
+    {
+      "collection": "responses",
+      "record": {
+        "actorDeviceId": "6bb1f7b9-1fa0-4960-89a4-40455d604e18",
+        "change": {
+          "category": "BUILDING_DAMAGE",
+          "description": "An exterior wall is damaged. The entrance needs inspection.",
+          "latitude": 35.0159063896862,
+          "longitude": 135.76180883665157,
+          "regionIds": [
+            "demo-east"
+          ],
+          "reportId": "af679e00-6383-4f1b-b60f-e2d5898a5c88",
+          "type": "REPORT"
+        },
+        "eventId": "af679e00-6383-4f1b-b60f-e2d5898a5c88",
+        "groupId": "b630ad7a-214c-4bc5-be04-564970ea2a5e",
+        "incidentId": "590299a4-53d0-4519-9b5f-a2aa0973534c",
+        "operatedAt": 1793661813629,
+        "replaces": [],
+        "sequence": 8
+      },
+      "rosterRevision": 1
+    },
+    {
+      "collection": "responses",
+      "record": {
+        "actorDeviceId": "6bb1f7b9-1fa0-4960-89a4-40455d604e18",
+        "change": {
+          "arranged": 3,
+          "name": "Safety helmets",
+          "needed": 8,
+          "requestId": "efb91c45-99d3-4d99-b5d7-f63c4fa75edf",
+          "target": {
+            "id": "af679e00-6383-4f1b-b60f-e2d5898a5c88",
+            "kind": "REPORT"
+          },
+          "type": "MATERIAL",
+          "unit": "pieces"
+        },
+        "eventId": "efb91c45-99d3-4d99-b5d7-f63c4fa75edf",
+        "groupId": "b630ad7a-214c-4bc5-be04-564970ea2a5e",
+        "incidentId": "590299a4-53d0-4519-9b5f-a2aa0973534c",
+        "operatedAt": 1793661813629,
+        "replaces": [],
+        "sequence": 9
+      },
+      "rosterRevision": 1
+    },
+    {
+      "collection": "responses",
+      "record": {
+        "actorDeviceId": "6bb1f7b9-1fa0-4960-89a4-40455d604e18",
+        "change": {
+          "reason": "A neighborhood response is needed.",
+          "target": {
+            "id": "af679e00-6383-4f1b-b60f-e2d5898a5c88",
+            "kind": "REPORT"
+          },
+          "type": "PRIORITY",
+          "urgency": "MEDIUM"
+        },
+        "eventId": "3313ebc0-3ecc-4c6e-934e-51d92f5d7fcd",
+        "groupId": "b630ad7a-214c-4bc5-be04-564970ea2a5e",
+        "incidentId": "590299a4-53d0-4519-9b5f-a2aa0973534c",
+        "operatedAt": 1793661813629,
+        "replaces": [],
+        "sequence": 10
+      },
+      "rosterRevision": 1
+    },
+    {
+      "collection": "responses",
+      "record": {
+        "actorDeviceId": "6bb1f7b9-1fa0-4960-89a4-40455d604e18",
+        "change": {
+          "state": "UNINJURED",
+          "target": {
+            "id": "40e2b936-4480-405f-be7d-64231659781d",
+            "kind": "PERSON"
+          },
+          "type": "INJURY"
+        },
+        "eventId": "e901081b-f016-4aca-8af1-7a7c7f0285be",
+        "groupId": "b630ad7a-214c-4bc5-be04-564970ea2a5e",
+        "incidentId": "590299a4-53d0-4519-9b5f-a2aa0973534c",
+        "operatedAt": 1793661813629,
+        "replaces": [],
+        "sequence": 11
+      },
+      "rosterRevision": 1
+    },
+    {
+      "collection": "responses",
+      "record": {
+        "actorDeviceId": "6bb1f7b9-1fa0-4960-89a4-40455d604e18",
+        "change": {
+          "state": "UNINJURED",
+          "target": {
+            "id": "2040f8e1-b721-49c2-b5d5-5cc9d212efa6",
+            "kind": "PERSON"
+          },
+          "type": "INJURY"
+        },
+        "eventId": "79ad9eb7-1db2-4b2b-82c8-9b06bbae9e37",
+        "groupId": "b630ad7a-214c-4bc5-be04-564970ea2a5e",
+        "incidentId": "590299a4-53d0-4519-9b5f-a2aa0973534c",
+        "operatedAt": 1793661813629,
+        "replaces": [],
+        "sequence": 12
+      },
+      "rosterRevision": 1
+    },
+    {
+      "collection": "responses",
+      "record": {
+        "actorDeviceId": "6bb1f7b9-1fa0-4960-89a4-40455d604e18",
+        "change": {
+          "state": "UNINJURED",
+          "target": {
+            "id": "08ef17d1-0b21-4b5f-99f2-0f43c345b693",
+            "kind": "PERSON"
+          },
+          "type": "INJURY"
+        },
+        "eventId": "260a4e92-11d5-426a-bd45-44a8b99143c5",
+        "groupId": "b630ad7a-214c-4bc5-be04-564970ea2a5e",
+        "incidentId": "590299a4-53d0-4519-9b5f-a2aa0973534c",
+        "operatedAt": 1793661813629,
+        "replaces": [],
+        "sequence": 13
+      },
+      "rosterRevision": 1
+    },
+    {
+      "collection": "responses",
+      "record": {
+        "actorDeviceId": "6bb1f7b9-1fa0-4960-89a4-40455d604e18",
+        "change": {
+          "state": "UNINJURED",
+          "target": {
+            "id": "984cd576-0c6a-4ea9-b302-0f066722c22a",
+            "kind": "PERSON"
+          },
+          "type": "INJURY"
+        },
+        "eventId": "bafa6d62-f7b5-4b1c-8147-7b43181ef3de",
+        "groupId": "b630ad7a-214c-4bc5-be04-564970ea2a5e",
+        "incidentId": "590299a4-53d0-4519-9b5f-a2aa0973534c",
+        "operatedAt": 1793661813629,
+        "replaces": [],
+        "sequence": 14
+      },
+      "rosterRevision": 1
+    },
+    {
+      "collection": "responses",
+      "record": {
+        "actorDeviceId": "6bb1f7b9-1fa0-4960-89a4-40455d604e18",
+        "change": {
+          "state": "UNKNOWN",
+          "target": {
+            "id": "b5b43746-4f44-4e84-bd2f-b6bc52bd48dd",
+            "kind": "PERSON"
+          },
+          "type": "INJURY"
+        },
+        "eventId": "e256f08f-700c-434d-81a7-b0c8d57e63f1",
+        "groupId": "b630ad7a-214c-4bc5-be04-564970ea2a5e",
+        "incidentId": "590299a4-53d0-4519-9b5f-a2aa0973534c",
+        "operatedAt": 1793661813629,
+        "replaces": [],
+        "sequence": 15
+      },
+      "rosterRevision": 1
+    },
+    {
+      "collection": "responses",
+      "record": {
+        "actorDeviceId": "6bb1f7b9-1fa0-4960-89a4-40455d604e18",
+        "change": {
+          "state": "UNKNOWN",
+          "target": {
+            "id": "62060e5d-472c-4e57-a5a3-f569826fb53f",
+            "kind": "PERSON"
+          },
+          "type": "INJURY"
+        },
+        "eventId": "7af25635-4b70-4277-b0ff-37fdeae1c16c",
+        "groupId": "b630ad7a-214c-4bc5-be04-564970ea2a5e",
+        "incidentId": "590299a4-53d0-4519-9b5f-a2aa0973534c",
+        "operatedAt": 1793661813629,
+        "replaces": [],
+        "sequence": 16
+      },
+      "rosterRevision": 1
+    },
+    {
+      "collection": "responses",
+      "record": {
+        "actorDeviceId": "6bb1f7b9-1fa0-4960-89a4-40455d604e18",
+        "change": {
+          "state": "UNKNOWN",
+          "target": {
+            "id": "64421ac4-6a37-4af4-81ba-bc479929d2ca",
+            "kind": "PERSON"
+          },
+          "type": "INJURY"
+        },
+        "eventId": "7cbd9abd-0385-4222-a3a8-b2e1dd51b0a4",
+        "groupId": "b630ad7a-214c-4bc5-be04-564970ea2a5e",
+        "incidentId": "590299a4-53d0-4519-9b5f-a2aa0973534c",
+        "operatedAt": 1793661813629,
+        "replaces": [],
+        "sequence": 17
+      },
+      "rosterRevision": 1
+    },
+    {
+      "collection": "responses",
+      "record": {
+        "actorDeviceId": "6bb1f7b9-1fa0-4960-89a4-40455d604e18",
+        "change": {
+          "state": "UNKNOWN",
+          "target": {
+            "id": "d4a9eb5b-6f42-412f-826b-457cccaf2563",
+            "kind": "PERSON"
+          },
+          "type": "INJURY"
+        },
+        "eventId": "20c3c0b8-eb0e-4d8c-a161-53f5865edd11",
+        "groupId": "b630ad7a-214c-4bc5-be04-564970ea2a5e",
+        "incidentId": "590299a4-53d0-4519-9b5f-a2aa0973534c",
+        "operatedAt": 1793661813629,
+        "replaces": [],
+        "sequence": 18
+      },
+      "rosterRevision": 1
+    },
+    {
+      "collection": "responses",
+      "record": {
+        "actorDeviceId": "6bb1f7b9-1fa0-4960-89a4-40455d604e18",
+        "change": {
+          "state": "INJURED",
+          "target": {
+            "id": "e111680f-68cb-421f-bff1-2859cbb190ad",
+            "kind": "PERSON"
+          },
+          "type": "INJURY"
+        },
+        "eventId": "546ff10b-cbac-453f-845e-29ce952060ef",
+        "groupId": "b630ad7a-214c-4bc5-be04-564970ea2a5e",
+        "incidentId": "590299a4-53d0-4519-9b5f-a2aa0973534c",
+        "operatedAt": 1793661813629,
+        "replaces": [],
+        "sequence": 19
+      },
+      "rosterRevision": 1
+    },
+    {
+      "collection": "responses",
+      "record": {
+        "actorDeviceId": "6bb1f7b9-1fa0-4960-89a4-40455d604e18",
+        "change": {
+          "state": "UNKNOWN",
+          "target": {
+            "id": "8b0ed9b3-9bd9-4f09-891f-2d6511d9f737",
+            "kind": "PERSON"
+          },
+          "type": "INJURY"
+        },
+        "eventId": "0d107fb9-e052-422c-a0b6-fe8614ee5efc",
+        "groupId": "b630ad7a-214c-4bc5-be04-564970ea2a5e",
+        "incidentId": "590299a4-53d0-4519-9b5f-a2aa0973534c",
+        "operatedAt": 1793661813629,
+        "replaces": [],
+        "sequence": 20
+      },
+      "rosterRevision": 1
+    },
+    {
+      "collection": "responses",
+      "record": {
+        "actorDeviceId": "6bb1f7b9-1fa0-4960-89a4-40455d604e18",
+        "change": {
+          "state": "INJURED",
+          "target": {
+            "id": "90744980-b399-4328-940c-f1a01c77f498",
+            "kind": "PERSON"
+          },
+          "type": "INJURY"
+        },
+        "eventId": "92fa682d-b50c-4b3e-b79c-347783e351dc",
+        "groupId": "b630ad7a-214c-4bc5-be04-564970ea2a5e",
+        "incidentId": "590299a4-53d0-4519-9b5f-a2aa0973534c",
+        "operatedAt": 1793661813629,
+        "replaces": [],
+        "sequence": 21
+      },
+      "rosterRevision": 1
+    },
+    {
+      "collection": "responses",
+      "record": {
+        "actorDeviceId": "6bb1f7b9-1fa0-4960-89a4-40455d604e18",
+        "change": {
+          "state": "UNKNOWN",
+          "target": {
+            "id": "c007b6c3-d2aa-46e6-abc0-f6a2aed1884b",
+            "kind": "PERSON"
+          },
+          "type": "INJURY"
+        },
+        "eventId": "6e4d33b9-41cc-4cea-8da4-656dea2c56bf",
+        "groupId": "b630ad7a-214c-4bc5-be04-564970ea2a5e",
+        "incidentId": "590299a4-53d0-4519-9b5f-a2aa0973534c",
+        "operatedAt": 1793661813629,
+        "replaces": [],
+        "sequence": 22
+      },
+      "rosterRevision": 1
+    },
+    {
+      "collection": "incidents",
+      "record": {
+        "action": "RESCUED",
+        "area": "",
+        "authorId": "6bb1f7b9-1fa0-4960-89a4-40455d604e18",
+        "authorName": "Demo rescue team",
+        "createdAt": 1793661813629,
+        "eventId": "7c752237-74d7-4ebc-98bb-0efcb1c2af76",
+        "groupId": "b630ad7a-214c-4bc5-be04-564970ea2a5e",
+        "incidentId": "590299a4-53d0-4519-9b5f-a2aa0973534c",
+        "kind": "CARE",
+        "note": "Assisted out of the building and taken to the first-aid point.",
+        "safety": null,
+        "sequence": 2,
+        "subjectId": "90744980-b399-4328-940c-f1a01c77f498",
+        "supersedes": null,
+        "title": "",
+        "training": true
+      },
+      "rosterRevision": 1
+    },
+    {
+      "collection": "incidents",
+      "record": {
+        "action": "RESCUED",
+        "area": "",
+        "authorId": "6bb1f7b9-1fa0-4960-89a4-40455d604e18",
+        "authorName": "Demo rescue team",
+        "createdAt": 1793661813629,
+        "eventId": "bcd569fa-3c8b-4c23-b0b3-67835c51a6c3",
+        "groupId": "b630ad7a-214c-4bc5-be04-564970ea2a5e",
+        "incidentId": "590299a4-53d0-4519-9b5f-a2aa0973534c",
+        "kind": "CARE",
+        "note": "Assisted out of the building and taken to the first-aid point.",
+        "safety": null,
+        "sequence": 3,
+        "subjectId": "c007b6c3-d2aa-46e6-abc0-f6a2aed1884b",
+        "supersedes": null,
+        "title": "",
+        "training": true
+      },
+      "rosterRevision": 1
+    }
+  ]
+}

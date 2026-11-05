@@ -24,3 +24,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "PlanD Mk1"
 include(":app")
+include(":enclosure-probe")

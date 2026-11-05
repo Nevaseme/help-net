@@ -39,7 +39,7 @@ class WolfxDeliveryTest {
         assertEquals(first.tag, cancel.tag); assertTrue(cancel.title.contains("取消"))
         assertNull(receiver.receive(packet(serial = 2), issued + 3))
         assertNull(receiver.receive(packet(serial = 4, training = true), issued + 4))
-        assertEquals("PlanD 受信試験", receiver.receive(packet(serial = 5, training = true), issued + 5, true)!!.title)
+        assertEquals("Help Net 受信試験", receiver.receive(packet(serial = 5, training = true), issued + 5, true)!!.title)
         assertTrue(store.receipts().any { it.warning.cancelled })
     }
     @Test fun sourceMismatchCannotMakeAHeartbeatOrP2pPacketIntoWolfx() = withReceiver { receiver, store ->

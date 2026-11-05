@@ -6,6 +6,33 @@ import org.junit.Test
 import java.util.TimeZone
 
 class OperationsExportTest {
+    @Test fun scopedExportNeverReintroducesHiddenPeopleButKeepsGeneralReports() {
+        val report=event(30,ResponseChange.Report(id(30),"道路閉塞",35.0,139.0,"倒木"))
+        val rows=operationRows(roster,incident,people,journal,emptyList(),listOf(report),emptyMap(),allowedResidentIds=setOf(id(1)))
+        assertEquals(setOf(id(1),id(30)),rows.map {it.targetId}.toSet())
+        val reportOnly=operationRows(roster,incident,people,journal,emptyList(),listOf(report),emptyMap(),allowedResidentIds=emptySet())
+        assertEquals(id(30),reportOnly.single().targetId)
+    }
+    @Test fun cancellationRemovesNormalExportAndRestoreReturnsSameReport() {
+        val report=event(30,ResponseChange.Report(id(30),"道路",35.0,139.0,"倒木",regionIds=listOf("north")))
+        val cancel=event(31,(report.change as ResponseChange.Report).copy(cancelled=true,cancelReason="重複"),listOf(report.eventId))
+        fun rows(history:List<ResponseEvent>)=operationRows(roster,incident,emptyList(),journal,emptyList(),history,emptyMap())
+        assertTrue(rows(listOf(report,cancel)).isEmpty())
+        val restore=event(32,(cancel.change as ResponseChange.Report).copy(cancelled=false,cancelReason=""),listOf(cancel.eventId))
+        assertEquals(id(30),rows(listOf(report,cancel,restore)).single().targetId)
+        assertEquals("north",rows(listOf(report,cancel,restore)).single().region)
+    }
+    @Test fun englishCsvTranslatesFixedLabelsWithoutReplacingUserText() {
+        val target=ResponseTarget(TargetKind.REPORT,id(30))
+        val history=listOf(event(30,ResponseChange.Report(id(30),"道路・未設定",35.0,139.0,"本文")),
+            event(31,ResponseChange.Progress(target,WorkStatus.PLANNED,"未設定・対応中を確認")),
+            event(32,ResponseChange.Material(target,id(32),"必要・水","本",3.0,1.0)))
+        val rows=operationRows(roster,incident,emptyList(),journal,emptyList(),history,mapOf(target to listOf("未設定")),language="en")
+        val csv=operationCsv(rows,TimeZone.getTimeZone("UTC"),language="en")
+        assertTrue(csv.startsWith("\uFEFF\"Region\",\"Target ID\""));assertTrue(csv.contains("Report: 道路・未設定"))
+        assertEquals("Planned",rows.single().status);assertEquals("未設定",rows.single().region)
+        assertTrue(csv.contains("未設定・対応中を確認"));assertTrue(csv.contains("必要・水: needed 3本; arranged 1本; shortfall 2本"))
+    }
     private fun id(n:Int)="00000000-0000-0000-0000-${n.toString().padStart(12,'0')}"
     private val roster=MemberRoster(groupId="trial",members=listOf(GroupMember(id(1),"確認班",MemberRole.ADMIN,listOf(id(1))),GroupMember(id(2),"連絡班",MemberRole.MEMBER,listOf(id(2)))))
     private val incident=id(10)
