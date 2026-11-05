@@ -9,3 +9,7 @@ for(const version of versions){
  document.getElementById('board').append(section);section.querySelector('nav button').click();
  if(location.hash===`#${version.id}`)section.scrollIntoView({inline:'start',block:'start'});
 }
+const android=document.createElement('section');android.className='view';android.id='helpnet-neighborhood-placement-android';
+android.innerHTML='<header class="comparison-caption" style="height:auto;min-height:126px"><h1 class="comparison-label">Help Net · Android 1.5.77 実装版</h1><p class="comparison-summary">町内会の地点に吹き出しを固定する配置へ戻しました。実機への更新は済み、操作確認は保留中です。</p></header><p style="padding:20px;font-size:16px;line-height:1.7">ビルドと単体試験298件は成功。エミュレーターの画面試験は完了していないため、確認済みの画面画像はまだ掲載していません。</p>';
+document.getElementById('board').append(android);
+if(location.hash===`#${android.id}`)android.scrollIntoView({inline:'start',block:'start'});
