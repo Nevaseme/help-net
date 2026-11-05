@@ -5,6 +5,11 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ConditionMessagesTest {
+ @Test fun savedOperationFeedbackTranslatesFixedLabelsWithoutChangingUserText() {
+  assertEquals("SOS saved on this device.\nSaved at: 7:29 AM",UiMessages.text("SOSをこの端末に保存しました\n保存時刻：7:29 AM","en"))
+  for(label in listOf("対応記録","登録情報","無事","SOSメモ","訓練開始","地震報告","安否確認の終了","救助の取り消し","建物の対応記録","建物・住戸の登録","訓練住居"))assertFalse(label,Regex("[\\u3040-\\u9fff]").containsMatchIn(UiMessages.text("${label}をこの端末に保存しました","en")))
+  assertEquals("山田さんの記録",UiMessages.text("山田さんの記録","en"))
+ }
  @Test fun generatedResidentCountsAndHistoryTranslateWithoutChangingNames() {
   assertEquals("Resident safety: SOS 1 / Safe 4 / No response 2",UiMessages.text("住民の安否：SOS 1人 / 無事 4人 / 未回答 2人","en"))
   assertEquals("Building name: 山田ビル",UiMessages.text("建物名：山田ビル","en"))

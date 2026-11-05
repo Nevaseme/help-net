@@ -1,5 +1,5 @@
 import {sameRecord,quakeStates} from './managed-records.mjs';
-import {saveVenue} from './venue-demo.mjs';
+import {saveVenue,isAssignedVenuePosition} from './venue-demo.mjs';
 import {saveMunicipality} from './municipalities.mjs';
 
 const collections=['residents','quakes','incidents','events','places','positions','memos','responses','deviceRecords'];
@@ -141,7 +141,7 @@ export class CloudClient {
   for(const table of collections){const rows=(await this.store.read(table)).filter(r=>r.groupId===group).sort((a,b)=>(a.operatedAt??a.createdAt??0)-(b.operatedAt??b.createdAt??0)||(a.sequence??0)-(b.sequence??0));for(const record of rows){
    // Managed START is materialized from proof on every client, never impersonated as an upload.
    if(table==='incidents'&&record.kind==='START')continue;
-   if(table==='positions'&&venue&&!venue.closed&&venue.positionMode!=='ACTUAL'&&author(table,record)===this.deviceId)continue;
+   if(table==='positions'&&venue&&!venue.closed&&venue.positionMode!=='ACTUAL'&&author(table,record)===this.deviceId&&!isAssignedVenuePosition(venue,record))continue;
    if(author(table,record)!==this.deviceId){if(await this.store.read('meta',`cloud-seen:${group}:${table}:${keyOf(record)}:${record.revision??1}`)!==await digest(record))foreign++;continue;}
    const ackKey=`cloud-ack:${group}:${table}:${keyOf(record)}:${record.revision??1}`,hash=await digest(record);
    if(await this.store.read('meta',ackKey)!==hash)own.push({table,record,ackKey,hash});

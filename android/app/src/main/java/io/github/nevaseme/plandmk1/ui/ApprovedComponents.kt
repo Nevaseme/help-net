@@ -68,7 +68,6 @@ import androidx.compose.ui.unit.sp
             HorizontalDivider()
             ApprovedMenuRow(uiText("training_incidents"),"list",{onNavigate(6)})
             HorizontalDivider()
-            if(administrator){ApprovedMenuRow(menuText("管理者画面"),"settings",{onNavigate(12)});HorizontalDivider()}
             ApprovedMenuRow(uiText("menu_app"),"settings",onSettings)
         }
     }

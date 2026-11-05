@@ -67,7 +67,7 @@ fun SituationMap(
     onReportPoint: ((MapPoint) -> Unit)? = null,
     reports:List<MapReport> = emptyList(),onReport: (String)->Unit = {}, initialZoom:Double=16.8,
     registeredBuildingIds:List<String> = emptyList(),neighborhoods:List<MapNeighborhood> = emptyList(),onNeighborhood:(String)->Unit={},
-    currentLocation:io.github.nevaseme.plandmk1.location.PositionFix?=null,selectedHome:MapHome?=null,
+    reportPreview:MapPoint?=null,currentLocation:io.github.nevaseme.plandmk1.location.PositionFix?=null,selectedHome:MapHome?=null,
 ) {
     val context = LocalContext.current
     val supports = remember { (context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager).deviceConfigurationInfo.reqGlEsVersion >= 0x30000 }
@@ -141,16 +141,17 @@ fun SituationMap(
             map.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(home.point.latitude,home.point.longitude),18.0))
         }
     }
-    LaunchedEffect(ready,riskModel,registeredBuildingIds){if(ready)controller?.style?.let {style->
-        for(source in listOf("kyoto-risk","toranomon-risk")){if(style.getSource(source)==null)continue
-            val id="$source-registered";val layer=(style.getLayer(id) as? org.maplibre.android.style.layers.LineLayer)?:org.maplibre.android.style.layers.LineLayer(id,source).withSourceLayer("buildings").apply{minZoom=14f;setProperties(lineColor("#087f8c"),lineWidth(3f));style.layers.firstOrNull {it is org.maplibre.android.style.layers.SymbolLayer}?.let {style.addLayerBelow(this,it.id)}?:style.addLayer(this)}
-            layer.setFilter(raw("""["in",["get","bid"],["literal",${org.json.JSONArray(registeredBuildingIds)}]]"""))
-        }
-    }}
     LaunchedEffect(ready,tsunamiResult) {
         if(ready)controller?.style?.let {style ->
             io.github.nevaseme.plandmk1.tsunami.TsunamiOverlay.update(style,tsunamiResult)
         }
+    }
+    var reportPreviewMarker by remember {mutableStateOf<Marker?>(null)}
+    LaunchedEffect(ready,reportPreview) {
+        val map=controller?:return@LaunchedEffect
+        if(!ready)return@LaunchedEffect
+        reportPreviewMarker?.let {map.removeMarker(it)}
+        reportPreviewMarker=reportPreview?.let {map.addMarker(MarkerOptions().position(LatLng(it.latitude,it.longitude)))}
     }
     LaunchedEffect(ready,currentLocation){if(ready)controller?.style?.let {drawCurrentMapLocation(it,currentLocation)}}
     DisposableEffect(view, owner) {
@@ -165,12 +166,10 @@ fun SituationMap(
         owner.lifecycle.addObserver(observer)
         view.addOnDidFailLoadingMapListener { latestError() }
         view.getMapAsync { map ->
-            controller = map; camera.map = map
+            controller = map; camera.map = map; map.setMaxZoomPreference(20.0)
             map.addOnCameraMoveStartedListener {reason->if(reason==MapLibreMap.OnCameraMoveStartedListener.REASON_API_GESTURE)camera.cancelLocationCenter()}
             map.cameraPosition = CameraPosition.Builder().target(LatLng(latitude, longitude)).zoom(zoom).build()
             map.uiSettings.apply { isRotateGesturesEnabled = false; isTiltGesturesEnabled = false; isCompassEnabled = false }
-            // Tile caching is enabled by default. The redundant renderer-backed
-            // setter stalled this UI callback during rapid map recreation.
             // A coarser Kyoto tile contains hundreds of thousands of footprints.
             // Loading it alongside the visible tiles doubles work during a jump.
             map.setPrefetchZoomDelta(0)
@@ -256,6 +255,11 @@ fun SituationMap(
                 }
             }
             map.setStyle(OfflineMapRepository.STYLE) { style ->
+                // Configure once after the renderer/style is ready. Kyoto overview
+                // geometry is too large to retain across zoom levels. This only
+                // drops unused renderer tiles; bundled/offline map data is kept.
+                // Physical 10-route comparison: native 798 MB -> 214 MB, setter 0 ms.
+                map.setTileCacheEnabled(false)
                 mapLabels.apply(style,tsunamiEnglish)
                 if (preview) {
                     val buildings = style.getLayer("building") as? FillLayer

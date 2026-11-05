@@ -12,6 +12,10 @@ appearanceMedia.addEventListener('change',applyAppearance);applyAppearance();
 // Keep the approved four tabs reachable while a non-modal detail sheet is open.
 // Visible bounds follow browser chrome, the software keyboard and text scaling.
 const root=document.documentElement;
+// Pointer/programmatic focus is not a selection. Tab navigation retains its indicator.
+root.dataset.inputModality='pointer';
+document.addEventListener('pointerdown',()=>{root.dataset.inputModality='pointer';},true);
+document.addEventListener('keydown',event=>{if(['Tab','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(event.key))root.dataset.inputModality='keyboard';},true);
 const height=selector=>document.querySelector(selector)?.getBoundingClientRect().height||0;
 function measure(){
  const vv=window.visualViewport,visible=vv?.height||innerHeight;

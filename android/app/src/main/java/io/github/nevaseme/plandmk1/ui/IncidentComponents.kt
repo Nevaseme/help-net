@@ -13,28 +13,22 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nevaseme.plandmk1.PlanViewModel
 import io.github.nevaseme.plandmk1.cloud.mapMunicipalityOrNull
 
-@Composable fun IncidentSelector(model: PlanViewModel) {
+@Composable fun IncidentSelector(model:PlanViewModel) {
     val state by model.incidentUi.collectAsStateWithLifecycle()
     val roster by model.roster.collectAsStateWithLifecycle()
-    val saving by model.saving.collectAsStateWithLifecycle()
-    var expanded by rememberSaveable { mutableStateOf(false) }
-    val current=state.current
-    val cloud by model.cloud.state.collectAsStateWithLifecycle()
-    fun drill(start:io.github.nevaseme.plandmk1.core.IncidentEvent)=cloud.venue?.displaysAsDrill(start)?:start.training
     val english=LocalUiLanguage.current=="en"
-    TextButton(enabled=!saving,onClick={expanded=true},modifier=Modifier.fillMaxWidth()) {
-        Text(if(english&&current!=null) "${if(drill(current.start)) "Drill" else "Earthquake"}: ${menuText(sampleIncidentTitle(current.start.groupId,current.start.title))} / ${menuText(sampleAreaName(current.start.groupId,current.start.area))} · ${if(current.closed) "Ended" else "Active"} ▾" else menuText(if(current!=null) "表示中の${if(drill(current.start)) "訓練" else "地震"}：${menuText(sampleIncidentTitle(current.start.groupId,current.start.title))}／対象地域：${menuText(sampleAreaName(current.start.groupId,current.start.area))}${if(current.closed) "（終了）" else "（安否確認中）"} ▾"
-        else if(state.selection=="legacy") "過去の情報（災害未分類・閲覧のみ） ▾" else "災害・訓練を選択 ▾"), style=MaterialTheme.typography.labelLarge, maxLines=2, overflow=TextOverflow.Ellipsis)
-    }
-    if(expanded) AlertDialog(onDismissRequest={expanded=false},title={Text(menuText("表示する災害・訓練"))},text={
-        Column(Modifier.verticalScroll(rememberScrollState())) {
-            if(state.options.isEmpty())Text(menuText("安否確認はまだありません"))
-            state.options.forEach { option -> TextButton(onClick={model.selectIncident(option.start.eventId);expanded=false}) {
-                Text(if(english)"${if(drill(option.start)) "Drill" else "Earthquake"}: ${menuText(sampleIncidentTitle(option.start.groupId,option.start.title))}\nArea: ${menuText(sampleAreaName(option.start.groupId,option.start.area))}\nStarted by: ${publicRecordAuthor(option.start.authorId,state.residents,state.care,roster)}\nStarted: ${formatTime(option.start.createdAt)}${if(option.closed) " (Ended)" else ""}" else menuText("${if(drill(option.start)) "訓練" else "地震"}：${menuText(sampleIncidentTitle(option.start.groupId,option.start.title))}\n対象地域：${menuText(sampleAreaName(option.start.groupId,option.start.area))}\n開始した人：${publicRecordAuthor(option.start.authorId,state.residents,state.care,roster)}\n開始日時：${formatTime(option.start.createdAt)}${if(option.closed) "（終了）" else ""}"))
-            } }
-            TextButton(onClick={model.selectIncident("legacy");expanded=false}) { Text(menuText("過去の情報（災害未分類・閲覧のみ）")) }
+    Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
+        Text(if(english)"Past drills and earthquakes" else "過去の訓練・地震",style=MaterialTheme.typography.titleMedium)
+        val history=state.options.filter {it.closed}.sortedByDescending {it.start.createdAt}
+        if(history.isEmpty())Text(if(english)"No past events." else "過去の開催はありません。")
+        history.forEach {option->
+            Text(menuText(sampleIncidentTitle(option.start.groupId,option.start.title)),style=MaterialTheme.typography.titleSmall)
+            Text(formatTime(option.start.createdAt))
+            Text(roster?.members?.find {option.start.authorId in it.deviceIds}?.activityName
+                ?: menuText(publicRecordAuthor(option.start.authorId,state.residents,state.care,roster)))
+            HorizontalDivider()
         }
-    },confirmButton={TextButton(onClick={expanded=false}){Text(menuText("閉じる"))}})
+    }
 }
 
 @Composable fun IncidentActions(model: PlanViewModel, registered: Boolean, administrator:Boolean=false) {

@@ -70,6 +70,91 @@ class VenueExperienceDeviceTest {
             }
             compose.onNodeWithText("Map").assertIsSelected();englishScreen()
             for(tab in listOf("People","Tasks","Safety","Map")){compose.onNodeWithText(tab,useUnmergedTree=true).performClick();compose.waitForIdle();englishScreen()}
+            compose.onNodeWithText("Safety",useUnmergedTree=true).performClick()
+            val firstAnswerId=model.incidentUi.value.current!!.answers.getValue(model.localId).eventId
+            compose.onNodeWithText("I need help",useUnmergedTree=true).performClick()
+            compose.onNodeWithText("Update my status").performScrollTo().performClick()
+            compose.waitUntil(15000){model.incidentUi.value.current?.answers?.get(model.localId)?.eventId!=firstAnswerId}
+            compose.waitUntil(15000){model.saveStates.value["safety"]?.phase==io.github.nevaseme.plandmk1.core.SavePhase.SAVED}
+            compose.waitForIdle()
+            compose.onNodeWithText("SOS saved on this device.",substring=true).assertExists()
+            compose.onNode(hasText("Safety") and hasClickAction()).assertIsSelected()
+            compose.onNodeWithText("This is a demo. Your location is set to Kyoto to make the experience easier to follow.").assertDoesNotExist()
+            englishScreen();shot("updated-safety")
+            compose.onNodeWithText("Map",useUnmergedTree=true).performClick();compose.waitForIdle()
+            if(InstrumentationRegistry.getArguments().getString("extendedUi")=="true") {
+                fun visibleMap():org.maplibre.android.maps.MapView {
+                    fun maps(v:android.view.View):List<org.maplibre.android.maps.MapView> = when(v) {
+                        is org.maplibre.android.maps.MapView -> listOf(v)
+                        is android.view.ViewGroup -> (0 until v.childCount).flatMap{maps(v.getChildAt(it))}
+                        else -> emptyList()
+                    }
+                    var found:org.maplibre.android.maps.MapView?=null
+                    inst.runOnMainSync{found=ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(Stage.RESUMED).flatMap{maps(it.window.decorView)}.lastOrNull{it.isShown}}
+                    return requireNotNull(found)
+                }
+                fun markers():Int {
+                    var count=-1
+                    val mapView=visibleMap()
+                    inst.runOnMainSync{mapView.getMapAsync{count=it.markers.size}}
+                    return count
+                }
+                fun tapMap() {
+                    val xy=IntArray(2);var width=0;var height=0
+                    val mapView=visibleMap()
+                    inst.runOnMainSync{mapView.let{it.getLocationOnScreen(xy);width=it.width;height=it.height}}
+                    val time=android.os.SystemClock.uptimeMillis()
+                    for(action in listOf(android.view.MotionEvent.ACTION_DOWN,android.view.MotionEvent.ACTION_UP)) {
+                        val event=android.view.MotionEvent.obtain(time,android.os.SystemClock.uptimeMillis(),action,xy[0]+width*.55f,xy[1]+height*.55f,0)
+                        event.source=android.view.InputDevice.SOURCE_TOUCHSCREEN
+                        inst.uiAutomation.injectInputEvent(event,true);event.recycle()
+                        if(action==android.view.MotionEvent.ACTION_DOWN)android.os.SystemClock.sleep(70)
+                    }
+                    compose.waitForIdle()
+                    // MapLibre confirms a single tap after its double-tap window.
+                    compose.waitUntil(5000){compose.onAllNodes(hasText("Use this location") and isEnabled()).fetchSemanticsNodes().isNotEmpty()}
+                    android.os.SystemClock.sleep(400) // allow the native preview frame to reach the screenshot
+                }
+                compose.waitUntil(15000){markers()>3}
+                val withSafe=markers()
+                android.util.Log.i("PlanD-venue-ui","$mode show-safe markers=$withSafe")
+                compose.onNodeWithText("Show safe").performClick();compose.waitForIdle()
+                compose.waitUntil(10000){markers()<withSafe}
+                // Annotation updates precede the native renderer's presented frame.
+                android.os.SystemClock.sleep(1500);shot("hide-safe")
+                android.util.Log.i("PlanD-venue-ui","$mode hide-safe markers=${markers()}")
+                compose.onNodeWithText("Show safe").performClick();compose.waitForIdle()
+                compose.waitUntil(10000){markers()>=withSafe}
+                android.os.SystemClock.sleep(1500);shot("show-safe")
+                compose.onNodeWithText("Location unknown").performClick()
+                compose.onNodeWithText("Location unknown 2").assertIsDisplayed();englishScreen();shot("unknown")
+                compose.onNodeWithContentDescription("Close").performClick()
+                compose.onNodeWithContentDescription("Open menu").performClick()
+                compose.onNodeWithText("Drills and earthquakes").assertExists();englishScreen();shot("menu")
+                compose.onNodeWithContentDescription("Close").performClick()
+                val existingReport=model.responseEvents.value.mapNotNull{it.change as? io.github.nevaseme.plandmk1.core.ResponseChange.Report}.first{!it.cancelled}
+                val reportMap=visibleMap()
+                inst.runOnMainSync{reportMap.getMapAsync{it.moveCamera(org.maplibre.android.camera.CameraUpdateFactory.newLatLngZoom(org.maplibre.android.geometry.LatLng(existingReport.latitude,existingReport.longitude),18.0))}}
+                compose.waitUntil(15000){compose.onAllNodesWithContentDescription("Incident report").fetchSemanticsNodes().isNotEmpty()}
+                compose.onAllNodesWithContentDescription("Incident report").onFirst().performClick();compose.waitForIdle()
+                compose.onNodeWithText("Map").assertIsSelected()
+                compose.onNodeWithTag("sheet-drag-handle").performTouchInput{swipe(center,androidx.compose.ui.geometry.Offset(center.x,center.y+350f),300)}
+                compose.waitUntil(5000){compose.onAllNodesWithTag("sheet-drag-handle").fetchSemanticsNodes().isEmpty()}
+                compose.onNodeWithText("Map").assertIsSelected()
+                compose.onNodeWithText("Report an incident").performClick()
+                compose.onNodeWithText("Use this location").assertIsNotEnabled()
+                tapMap();compose.onNodeWithText("Use this location").assertIsEnabled();shot("report-preview")
+                compose.onNodeWithText("Use this location").assertIsDisplayed().performClick()
+                compose.onNodeWithContentDescription("Situation and details").performTextInput("Local preview check")
+                compose.onNodeWithContentDescription("Situation and details").assertTextContains("Local preview check")
+                compose.onNodeWithText("Report location selected · Change").performClick()
+                compose.onNodeWithText("Use this location").assertIsNotEnabled()
+                tapMap();compose.onNodeWithText("Use this location").assertIsEnabled();shot("report-form-preview")
+                compose.onNodeWithText("Use this location").assertIsDisplayed().performClick()
+                shot("report-preserved")
+                compose.onNodeWithContentDescription("Situation and details").assertTextContains("Local preview check");englishScreen()
+                compose.onNodeWithContentDescription("Close").performClick()
+            }
         }finally{inst.runOnMainSync{models.clear();app.installation.setGroup(previous);ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(Stage.RESUMED).toList().forEach{it.finish()}};prefs.edit().apply{if(previousLanguage==null)remove("language")else putString("language",previousLanguage)}.commit()}
     }
 }

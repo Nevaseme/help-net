@@ -20,7 +20,38 @@ try{for(const mode of ['DRILL','EARTHQUAKE']){
  await page.waitForFunction(()=>window.qaMap&&Object.values(window.qaMap._layers).some(l=>l.options?.className==='my-location-dot'));await page.waitForFunction(()=>window.qaVector?.isStyleLoaded(),null,{timeout:60000});await page.waitForTimeout(1200);await audit('map');await page.screenshot({path:out+'/'+mode+'-map.png'});
  const full=await page.locator('.person-map-marker').count();await page.locator('#map-show-safe').uncheck();await page.waitForTimeout(500);const focused=await page.locator('.person-map-marker').count();assert.ok(focused<full,`${full} > ${focused}`);console.log(JSON.stringify({mode,full,focused}));await page.screenshot({path:out+'/'+mode+'-hide-safe.png'});await page.locator('#map-show-safe').check();
  assert.equal(await page.evaluate(()=>window.qaMap.getPane('my-location').style.zIndex),'650');
+ assert.equal(await page.evaluate(()=>window.qaMap.getPane('my-location').style.pointerEvents),'none');
+ assert.equal(await page.evaluate(()=>window.qaMap.getMaxZoom()),20);assert.equal(await page.evaluate(()=>window.qaMap.options.bounceAtZoomLimits),false);
+ if(mode==='DRILL'){
+  const people=await page.evaluate(async()=>{const {Store}=await import('/sync.mjs');const s=await Store.open('tasukeai-cloud'),v=await s.read('meta','venue:'+await s.read('meta','group'));s.close();return v.scenario.people;});
+  for(const region of ['demo-central','demo-west']){
+   const person=people.find(p=>p.communityId===region&&p.safety==='UNREPORTED'&&!p.positionUnknown);
+   await page.evaluate(home=>window.qaMap.setView([home.latitude,home.longitude],18,{animate:false}),person.home);await page.waitForTimeout(1200);
+   await page.evaluate(home=>window.qaMap.fire('click',{latlng:{lat:home.latitude,lng:home.longitude}}),person.home);
+   const sheet=page.locator('#map-building-sheet');await sheet.waitFor();assert.match(await sheet.innerText(),/Residents with no response/);
+   if(region==='demo-central')await sheet.getByRole('button').filter({hasText:person.name}).waitFor();else{assert.match(await sheet.innerText(),/You cannot view individual details because you do not belong to this neighborhood\./);assert.equal(await sheet.locator('[data-building-person]').count(),0);}
+   await audit(region+'-building');await page.screenshot({path:out+'/'+mode+'-'+region+'-building.png'});await sheet.locator('.sheet-close').click();
+  }
+  await page.evaluate(()=>window.qaMap.setView([35.014625,135.764],18,{animate:false}));await page.waitForTimeout(800);await page.screenshot({path:out+'/'+mode+'-compact-map.png'});
+  await page.locator('#map-show-safe').uncheck();await page.waitForTimeout(250);await page.screenshot({path:out+'/'+mode+'-compact-focused.png'});await page.locator('#map-show-safe').check();
+ }
+ await page.locator('#map-report-add').click();assert.equal(await page.locator('#map-pick-confirm').isDisabled(),true);
+ await page.evaluate(()=>window.qaMap.fire('click',{latlng:{lat:35.01455,lng:135.7641}}));
+ await page.locator('.report-preview-marker').waitFor();assert.equal(await page.locator('#map-pick-confirm').isEnabled(),true);
+ await page.evaluate(()=>window.qaMap.fire('click',{latlng:{lat:35.0146,lng:135.7642}}));assert.equal(await page.locator('.report-preview-marker').count(),1);
+ await page.screenshot({path:out+'/'+mode+'-pin-preview.png'});
+ await page.locator('#map-pick-confirm').click();await page.locator('#response-edit-form').waitFor();
+ assert.equal(await page.locator('#response-edit-form [name="latitude"]').inputValue(),'35.0146');assert.equal(await page.locator('#response-edit-form [name="regionIds"]').count(),0);
+ await page.locator('#response-edit-form [name="description"]').fill('Retained report draft');await page.locator('#report-pick-location').click();
+ await page.getByRole('button',{name:'Cancel',exact:true}).click();await page.locator('#response-edit-form').waitFor();assert.equal(await page.locator('#response-edit-form [name="description"]').inputValue(),'Retained report draft');
+ await audit('report-preview');await page.screenshot({path:out+'/'+mode+'-report-preview.png'});
+ await page.locator('#response-edit-form').evaluate(form=>form.closest('dialog').close());
+ await page.locator('#map-unknown').click();await page.waitForTimeout(250);assert.match(await page.locator('#list').innerText(),/Last updated:/);await audit('unknown');
  for(const name of ['residents','response','safety']){await page.locator(`[data-tab="${name}"]`).click();await page.waitForTimeout(350);await audit(name);}
+ await page.locator('#safe').click();await page.locator('#status-update').click();await page.waitForFunction(()=>document.querySelector('#own-status-feedback').textContent==='Saved');await audit('updated-safe');
+ assert.equal(await page.evaluate(()=>document.body.dataset.page),'safety');assert.equal(await page.locator('#venue-location-notice').isVisible(),false);
+ await page.locator('#sos').click();await page.locator('#own-memo').fill('Updated safety status');await page.locator('#status-update').click();await page.waitForFunction(()=>document.querySelector('#own-status-feedback').textContent==='Saved');await audit('updated-sos');
+ assert.equal(await page.evaluate(()=>document.body.dataset.page),'safety');assert.equal(await page.locator('#venue-location-notice').isVisible(),false);
  await page.locator('#menu-open').click();assert.equal(await page.evaluate(()=>document.activeElement.id),'menu-title');await audit('menu');
  for(const name of ['profile','group','incidents','settings']){if(!await page.locator('#app-menu').isVisible())await page.locator('#menu-open').click();await page.locator(`[data-menu="${name}"]`).click();await page.waitForTimeout(500);await audit(name);await page.screenshot({path:out+'/'+mode+'-'+name+'.png'});if(name==='settings')await page.locator('#settings-sheet .sheet-close').click().catch(()=>{});}
  await context.close();

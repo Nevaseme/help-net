@@ -4,7 +4,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.EncodeDefault
 
 @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
-@Serializable data class DemoHome(val buildingId:String,val address:String,val latitude:Double,val longitude:Double,val plateauId:String?,val floor:String="",val room:String="",@EncodeDefault(EncodeDefault.Mode.NEVER) val displayName:String?=null,@EncodeDefault(EncodeDefault.Mode.NEVER) val searchReference:AddressSearchReference?=null) {
+@Serializable data class DemoHome(val buildingId:String,val address:String,val latitude:Double,val longitude:Double,val plateauId:String?,val floor:String="",val room:String="",@EncodeDefault(EncodeDefault.Mode.NEVER) val displayName:String?=null,@EncodeDefault(EncodeDefault.Mode.NEVER) val searchReference:AddressSearchReference?=null,@EncodeDefault(EncodeDefault.Mode.NEVER) val householdId:String?=null) {
     fun validate(){searchReference?.validate();require(recordIdPattern.matches(buildingId)&&address.isNotBlank()&&address.length<=240);require(latitude.isFinite()&&latitude in -85.0..85.0&&longitude.isFinite()&&longitude in -180.0..180.0);require(plateauId==null||plateauId.isNotBlank()&&plateauId.length<=160);require(displayName==null||displayName.isNotBlank()&&displayName.length<=60);require(floor.length<=40&&room.length<=240)}
 }
 @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)

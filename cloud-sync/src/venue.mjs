@@ -1,3 +1,4 @@
+import {compactSlots} from './venue-compact.mjs';
 import {createVenueScenario,seedVenueScenario} from './venue-scenario.mjs';
 import {ApiError,requireValue,uuid} from './validation.mjs';
 import {validateDemoPassword} from './demo-auth.mjs';
@@ -16,10 +17,7 @@ async function passwordHash(password,salt){
  return hex(await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',iterations:100000,salt:enc.encode(salt)},key,256));
 }
 const area={id:'kyoto-gosho-south',name:'御所南〜烏丸御池',south:35.011,north:35.018,west:135.758,east:135.767};
-function slots(){
- const homes=catalogue.homes.filter(h=>demoCommunityAt(h.longitude)==='demo-central');
- return Array.from({length:64},(_,slot)=>{const home=homes[slot%homes.length];return {...demoPhonePoint('demo-central',24+slot),communityId:'demo-central',home};});
-}
+function slots(){return compactSlots();}
 
 export const venueMethods={
  venueInit(){
@@ -63,7 +61,7 @@ export const venueMethods={
   this.s.transaction(()=>{
    const previous=this.venueConfig();if(previous?.sessionId===input.requestId)return;
    requireValue(!previous||this.venueSnapshot().closed,'venue_already_active',409,'現在の会場デモを終了してから、新しいデモを開始してください。');
-   const config={sessionId:input.requestId,areaId:input.areaId,privateTraining,presentationMode,positionMode:input.positionMode??'KYOTO',startedAt:this.now(),simulationStartedAt:this.now()-elapsedMinutes*60000,salt,passwordHash:hash,slots:slots(),scenario:privateTraining?null:createVenueScenario(input.requestId)};
+   const config={sessionId:input.requestId,areaId:input.areaId,privateTraining,presentationMode,positionMode:input.positionMode??'KYOTO',startedAt:this.now(),simulationStartedAt:this.now()-elapsedMinutes*60000,salt,passwordHash:hash,slots:slots(),scenario:privateTraining?null:createVenueScenario(input.requestId,this.now())};
    this.s.run('INSERT INTO metadata(key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value','venue',JSON.stringify(config));
    this.append(actor,{collection:'quakes',record:{groupId:this.meta('groupId'),eventId:input.requestId,actorDeviceId:actor.deviceId,operatedAt:this.now(),action:'TRAINING_START',training:true,title:privateTraining?input.title.trim():presentationMode==='EARTHQUAKE'?'地震の安否確認':'安否確認の訓練',area:privateTraining?input.area.trim():config.positionMode==='ACTUAL'?'参加者の現在地':area.name}});
    if(config.scenario)seedVenueScenario(this,actor,config);

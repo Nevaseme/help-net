@@ -29,7 +29,7 @@ for(const entry of await readdir(web,{withFileTypes:true})){
 await copyFile(join(root,'src/venue-buildings.json'),join(root,'dist/public/demo-building-addresses.json'));
 await copyFile(join(root,'../tools/building_analysis/venue-address-evidence.json'),join(root,'dist/public/demo-building-address-sources.json'));
 for(const entry of await readdir(join(root,'src'))){
- if(['venue-buildings.json','venue-phone-points.json'].includes(entry)){await copyFile(join(root,'src',entry),join(root,'dist/src',entry));continue;}
+ if(['venue-buildings.json','venue-phone-points.json','venue-compact-layout.json'].includes(entry)){await copyFile(join(root,'src',entry),join(root,'dist/src',entry));continue;}
  if(!entry.endsWith('.mjs'))continue;
  const source=(await readFile(join(root,'src',entry),'utf8')).replaceAll('../../lab/web/','../shared/');
  await writeFile(join(root,'dist/src',entry),source);

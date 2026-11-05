@@ -86,13 +86,10 @@ private fun PlanAppContent(model: PlanViewModel) {
     var awaitingSavedAnswer by rememberSaveable(group, incident.selection) { mutableStateOf(firstAnswer) }
     val saveStates by model.saveStates.collectAsStateWithLifecycle()
     var showVenueNotice by rememberSaveable(group,incident.selection){mutableStateOf(false)}
-    var previousSafetyPhase by remember { mutableStateOf(saveStates["safety"]?.phase) }
     LaunchedEffect(group,incident.groupId,incident.selection,firstAnswer,tab,picking) { if(firstAnswer&&tab!=0){tab=0;lastMain=0;picking=false;awaitingSavedAnswer=true} }
     LaunchedEffect(firstAnswer, saveStates["safety"]?.phase) {
         if(firstAnswer)awaitingSavedAnswer=true
         if (!firstAnswer && awaitingSavedAnswer && incident.current?.answers?.containsKey(model.localId)==true) { showVenueNotice=activeVenue?.positionMode=="KYOTO";tab = 1; lastMain = 1; awaitingSavedAnswer = false }
-        else if (previousSafetyPhase == SavePhase.SAVING && saveStates["safety"]?.phase == SavePhase.SAVED && tab == 0) { showVenueNotice=activeVenue?.positionMode=="KYOTO";tab = 1; lastMain = 1 }
-        previousSafetyPhase = saveStates["safety"]?.phase
     }
     if(showVenueNotice)AlertDialog(onDismissRequest={showVenueNotice=false},title={Text(if(uiLanguage=="en")"Your location" else "現在地")},text={Text(if(uiLanguage=="en")"This is a demo. Your location is set to Kyoto to make the experience easier to follow." else "これはデモです。わかりやすく体験していただくため、現在地を京都に設定しています。")},confirmButton={TextButton(onClick={showVenueNotice=false}){Text(if(uiLanguage=="en")"Continue" else "続ける")}})
     if (preview && BuildConfig.DEBUG) { DesignDemoScreen { preview = false }; return }
@@ -233,7 +230,7 @@ private fun PlanAppContent(model: PlanViewModel) {
                         3 -> SettingsScreen(model, storedOwn, group, saving, onBuildings={navigate(2)}, onPick={picking=true;tab=1})
                         9 -> PositionSettings(model, own != null)
                         4 -> LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
-                        if(!communicationDetails)item { CloudSharingPanel(model,own?.name.orEmpty(),onCommunication={communicationDetails=true}) }
+                        if(!communicationDetails)item { CloudSharingPanel(model,own?.name.orEmpty(),onCommunication={communicationDetails=true},onIncidents={navigate(6)}) }
                         if(communicationDetails) {
                         item { TextButton(onClick={communicationDetails=false}) {Text(menuText("グループに戻る"))} }
                         item { CloudCommunicationDetails(model) }
@@ -272,13 +269,13 @@ private fun PlanAppContent(model: PlanViewModel) {
                         }
                         }
                         5 -> OfflineMapScreen(model,own)
-                        12 -> if(model.canStartTraining())Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)){IncidentActions(model,own!=null,administrator=true);IncidentSelector(model)}
-                        6 -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),verticalArrangement=Arrangement.spacedBy(20.dp)) {
-                            IncidentActions(model,own!=null)
+                        6,12 -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),verticalArrangement=Arrangement.spacedBy(20.dp)) {
+                            Text(uiText("training_incidents"),style=MaterialTheme.typography.titleLarge)
+                            if(model.canStartTraining())CloudVenueTraining(model)
+                            else Text(if(LocalUiLanguage.current=="en")"An administrator starts and ends the event." else "開始・終了は管理者が行います。")
                             if(roster==null)OutlinedButton(onClick={navigate(4)}){Text(uiText("group_sharing"))}
                             HorizontalDivider()
                             IncidentSelector(model)
-                            if(own==null) Button(onClick={navigate(3)}){Text(menuText("自分の情報を登録"))}
                         }
                         else -> AppInformation()
                     }

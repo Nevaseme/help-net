@@ -765,6 +765,8 @@ object UiMessages {
         english[value]?.let {return it}
         if(value.startsWith("京都府南部"))return value.replace("京都府南部","Southern Kyoto").replace("への速報に取消が届きました。"," warning was cancelled.").replace("は警報の対象から外れました。"," is no longer in the warning area.").replace("：予測震度不明"," · Predicted intensity unknown").replace("：予測震度"," · Predicted JMA intensity ").replace("P2P地震情報","P2P Quake").replace("（"," (").replace("）",")").replace("・第",", update ").replace("報","").replace("弱"," lower").replace("強"," upper").replace("以上"," or greater").replace("〜"," to ")
         if(value.contains("\n"))return value.split("\n").joinToString("\n"){text(it,language)}
+        val savedSuffix="をこの端末に保存しました"
+        if(value.endsWith(savedSuffix))return text(value.removeSuffix(savedSuffix),language)+" saved on this device."
         for(prefix in listOf("記録した人","記録日時","確認範囲","未確認事項","未確認","保存時刻","建物名","部屋・住戸"))if(value.startsWith("$prefix："))return text(prefix,language)+": "+value.removePrefix("$prefix：")
         val residentCounts=Regex("住民の安否：SOS (\\d+)人 / 無事 (\\d+)人 / 未回答 (\\d+)人").matchEntire(value)
         if(residentCounts!=null)return "Resident safety: SOS ${residentCounts.groupValues[1]} / Safe ${residentCounts.groupValues[2]} / No response ${residentCounts.groupValues[3]}"

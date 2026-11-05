@@ -112,7 +112,7 @@ fun homeLabel(rows: List<PlaceEvent>,person: String): String {
         val sameCommunity=venue?.scenario==null||person.originId==model.localId||communityPeople.any {it.id==person.originId&&it.communityId==ownCommunity}
         val base=residentMapPerson(person,rows,care,positions.find {it.originId==person.originId},roster=roster)
         val placement=venue?.allPlacements()?.find {it.deviceId==person.originId&&it.latitude!=null&&it.longitude!=null}
-        val projected=projectPersonPrivacy(if(placement==null)base else base.copy(point=MapPoint(placement.latitude!!,placement.longitude!!),acquiredAt=venue?.startedAt),incident.current?.start?.createdAt,now)
+        val projected=projectPersonPrivacy(if(placement==null)base else base.copy(point=MapPoint(placement.latitude!!,placement.longitude!!),acquiredAt=venue?.assignedPositionTime(placement,positions.find {it.originId==person.originId}),assignedPosition=venue?.positionMode=="KYOTO"&&placement.source!="SCENARIO"),incident.current?.start?.createdAt,now)
         sameCommunity&&projected.identityVisible&&projected.registeredPlaceVisible
     }
     var editing by rememberSaveable {mutableStateOf(false)};var newUnit by rememberSaveable {mutableStateOf(false)}

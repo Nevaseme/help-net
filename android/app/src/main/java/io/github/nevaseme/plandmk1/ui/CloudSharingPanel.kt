@@ -26,7 +26,7 @@ import io.github.nevaseme.plandmk1.BuildConfig
 import io.github.nevaseme.plandmk1.PlanViewModel
 
 @Composable
-fun CloudSharingPanel(model:PlanViewModel,ownName:String,onCommunication:()->Unit={}) {
+fun CloudSharingPanel(model:PlanViewModel,ownName:String,onCommunication:()->Unit={},onIncidents:()->Unit={}) {
     val state by model.cloud.state.collectAsStateWithLifecycle()
     val permissionRoster by model.roster.collectAsStateWithLifecycle()
     var endpoint by rememberSaveable {mutableStateOf(BuildConfig.CLOUD_SYNC_URL)}
@@ -52,7 +52,7 @@ fun CloudSharingPanel(model:PlanViewModel,ownName:String,onCommunication:()->Uni
                 Text(menuText(if(state.venue?.positionMode=="ACTUAL")"参加者の現在地を表示" else "京都の割当位置を表示"),style=MaterialTheme.typography.bodyMedium)
                 if(state.admin)Text(menuText("参加する人に、このグループ名と設定した参加パスワードを伝えてください。"),style=MaterialTheme.typography.bodySmall)
             }
-            if(state.admin)CloudVenueTraining(model)
+            TextButton(onClick=onIncidents){Text(uiText("training_incidents"))}
             HorizontalDivider()
             TextButton(onClick={page="settings"},modifier=Modifier.fillMaxWidth()){Text(menuText("グループの設定"))}
         }
@@ -62,17 +62,18 @@ fun CloudSharingPanel(model:PlanViewModel,ownName:String,onCommunication:()->Uni
                 SectionTitle(menuText("グループの設定"))
                 if(state.admin){
                     Text(if(LocalUiLanguage.current=="en")"Injury and urgency permissions" else "負傷登録・緊急度設定の権限",style=MaterialTheme.typography.titleMedium)
+                    if(permissionRoster?.members?.none {it.role!=io.github.nevaseme.plandmk1.core.MemberRole.ADMIN}!=false)Text(if(LocalUiLanguage.current=="en")"No participants to assign permissions to yet." else "権限を設定する参加者はまだいません。")
                     permissionRoster?.members?.filter {it.role!=io.github.nevaseme.plandmk1.core.MemberRole.ADMIN}?.forEach {person->
                         Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){Text(person.activityName,Modifier.weight(1f));Switch(person.canTriage,{model.cloud.setMemberPermission(person.memberId,it)},enabled=!state.busy)}
                     }
                 }
                 Text(menuText("地図保存・住所検索の地域"),style=MaterialTheme.typography.titleMedium)
                 Text(menuText(state.municipality?.let{"${it.prefecture} ${it.name}"}?:"未設定"))
-                Text(menuText("通常の地図保存と住所検索に使います。会場訓練の地図は位置モードから自動で準備します。"),style=MaterialTheme.typography.bodySmall)
+                Text(if(LocalUiLanguage.current=="en")"Used for offline maps and address searches. This does not change neighborhood boundaries." else "地図保存と住所検索に使う市です。町内会の範囲は変わりません。",style=MaterialTheme.typography.bodySmall)
                 if(state.admin) {
                     TextButton(onClick={choosingCity=!choosingCity},enabled=!state.busy){Text(menuText(if(choosingCity)"選択を閉じる" else "市を変更"))}
                     if(choosingCity)io.github.nevaseme.plandmk1.cloud.GroupMunicipality.available.forEach {city->
-                        TextButton(onClick={model.cloud.setMunicipality(city.code);choosingCity=false},enabled=!state.busy){Text("${city.prefecture} ${city.name}")}
+                        TextButton(onClick={model.cloud.setMunicipality(city.code);choosingCity=false},enabled=!state.busy){Text(menuText("${city.prefecture} ${city.name}"))}
                     }
                 }
                 HorizontalDivider()

@@ -1,6 +1,21 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {communityOverview,issueCommunityReport,communityReportHtml} from '../web/community-overview.mjs';
+import {communityOverview,issueCommunityReport,communityReportHtml,reportCommunityIds,areaCaseCommunityIds} from '../web/community-overview.mjs';
+
+test('report location drives counts and filters without rewriting old region records',()=>{
+ const communities=[{id:'west',boundary:[[0,0],[1,0],[1,1],[0,1]]},{id:'east',boundary:[[1,0],[2,0],[2,1],[1,1]]}];
+ const report={type:'REPORT',reportId:'r',latitude:.5,longitude:1.5,regionIds:['west'],cancelled:false},saved=structuredClone(report);
+ assert.deepEqual(reportCommunityIds(report,communities),['east']);
+ assert.deepEqual(areaCaseCommunityIds({target:{kind:'REPORT',id:'r'},reports:[{change:report}]},{communities}),['east']);
+ const counts=change=>communityOverview({people:[],heads:[{change}],communities});
+ assert.equal(counts(report).find(r=>r.id==='east').reports,1);assert.equal(counts(report).find(r=>r.id==='west').reports,0);
+ assert.equal(counts({...report,longitude:.5}).find(r=>r.id==='west').reports,1);
+ assert.equal(counts({...report,longitude:3}).find(r=>r.id==='unknown').reports,1);
+ assert.deepEqual(reportCommunityIds({...report,longitude:1},communities),['east']);
+ const single=communityOverview({people:[],heads:[{change:{...report,longitude:3}}],communities:communities.slice(0,1)});
+ assert.equal(single.find(r=>r.id==='unknown').reports,1);assert.deepEqual(report,saved);
+ assert.deepEqual(reportCommunityIds(report,[{id:'west'}]),['west']);
+});
 
 test('cancelled material heads add no shortage; an active concurrent head remains visible with mixed-unit conflicts explicit',()=>{
  const target={kind:'PERSON',id:'a'},change={type:'MATERIAL',target,requestId:'m',name:'Water',unit:'bottles',needed:10,arranged:1};

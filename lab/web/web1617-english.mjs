@@ -2,6 +2,7 @@ import {menuEnglish} from './menu-english.mjs';
 // Approved terminology: docs/superpowers/plans/2026-10-30-english-ui-glossary.csv
 // Context-specific labels and composed messages are handled by language.mjs.
 export const englishUI = {
+  "日時不明":"Time unavailable",
   "活動地域の市":"City",
   "市を選ぶ":"Choose a city",
   "活動地域を保存":"Save area",

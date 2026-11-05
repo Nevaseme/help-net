@@ -40,14 +40,14 @@ data class MapPerson(
     val home: MapHome? = null, val bedroom: String = "未登録", val memo: String = "",
     val impactAt: Long? = null, val enclosedAt: Long? = null,
     val identityVisible: Boolean = true, val registeredPlaceVisible: Boolean = true, val demo:Boolean=false,val fictional:Boolean=false,
-    val rescuedAt: Long? = null,
+    val rescuedAt: Long? = null, val lastKnownAt:Long?=null, val assignedPosition:Boolean=false,
 ) {
     val publicName get() = when (state) {
         MapSafety.SAFE -> "無事の人"
         MapSafety.RESCUED -> "救助済みの人"
         else -> if(!identityVisible) "応答なし" else name.ifBlank { "登録住民" }
     }
-    fun hasPosition(@Suppress("UNUSED_PARAMETER") now: Long) = point != null && acquiredAt != null
+    fun hasPosition(@Suppress("UNUSED_PARAMETER") now: Long) = point != null && (acquiredAt != null || assignedPosition)
 }
 
 /** Display projection only; the stored profile and incident's earliest formation time are retained. */

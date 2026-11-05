@@ -35,15 +35,18 @@ class PlanViewModel(application: Application) : AndroidViewModel(application) {
     val incidentUi = group.flatMapLatest { g ->
         val authority=combine(app.quakes.observeRoster(g),app.quakes.observe(g),app.cloud.venueChanges,deviceRecords) {roster,events,_,records->Triple(roster,events,app.cloud.venue(g)?.withHomes(records))}
         combine(app.store.observe(g),app.store.observeEvents(g),app.store.observeIncidents(g),app.installation.incidentSelectionChanges,authority) { residents, care, journal, _, authorityState ->
-            val preferred=canonicalIncidentId(authorityState.first,authorityState.second,app.installation.incidentSelection(g))
             val options=managedIncidentOptions(journal,authorityState.first,authorityState.second)
+            val savedSelection=canonicalIncidentId(authorityState.first,authorityState.second,app.installation.incidentSelection(g))
+            // Past events remain available as history, never as a live map selection.
+            val preferred=options.firstOrNull {!it.closed&&it.start.eventId==savedSelection}?.start?.eventId
+                ?:options.firstOrNull {!it.closed}?.start?.eventId.orEmpty()
             val displayed=authorityState.third?.takeIf {it.active(g,preferred)}?.displayResidents()?:residents
             val demo=authorityState.third?.takeIf {it.active(g,preferred)}
             val projectedJournal=journal+demo?.scenarioJournal().orEmpty()
             val projectedOptions=if(demo!=null)managedIncidentOptions(projectedJournal,authorityState.first,authorityState.second)else options
             val clockOptions=projectedOptions.map {v->demo?.projectClock(v)?:v}
             val state=projectIncidentUi(g,displayed,care,projectedJournal,preferred,clockOptions)
-            if(preferred==null&&state.selection.isNotEmpty()) {
+            if(savedSelection!=state.selection) {
                 try {app.installation.selectIncident(g,state.selection)}
                 catch(e: Exception) {message.value=e.localizedMessage;return@combine projectIncidentUi(g,residents,care,journal,"",options)}
             }

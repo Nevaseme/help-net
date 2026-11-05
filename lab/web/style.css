@@ -10,6 +10,8 @@ button{cursor:pointer;min-height:48px;padding:10px 16px;border:1px solid transpa
 button.secondary{border-color:var(--line);border-radius:11px;background:var(--paper);color:var(--ink);font-weight:650}
 button.danger{background:var(--danger)}button:disabled{opacity:.55;cursor:default}
 :where(button,a,input,textarea,select,summary):focus-visible{outline:3px solid var(--primary);outline-offset:3px}
+html[data-input-modality="pointer"] :focus{outline:none}
+dialog :is(h2,h3)[tabindex="-1"]:focus{outline:none}
 button[aria-pressed="true"]{border-color:var(--primary);background:var(--selected);color:var(--primary)}
 .app-header{position:sticky;top:0;z-index:30;min-height:calc(78px + env(safe-area-inset-top,0px));padding:calc(12px + env(safe-area-inset-top,0px)) max(18px,calc((100% - var(--content-width))/2 + 18px)) 12px;border-bottom:1px solid var(--line);background:var(--paper);display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:2px}
 h1{margin:0;font-size:1.562rem;line-height:1.35;font-weight:850;letter-spacing:-.035em}h1 span{font-size:0.875rem;font-weight:500;letter-spacing:0}.app-header p{margin:0}
@@ -330,3 +332,10 @@ html[lang="en"] .map-toolbar #map-unknown img:last-child{position:static;flex:no
 
 .venue-location-notice{position:fixed;inset:0;margin:auto;width:min(90vw,420px);height:fit-content;max-height:80dvh;overflow:auto;padding:24px;border:0;border-radius:20px;color:var(--ink);background:var(--surface,#fff)}
 .venue-location-notice h2{margin:0 0 16px;font-size:22px}.venue-location-notice p{font-size:17px;line-height:1.5}.venue-location-notice button{width:100%;min-height:48px;margin-top:12px}.venue-location-notice::backdrop{background:#0006}
+
+.report-preview-marker{pointer-events:none}.report-preview-pin{display:block;width:28px;height:28px;background:var(--primary);border:3px solid white;border-radius:50% 50% 50% 0;transform:translate(2px,3px) rotate(-45deg);box-shadow:0 1px 5px #0008}.report-preview-pin:after{content:"";display:block;width:8px;height:8px;margin:7px;background:white;border-radius:50%}.map-pick-notice{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.map-pick-notice p{flex-basis:100%;margin:0}.map-pick-notice #map-pick-confirm{flex:1}
+
+/* One event-management screen; legacy forms remain only for old code paths. */
+#training-page>#training-form,#training-page>.incident-context,#training-page>.incident-tools,#training-page>#incident-end,#training-page>#incident-feedback,#training-page>h3{display:none}
+#incident-history .incident-history-row{padding:12px 0;border-bottom:1px solid var(--line)}
+#incident-history h4,#incident-history p{margin:4px 0}

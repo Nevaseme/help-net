@@ -53,13 +53,14 @@ fun StateSymbol(state: MapSafety, modifier: Modifier = Modifier, description: St
 }
 
 fun positionDescription(person: MapPerson, now: Long): String = when {
+    person.assignedPosition && person.point != null && person.acquiredAt == null -> "日時不明"
     person.acquiredAt == null || person.point == null -> "位置は未受信"
     else -> "${io.github.nevaseme.plandmk1.core.usTime(person.acquiredAt)}取得・${((now - person.acquiredAt) / 60_000).coerceAtLeast(0)}分前" + (person.accuracy?.let { "・精度 約${it}m" } ?: "")
 }
 
 @Composable fun safetyText(state:MapSafety)=if(state==MapSafety.SOS)"SOS" else uiText(when(state){MapSafety.SOS->"my_sos";MapSafety.UNANSWERED->"no_response";MapSafety.SAFE->"safe";MapSafety.RESCUED->"rescued"})
 @Composable fun personText(person:MapPerson)=when {person.state==MapSafety.SAFE->uiText("safe_person");person.state==MapSafety.RESCUED->uiText("rescued_person");!person.identityVisible->uiText("no_response");person.name.isBlank()->uiText("registered_resident");else->person.name}
-@Composable private fun positionText(person:MapPerson,now:Long):String=if(person.point==null||person.acquiredAt==null)uiText("position_unreceived") else uiText("position_time",io.github.nevaseme.plandmk1.core.usTime(person.acquiredAt),((now-person.acquiredAt)/60_000).coerceAtLeast(0))+(person.accuracy?.let {" · "+uiText("accuracy",it)}?:"")
+@Composable private fun positionText(person:MapPerson,now:Long):String=if(person.assignedPosition&&person.point!=null&&person.acquiredAt==null){if(LocalUiLanguage.current=="en")"Time unavailable" else "日時不明"}else if(person.point==null||person.acquiredAt==null)person.lastKnownAt?.let {(if(LocalUiLanguage.current=="en")"Location unknown · Last updated: " else "位置不明・最終取得：")+io.github.nevaseme.plandmk1.core.usDateTime(it)}?:uiText("position_unreceived") else uiText("position_time",io.github.nevaseme.plandmk1.core.usTime(person.acquiredAt),((now-person.acquiredAt)/60_000).coerceAtLeast(0))+(person.accuracy?.let {" · "+uiText("accuracy",it)}?:"")
 
 @OptIn(ExperimentalMaterial3Api::class,ExperimentalLayoutApi::class)
 @Composable
@@ -82,6 +83,7 @@ fun SituationScreen(
     var neighborhoodId by rememberSaveable {mutableStateOf<String?>(null)}
     val statistics=neighborhoods.map {it.row}.ifEmpty { listOf(io.github.nevaseme.plandmk1.core.CommunityRow("group",statisticsLabel,statisticsLabel,total=people.size,sos=people.count {it.state==MapSafety.SOS},unreported=people.count {it.state==MapSafety.UNANSWERED},safe=people.count {it.state==MapSafety.SAFE},rescued=people.count {it.state==MapSafety.RESCUED})) }
     var choosingReport by rememberSaveable {mutableStateOf(false)}
+    var reportPreview by remember(choosingReport) {mutableStateOf<MapPoint?>(null)}
     var showSafe by rememberSaveable { mutableStateOf(true) }
     var tsunami by rememberSaveable { mutableStateOf(false) }
     val tsunamiEnglish=LocalUiLanguage.current=="en"
@@ -153,9 +155,10 @@ fun SituationScreen(
                 onPerson = { selectedId = it.id; sheet = "person" },
                 onHome = { extraHome = it; homePersonId = null; homeId = it.id; sheet = "home" },
                 onOverlapping = { areaIds = it.map(MapPerson::id); listFilter = null; sheet = "overlap" }, onError = { failed = true }, modifier = Modifier.fillMaxSize(),
-                registeredBuildingIds=registeredBuildingIds,assessmentIntensity=assessmentIntensity,onReportPoint=if(choosingReport){{point->choosingReport=false;onAddReport?.invoke(point)}}else null,reports=reports,onReport=onReport)
+                registeredBuildingIds=registeredBuildingIds,assessmentIntensity=assessmentIntensity,reportPreview=reportPreview,onReportPoint=if(choosingReport){{point->reportPreview=point}}else null,reports=reports,onReport=onReport)
             if(onAddReport!=null)Button(onClick={choosingReport=!choosingReport},modifier=Modifier.align(Alignment.BottomEnd).padding(end=14.dp,bottom=96.dp).heightIn(min=48.dp),shape=RoundedCornerShape(10.dp),contentPadding=PaddingValues(horizontal=15.dp,vertical=10.dp)){Text(uiText(if(choosingReport)"cancel" else "report_add"),fontSize=14.sp,fontWeight=FontWeight(750))}
-            if(choosingReport)Surface(Modifier.align(Alignment.TopCenter).padding(top=80.dp,start=12.dp,end=12.dp),shape=RoundedCornerShape(10.dp)){Text(uiText("choose_report_point"),Modifier.padding(12.dp))}
+            if(choosingReport)Button(onClick={reportPreview?.let {choosingReport=false;onAddReport?.invoke(it)}},enabled=reportPreview!=null,modifier=Modifier.align(Alignment.BottomCenter).padding(bottom=156.dp)){Text(if(LocalUiLanguage.current=="en")"Use this location" else "この場所を使う")}
+            if(choosingReport)Surface(Modifier.align(Alignment.TopStart).padding(top=12.dp,start=12.dp,end=80.dp),shape=RoundedCornerShape(10.dp)){Text(uiText("choose_report_point"),Modifier.padding(12.dp))}
             Surface(Modifier.align(Alignment.TopEnd).padding(12.dp), shape = RoundedCornerShape(14.dp), shadowElevation = 3.dp, color = MaterialTheme.colorScheme.surface) {
                 Column {
                     IconButton(onClick = { camera.zoom(1.0) }) { Text("+", fontSize = 26.sp, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.semantics { contentDescription = if(tsunamiEnglish)"Zoom in" else "地図を拡大" }) }
@@ -233,11 +236,11 @@ fun SituationScreen(
 @Composable fun BuildingMapDetail(home:MapHome,counts:BuildingResidentCounts,people:List<MapPerson>,now:Long,onResidentPosition:(MapPoint)->Unit,onResidentDetail:(MapPerson)->Unit,close:()->Unit,outsideNeighborhood:Boolean=false) {
     Column(Modifier.fillMaxWidth().fillMaxHeight(.86f).verticalScroll(rememberScrollState()).padding(horizontal=22.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
         DetailHeading(uiText("building_details"),menuText(demoAddressLabel(home.address,LocalUiLanguage.current)).takeIf {it.isNotBlank()},close)
-        if(outsideNeighborhood)Text(if(LocalUiLanguage.current=="en")"This building is outside your neighborhood." else "この建物は所属する町内会の範囲外です。",color=MaterialTheme.colorScheme.onSurfaceVariant)
         HomeAttributes(home,showYear=true,now=now)
         Text(if(LocalUiLanguage.current=="en")"Total residents: ${counts.total}" else "登録住民：${counts.total}人",fontWeight=FontWeight.Bold)
         Text("${safetyText(MapSafety.SAFE)} ${counts.safe} · ${safetyText(MapSafety.UNANSWERED)} ${counts.unanswered}\nSOS ${counts.sos} · ${safetyText(MapSafety.RESCUED)} ${counts.rescued}")
-        Text(uiText("no_response"),style=MaterialTheme.typography.titleMedium)
+        Text(if(LocalUiLanguage.current=="en")"Residents with no response" else "応答なしの人の一覧",style=MaterialTheme.typography.titleMedium)
+        if(outsideNeighborhood)Text(if(LocalUiLanguage.current=="en")"You cannot view individual details because you do not belong to this neighborhood." else "この町内会に所属していないため、個人の詳細は表示できません。",color=MaterialTheme.colorScheme.onSurfaceVariant)
         val members=disclosedBuildingResidents(home,people).filter {it.state==MapSafety.UNANSWERED}
         if(members.isEmpty()&&!outsideNeighborhood)Text(if(LocalUiLanguage.current=="en")"No individual details are shared for this building." else "この建物で共有されている個別情報はありません。",color=MaterialTheme.colorScheme.onSurfaceVariant)
         members.forEach {person->PersonRow(person,now,false){
@@ -291,7 +294,7 @@ fun filteredPeople(people:List<MapPerson>,filter:String?,now:Long)=when(filter){
         if (!unknown) StateSymbol(person.state) else PlanIcon("person", null)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(personText(person),fontSize=15.sp,lineHeight=22.sp,fontWeight=FontWeight.Bold)
-            Text(if(unknown&&person.registeredPlaceVisible)person.home?.address?.let {demoAddressLabel(it,LocalUiLanguage.current)}?:uiText("unregistered")else if(person.hasPosition(now))safetyText(person.state)+" · "+uiText("position_age",((now-(person.acquiredAt?:now))/60_000).coerceAtLeast(0))else uiText("unknown_location"),fontSize=13.sp,lineHeight=21.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(if(unknown&&person.lastKnownAt!=null)positionText(person,now)else if(unknown&&person.registeredPlaceVisible)person.home?.address?.let {demoAddressLabel(it,LocalUiLanguage.current)}?:uiText("unregistered")else if(person.hasPosition(now))safetyText(person.state)+" · "+(if(person.acquiredAt==null)positionText(person,now)else uiText("position_age",((now-person.acquiredAt)/60_000).coerceAtLeast(0)))else uiText("unknown_location"),fontSize=13.sp,lineHeight=21.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
             if(!person.hasPosition(now)&&person.registeredPlaceVisible&&person.bedroom.isNotBlank())Text(person.bedroom,fontSize=13.sp,lineHeight=21.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
 
         }

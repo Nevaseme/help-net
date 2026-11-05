@@ -206,15 +206,15 @@
     <string name="approved_coordinates">緯度・経度を入力する</string>
     <string name="approved_autostart_title">再起動後も安否共有を続ける</string>
     <string name="approved_autostart_explanation">この端末では「自動起動」の許可が必要な場合があります。裏側の共有処理を再開する設定です。アプリの画面が勝手に開くことはありません。</string>
-    <string name="approved_autostart_xiaomi_steps">「自動起動」または「バックグラウンド自動起動」で、PlanD Mk1をオンにしてください。</string>
-    <string name="approved_autostart_vivo_steps">「自動起動」で、PlanD Mk1をオンにしてください。</string>
+    <string name="approved_autostart_xiaomi_steps">「自動起動」または「バックグラウンド自動起動」で、Help Netをオンにしてください。</string>
+    <string name="approved_autostart_vivo_steps">「自動起動」で、Help Netをオンにしてください。</string>
     <string name="approved_autostart_open">設定を開く</string>
     <string name="approved_autostart_reviewed">確認した</string>
     <string name="approved_autostart_later">あとで</string>
     <string name="approved_autostart_settings">再起動後の安否共有</string>
     <string name="approved_autostart_later_hint">あとから「アプリ設定」→「再起動後の安否共有」でも確認できます。</string>
-    <string name="approved_autostart_fallback">設定画面を直接開けませんでした。端末の設定で「自動起動」を検索し、PlanD Mk1をオンにしてください。</string>
-    <string name="approved_autostart_unavailable">設定画面を開けませんでした。端末の設定を開いて「自動起動」を検索し、PlanD Mk1をオンにしてください。</string>
+    <string name="approved_autostart_fallback">設定画面を直接開けませんでした。端末の設定で「自動起動」を検索し、Help Netをオンにしてください。</string>
+    <string name="approved_autostart_unavailable">設定画面を開けませんでした。端末の設定を開いて「自動起動」を検索し、Help Netをオンにしてください。</string>
     <string name="approved_administrator">管理者画面</string>
     <string name="approved_unknown">不明</string>
 </resources>

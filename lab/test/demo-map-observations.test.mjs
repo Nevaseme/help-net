@@ -6,10 +6,11 @@ import {venueResidents} from '../web/venue-demo.mjs';
 import {personPresentation} from '../web/web1617-ui.mjs';
 import {communityMapOverview} from '../web/community-overview.mjs';
 
-test('old and new demo scenarios show identical fictional observations without changing identities or answers',()=>{
+test('explicit observations and legacy fallback preserve identities and answers',()=>{
  const scenario=createVenueScenario('session'),old=structuredClone(scenario);
  old.people.forEach(p=>delete p.observations);
- assert.deepEqual(withDemoObservations(old),scenario);
+ assert.deepEqual(withDemoObservations(scenario),scenario);
+ const restored=withDemoObservations(old);assert.deepEqual(restored.people.map(({observations,...p})=>p),old.people);assert.equal(restored.people[6].observations.enclosed,true);
  const venue={scenario,sessionId:'session',startedAt:1000,groupId:'g',placements:[{deviceId:'real',name:'Actual participant',latitude:35,longitude:135}]};
  const residents=venueResidents(venue);
  assert.equal(residents[0].impactAt,undefined);assert.equal(residents[0].enclosedAt,undefined);

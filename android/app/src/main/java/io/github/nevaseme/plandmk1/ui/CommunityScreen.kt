@@ -29,7 +29,7 @@ import java.util.UUID
 @Composable fun CommunityScreen(model:PlanViewModel,groupName:String,onCase:((ResponseTarget)->Unit)?=null,onClose:()->Unit){
  val context=LocalContext.current;val scope=rememberCoroutineScope();val en=LocalUiLanguage.current=="en";fun label(k:String)=communityLabel(k,en)
  val group by model.group.collectAsStateWithLifecycle();val state by model.incidentUi.collectAsStateWithLifecycle();val residents by model.residents.collectAsStateWithLifecycle();val care by model.careEvents.collectAsStateWithLifecycle();val allHeads by model.responseEvents.collectAsStateWithLifecycle();val venue by model.activeVenue.collectAsStateWithLifecycle();val roster by model.roster.collectAsStateWithLifecycle()
- val incident=state.current;val incidentId=incident?.start?.eventId;val heads=allHeads.filter {it.groupId==group&&it.incidentId==incidentId};val changes=heads.map {it.change}
+ val incident=state.current;val incidentId=incident?.start?.eventId;val heads=allHeads.filter {it.groupId==group&&it.incidentId==incidentId};val changes=heads.map {locateResponseChange(it.change,communityNamesFor(venue,groupName))}
  val editable=incident!=null&&!incident.closed&&runCatching {roster?.canTriage(model.localId)==true}.getOrDefault(false)
  val communities=communityNamesFor(venue,groupName)
  val people=communityPeopleFor(residents,care,venue,roster)

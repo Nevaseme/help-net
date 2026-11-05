@@ -223,6 +223,11 @@ internal object AdditionalUiMessages {
         "対応記録" to "Response record",
         "訓練の開始" to "Start drill",
         "地震発生・安否確認の開始" to "Start earthquake safety check",
-        "安否確認の終了" to "End safety check"
+        "安否確認の終了" to "End safety check",
+        "訓練開始" to "Drill start",
+        "地震報告" to "Earthquake report",
+        "救助の取り消し" to "Rescue correction",
+        "建物・住戸の登録" to "Building or home registration",
+        "訓練住居" to "Assigned home"
     )
 }

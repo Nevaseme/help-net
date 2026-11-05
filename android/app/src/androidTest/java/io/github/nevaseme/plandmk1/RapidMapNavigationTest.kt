@@ -70,7 +70,13 @@ class RapidMapNavigationTest {
         var retainedView: MapView? = null
         val frames=AtomicInteger()
         val startedFrames=AtomicInteger()
-        for(delayMs in listOf(100L,350L,800L,1500L,2500L,350L)) {
+        val arguments=InstrumentationRegistry.getArguments()
+        val traversal=arguments.getString("memoryTraversal")=="true"
+        val delays=listOf(100L,350L,800L,1500L,2500L,350L)
+        val route=listOf(LatLng(35.0,135.75),LatLng(35.03,135.75),LatLng(34.99,135.77),LatLng(35.01,135.72),LatLng(35.04,135.77))
+        var cacheConfigured=false
+        for(step in 0 until (if(traversal)10 else delays.size)) {
+            val delayMs=delays[step%delays.size]
             main {activity.testTab=0}
             val mapRef=AtomicReference<MapLibreMap>();val viewRef=AtomicReference<MapView>()
             await {main {if(viewRef.get()==null) mapViews(activity.window.decorView).firstOrNull()?.let {
@@ -84,7 +90,15 @@ class RapidMapNavigationTest {
             }
             else assertTrue("Tab changes must reuse the map",retainedView===viewRef.get())
             await {var ready=false;main {ready=map.style?.isFullyLoaded==true};ready}
-            main {map.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(35.0,135.75),11.5),300)}
+            if(!cacheConfigured) {
+                if(arguments.getString("disableTileCache")=="true") main {
+                    val started=SystemClock.elapsedRealtime()
+                    map.setTileCacheEnabled(false)
+                    android.util.Log.i("PlanD-rapid-tabs","disableTileCache setterMs=${SystemClock.elapsedRealtime()-started}")
+                }
+                cacheConfigured=true
+            }
+            main {map.animateCamera(CameraUpdateFactory.newLatLngZoom(if(traversal)route[step%route.size]else route.first(),11.5),300)}
             SystemClock.sleep(350)
             main {map.animateCamera(CameraUpdateFactory.zoomTo(15.5),300)}
             SystemClock.sleep(delayMs)
@@ -128,7 +142,11 @@ class RapidMapNavigationTest {
             assertTrue("Hidden map must stay stopped after cache maintenance delay",frames.get()==settledHiddenFrames)
             memory("before-trim")
             val trim=InstrumentationRegistry.getArguments().getString("trimMemory")!="false"
-            if(trim) main {retainedView!!.onLowMemory()}
+            if(trim) main {
+                // Exercise the system callback route, not a direct MapView call.
+                (inst.targetContext.applicationContext as android.app.Application)
+                    .onTrimMemory(android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW)
+            }
             SystemClock.sleep(10_000)
             memory(if(trim) "after-trim" else "control-no-trim")
             main {activity.testTab=0}

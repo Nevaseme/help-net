@@ -2,7 +2,16 @@ package io.github.nevaseme.plandmk1.core
 
 import kotlinx.serialization.Serializable
 
-@Serializable data class CommunityName(val id:String,val nameJa:String,val nameEn:String)
+@Serializable data class CommunityName(val id:String,val nameJa:String,val nameEn:String,val boundary:List<List<Double>>?=null)
+fun reportRegionIds(latitude:Double,longitude:Double,communities:List<CommunityName>):List<String> {
+ val region=communities.firstOrNull {community->
+  val ring=community.boundary.orEmpty();var inside=false
+  for(i in ring.indices){val a=ring[i];val b=ring[(i+1)%ring.size];if((a[1]>latitude)!=(b[1]>latitude)&&longitude<(b[0]-a[0])*(latitude-a[1])/(b[1]-a[1])+a[0])inside=!inside}
+  inside
+ };return region?.let {listOf(it.id)}?:emptyList()
+}
+fun locateResponseChange(change:ResponseChange,communities:List<CommunityName>):ResponseChange =
+ if(change is ResponseChange.Report&&communities.any {it.boundary!=null})change.copy(regionIds=reportRegionIds(change.latitude,change.longitude,communities))else change
 @Serializable data class CommunityPerson(val id:String,val name:String,val communityId:String?,val status:String,val fictional:Boolean=false,val buildingId:String?=null)
 @Serializable data class CommunityMaterial(val name:String,val unit:String,var shortfall:Double=0.0,var conflict:Boolean=false)
 @Serializable data class CommunityRow(val id:String,val nameJa:String,val nameEn:String,var total:Int=0,var fictional:Int=0,var safe:Int=0,var sos:Int=0,var rescued:Int=0,var unreported:Int=0,var injured:Int=0,var injuryUnknown:Int=0,var reports:Int=0,val materials:MutableList<CommunityMaterial> = mutableListOf())
@@ -15,7 +24,7 @@ fun demoCommunityFor(longitude:Double,cuts:List<Double>?=null):String? {
 fun communityInjury(changes:List<ResponseChange>,id:String)=changes.filterIsInstance<ResponseChange.Injury>().filter {it.target==ResponseTarget(TargetKind.PERSON,id)}.map {it.state}.distinct().singleOrNull()?:InjuryState.UNKNOWN
 fun communityOverview(people:List<CommunityPerson>,changes:List<ResponseChange>,communities:List<CommunityName>):List<CommunityRow>{
  val rows=communities.associate {it.id to CommunityRow(it.id,it.nameJa,it.nameEn)}.toMutableMap()
- fun region(id:String?)=id?.takeIf {candidate->communities.any {it.id==candidate}}?:communities.singleOrNull()?.id?:"unknown"
+ fun region(id:String?)=id?.takeIf {candidate->communities.any {it.id==candidate}}?:communities.singleOrNull()?.takeIf {it.boundary.isNullOrEmpty()}?.id?:"unknown"
  fun get(id:String?):CommunityRow {val key=region(id);return rows.getOrPut(key){CommunityRow(key,"未分類","Unassigned")}}
  val personRegions=mutableMapOf<String,String>()
  for(p in people.distinctBy {it.id}){val r=get(p.communityId);personRegions[p.id]=r.id;r.total++;if(p.fictional)r.fictional++;when(p.status){"SAFE"->r.safe++;"SOS"->r.sos++;"RESCUED"->r.rescued++;else->r.unreported++};when(communityInjury(changes,p.id)){InjuryState.INJURED->r.injured++;InjuryState.UNKNOWN->r.injuryUnknown++;else->Unit}}

@@ -4,6 +4,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {Journal} from '../src/journal.mjs';
 import {handle} from '../src/http.mjs';
 import venueBuildings from '../src/venue-buildings.json' with {type:'json'};
+import {compactBlockedRoadPoint} from '../src/venue-compact.mjs';
 import {blockedRoadSamplePoint} from '../src/venue-scenario.mjs';
 
 const id=()=>crypto.randomUUID(),token=()=>id().replaceAll('-','')+id().replaceAll('-','');
@@ -14,8 +15,8 @@ async function legacyRoadFixture(t){
  await f.call(`/groups/${g}/venue`,{requestId:id(),password,areaId:'kyoto-gosho-south'},admin.token);
  const journal=f.get(g),config=journal.venueConfig();
  const road=journal.history('responses').find(e=>e.change.type==='REPORT'&&e.change.category==='ROAD_BLOCKED');
- assert.equal(road.change.latitude,blockedRoadSamplePoint.latitude);
- assert.equal(road.change.longitude,blockedRoadSamplePoint.longitude);
+ assert.equal(road.change.latitude,compactBlockedRoadPoint.latitude);
+ assert.equal(road.change.longitude,compactBlockedRoadPoint.longitude);
  // Reconstruct the exact old saved seed without changing production migration rules.
  road.change.latitude=config.scenario.people[0].home.latitude;road.change.longitude=config.scenario.people[0].home.longitude;
  journal.s.run('UPDATE journal SET body=? WHERE collection=? AND record_key=?',JSON.stringify(road),'responses',road.eventId);
@@ -73,16 +74,16 @@ test('venue creates persistent fictional scenario without consuming audience ide
  const f=fixture(t),admin=await setup(f),g=admin.groupId,requestId=id();
  const input={requestId,password,areaId:'kyoto-gosho-south'};
  const start=await f.call(`/groups/${g}/venue`,input,admin.token);
- const scenario=start.body.venue.scenario;assert.equal(scenario?.people?.length,66);
- assert.equal(scenario.people.filter(p=>p.safety==='SAFE').length,40);assert.equal(scenario.people.filter(p=>p.safety==='UNREPORTED').length,13);assert.equal(scenario.people.filter(p=>p.initialRescue).length,6);assert.equal(new Set(scenario.people.map(p=>p.home.plateauId)).size,12);assert.equal(new Set(scenario.people.map(p=>p.home.placementId)).size,64);
+ const scenario=start.body.venue.scenario;assert.equal(scenario?.people?.length,96);
+ assert.equal(scenario.people.filter(p=>p.safety==='SAFE').length,88);assert.equal(scenario.people.filter(p=>p.safety==='UNREPORTED').length,4);assert.equal(scenario.people.filter(p=>p.initialRescue).length,0);assert.equal(new Set(scenario.people.map(p=>p.home.plateauId)).size,60);assert.equal(new Set(scenario.people.map(p=>p.home.householdId)).size,64);
  assert.equal(start.body.roster.members.length,1);assert.equal(start.body.venue.placements.length,1);
  assert.deepEqual(scenario.communityLongitudeCuts,[135.760,135.7644]);
- for(const c of scenario.communities){const residents=scenario.people.filter(p=>p.communityId===c.id);assert.equal(new Set(residents.map(p=>p.home.buildingId)).size,4);assert.ok(residents.some(p=>p.safety==='SAFE'));assert.ok(residents.some(p=>p.safety==='UNREPORTED'));assert.ok(residents.some(p=>p.safety==='SOS'&&!p.initialRescue));}
+ for(const c of scenario.communities){const residents=scenario.people.filter(p=>p.communityId===c.id);assert.equal(new Set(residents.map(p=>p.home.buildingId)).size,({'demo-west':17,'demo-central':27,'demo-east':16})[c.id]);assert.ok(residents.some(p=>p.safety==='SAFE'));assert.ok(residents.some(p=>p.safety==='UNREPORTED'));assert.ok(residents.some(p=>p.safety==='SOS'&&!p.initialRescue));}
  assert.ok(scenario.people.every(p=>p.home.plateauId&&p.home.buildingId&&p.home.address&&p.communityId));
  assert.deepEqual(new Set(scenario.people.map(p=>p.safety)),new Set(['SAFE','SOS','UNREPORTED']));
  assert.ok(scenario.people.every(p=>!/[\u3040-\u30ff\u3400-\u9fff]/.test(p.note+p.name+p.home.room)));
  assert.equal(f.get(g).history('responses').filter(r=>r.change.type==='REPORT').length,3);
- assert.equal(f.get(g).history('incidents').filter(r=>r.kind==='CARE'&&r.action==='RESCUED').length,6);
+ assert.equal(f.get(g).history('incidents').filter(r=>r.kind==='CARE'&&r.action==='RESCUED').length,0);
  const replay=await f.call(`/groups/${g}/venue`,input,admin.token);assert.deepEqual(replay.body.venue.scenario,scenario);
  assert.equal(f.get(g).history('responses').filter(r=>r.change.type==='REPORT').length,3);
 });
@@ -138,7 +139,7 @@ test('administrator selects actual positions; join creates no invented coordinat
  assert.equal(member.venue.placements.every(p=>p.source==='DEVICE_LOCATION'&&p.latitude===null&&p.longitude===null),true);
  const {saveVenue,venuePositions}=await import('../../lab/web/venue-demo.mjs');await saveVenue({read:async()=>null,update:async(_table,_key,fn)=>fn()},member);
  const point={groupId:g,originId:member.deviceId,revision:1,latitude:35.66,longitude:139.73,acquiredAt:Date.now(),accuracyMeters:20};
- const actual=rows=>rows.filter(p=>p.originId===member.deviceId);assert.equal(actual(venuePositions(member.venue,[])).length,0);assert.equal(actual(venuePositions(member.venue,[{...point,acquiredAt:1}])).length,0);assert.deepEqual(actual(venuePositions(member.venue,[point])),[point]);assert.equal(venuePositions(member.venue,[]).length,64);
+ const actual=rows=>rows.filter(p=>p.originId===member.deviceId);assert.equal(actual(venuePositions(member.venue,[])).length,0);assert.equal(actual(venuePositions(member.venue,[{...point,acquiredAt:1}])).length,0);assert.deepEqual(actual(venuePositions(member.venue,[point])),[point]);assert.equal(venuePositions(member.venue,[]).length,94);
  assert.equal((await f.call(`/groups/${g}/records`,{records:[{collection:'positions',record:point}]},member.token)).status,200);
  assert.equal(f.get(g).history('residents').length,0);assert.equal(f.get(g).history('positions').length,1);
 });
@@ -214,7 +215,8 @@ test('only administrator can reverse another author rescue; server preserves sig
  const f=fixture(t),admin=await setup(f),g=admin.groupId,sessionId=id();
  await f.call(`/groups/${g}/venue`,{requestId:sessionId,password,areaId:'kyoto-gosho-south'},admin.token);
  const member=(await f.call('/venue/join',{groupName:'会場テスト',password,activityName:'Helper',deviceId:id(),registrationToken:token()})).body;
- const original=f.get(g).history('incidents').find(e=>e.kind==='CARE'&&e.action==='RESCUED');
+ const original={groupId:g,eventId:id(),incidentId:sessionId,authorId:admin.deviceId,authorName:'Administrator',sequence:2,createdAt:Date.now(),kind:'CARE',subjectId:f.get(g).venueConfig().scenario.people[0].deviceId,action:'RESCUED',note:'Assisted to safety.',area:'',title:'',training:true,safety:null};
+ assert.equal((await f.call(`/groups/${g}/records`,{records:[{collection:'incidents',record:original}]},admin.token)).status,200);
  const push=(record,auth)=>f.call(`/groups/${g}/records`,{records:[{collection:'incidents',record}]},auth);
  const base={...original,eventId:id(),authorId:member.deviceId,authorName:'Helper',sequence:2,createdAt:Date.now(),action:'REVOKED',supersedes:original.eventId};
  const denied=await push(base,member.token);assert.equal(denied.status,403,JSON.stringify(denied.body));assert.equal(denied.body.error.code,'care_forbidden');
@@ -240,7 +242,7 @@ test('administrator starts venue and forty named attendees join its existing inc
  assert.equal(new Set(joined.map(r=>r.memberId)).size,40);
  const replay=await f.call('/venue/join',inputs[0]);assert.equal(replay.body.memberId,joined[0].memberId);
  const snapshot=f.get(admin.groupId).snapshot();assert.equal(snapshot.roster.members.length,41);
- assert.equal(snapshot.venue.placements.length,41);assert.equal(new Set(snapshot.venue.placements.map(p=>p.latitude+':'+p.longitude)).size,41);assert.ok(new Set(snapshot.venue.placements.map(p=>p.home.buildingId)).size>1);assert.ok(snapshot.venue.placements.every(p=>p.communityId==='demo-central'));
+ assert.equal(snapshot.venue.placements.length,41);assert.equal(new Set(snapshot.venue.placements.map(p=>p.latitude+':'+p.longitude)).size,41);assert.equal(new Set(snapshot.venue.placements.map(p=>p.home.householdId)).size,41);assert.ok(snapshot.venue.placements.every(p=>p.communityId==='demo-central'&&p.home.buildingUse==='apartments'));
  assert.equal(f.get(admin.groupId).history('residents').length,0);
  const text=JSON.stringify(snapshot);assert.equal(text.includes(password),false);assert.equal(text.includes('passwordHash'),false);
 });
