@@ -1,0 +1,12 @@
+const versions=[
+ {id:'helpnet-map-review-comparison',title:'Help Net · PWA 1.6.45 実装確認',summary:'地図操作を内容の幅に合わせて配置し、通報の印を地点からずらしました。建物詳細は同じ町内会の応答なしの人を表示し、範囲外には短い説明を出します。',scenes:[['web-map','地図','余白を整理した地図と通報の印。'],['web-outside-neighborhood','範囲外の建物','所属町内会の範囲外という短い案内。'],['web-same-neighborhood','応答なしの人','同じ町内会の応答なし3人。SOSの人物情報はこの一覧に含みません。'],['web-report-open','地図から通報','地図のまま開いた通報詳細。'],['web-320','320px幅','狭い画面でも3つの操作を表示。']]},
+ {id:'helpnet-map-review-android',title:'Help Net · Android 1.5.73 実装確認',summary:'津波操作の余白と位置不明の文字欠けを修正し、通報を地図上で開閉できるようにしました。パネルのドラッグ追従を含め、Android実装をエミュレーターで確認した画像です。',scenes:[['android-toolbar-360','360dp幅','幅360dpで3つの地図操作を表示。'],['android-toolbar-large-text','文字拡大','拡大文字は折り返して操作を保つ。'],['android-report-map-open','地図から通報','通報詳細を開いてもMapが選択されたまま。'],['android-report-map-closed','通報を閉じた後','通報を閉じても地図を維持。'],['android-drag-held','ドラッグ中','指に追従して動くAndroidのパネル。']]}
+];
+for(const version of versions){
+ const section=document.createElement('section');section.className='view';section.id=version.id;
+ section.innerHTML=`<header class="comparison-caption" style="height:auto;min-height:126px"><h1 class="comparison-label"></h1><p class="comparison-summary"></p></header><nav aria-label="実装確認画像" style="display:flex;flex-wrap:wrap;gap:8px;margin:12px 0"></nav><img style="display:block;width:100%;height:auto;border-radius:16px"><p style="font-size:14px"><a href="https://tasukeai-sync.tomodachi-takumi.workers.dev/" target="_blank" rel="noopener">Webアプリを開く</a></p>`;
+ section.querySelector('h1').textContent=version.title;section.querySelector('.comparison-summary').textContent=version.summary;
+ for(const [file,label,alt] of version.scenes){const b=document.createElement('button');b.type='button';b.textContent=label;b.style.cssText='min-height:48px;padding:8px 12px;border:1px solid #617786;border-radius:8px;cursor:pointer;font:inherit';b.onclick=()=>{for(const peer of section.querySelectorAll('nav button')){const active=peer===b;peer.setAttribute('aria-pressed',String(active));peer.style.background=active?'#155eef':'#fff';peer.style.color=active?'#fff':'#183447';}const img=section.querySelector('img');img.src=`helpnet-map-review/${file}.png`;img.alt=alt;};section.querySelector('nav').append(b);}
+ document.getElementById('board').append(section);section.querySelector('nav button').click();
+ if(location.hash===`#${version.id}`)section.scrollIntoView({inline:'start',block:'start'});
+}
