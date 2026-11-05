@@ -1,4 +1,4 @@
-import {compactScenario,compactBlockedRoadPoint} from './venue-compact.mjs';
+import {compactScenario,compactReportPoints} from './venue-compact.mjs';
 import catalogue from './venue-buildings.json' with {type:'json'};
 import {withDemoObservations,withUnknownDemoResidents} from '../../lab/web/venue-observations.mjs';
 
@@ -42,7 +42,7 @@ export function seedVenueScenario(journal,actor,config){
  const reports=[['ROAD_BLOCKED','Fallen masonry blocks the narrow street. Keep pedestrians away.','Crowbars','pieces',4,1],['WATER_OUTAGE','Water supply is interrupted. Drinking water is needed.','Drinking water','litres',120,40],['BUILDING_DAMAGE','An exterior wall is damaged. The entrance needs inspection.','Safety helmets','pieces',8,3]];
  reports.forEach(([category,description,name,unit,needed,arranged],i)=>{
   const p=config.scenario.people.find(p=>p.communityId===['demo-west','demo-central','demo-east'][i])||config.scenario.people[i],reportId=crypto.randomUUID(),target={kind:'REPORT',id:reportId};
-  const point=i===0?(config.scenario.layoutVersion===2?compactBlockedRoadPoint:blockedRoadSamplePoint):p.home;
+  const point=config.scenario.layoutVersion===3?compactReportPoints[category]:i===0?(config.scenario.layoutVersion===2?{latitude:35.01208791859861,longitude:135.75812686573374}:blockedRoadSamplePoint):p.home;
   append({type:'REPORT',reportId,category,description,latitude:point.latitude,longitude:point.longitude,regionIds:[p.communityId]});
   append({type:'MATERIAL',target,requestId:crypto.randomUUID(),name,unit,needed,arranged});
   append({type:'PRIORITY',target,urgency:i===0?'HIGH':'MEDIUM',reason:i===0?'People may enter an obstructed street.':'A neighborhood response is needed.'});

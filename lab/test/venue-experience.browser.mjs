@@ -2,8 +2,9 @@ import assert from 'node:assert/strict';
 import {mkdir,writeFile} from 'node:fs/promises';
 import {chromium} from 'file:///C:/Users/TAKUMI/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
 import {startVenueServer} from './venue-server.mjs';
-const out=process.env.TEMP+'/pland-venue-20261106';await mkdir(out,{recursive:true});
-const server=await startVenueServer({cityFixture:true}),browser=await chromium.launch({headless:true,executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe'});
+const participants=Number(process.env.VENUE_PARTICIPANTS||1);
+const out=process.env.VENUE_OUTPUT||process.env.TEMP+'/pland-venue-20261106';await mkdir(out,{recursive:true});
+const server=await startVenueServer({cityFixture:true,publicAssets:process.env.VENUE_PUBLIC_ASSETS||null}),browser=await chromium.launch({headless:true,executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe'});
 const base=process.env.VENUE_TEST_BASE||server.base;
 const errors=[],japanese=[];
 async function routeLocalApi(context){if(base!==server.base)await context.route('**/api/**',async route=>{const request=route.request(),response=await fetch(server.base+new URL(request.url()).pathname+new URL(request.url()).search,{method:request.method(),headers:{...request.headers(),origin:server.base},...(request.method()==='POST'?{body:request.postDataBuffer()}:{})});await route.fulfill({status:response.status,headers:Object.fromEntries(response.headers),body:Buffer.from(await response.arrayBuffer())});});}
@@ -12,7 +13,16 @@ try{for(const mode of ['DRILL','EARTHQUAKE']){
  await routeLocalApi(context);await context.addInitScript(()=>{navigator.serviceWorker.register=async()=>({waiting:null,update:async()=>{}});});
  await page.route('**/tsunami-map.mjs',async route=>{const r=await route.fetch();await route.fulfill({response:r,body:(await r.text()).replace("L.control.zoom({position:'topright'}).addTo(map);","window.qaMap=map;L.control.zoom({position:'topright'}).addTo(map);").replace('vectorMap=layer.getMaplibreMap();','vectorMap=layer.getMaplibreMap();window.qaVector=vectorMap;')});});
  const audit=async name=>{const rows=await page.evaluate(()=>{const found=[];const re=/[\u3040-\u30ff\u3400-\u9fff]/;for(const e of document.querySelectorAll('body *')){if(e.closest('script,style,[hidden]')||!e.checkVisibility({checkOpacity:true,checkVisibilityCSS:true}))continue;if(e.matches('input:not([type=password]):not([type=hidden]),textarea')&&re.test(e.value))found.push({tag:e.tagName,id:e.id,attribute:'value',text:e.value});for(const a of ['aria-label','title','placeholder']){const v=e.getAttribute(a);if(v&&re.test(v))found.push({tag:e.tagName,id:e.id,attribute:a,text:v});}for(const n of e.childNodes)if(n.nodeType===Node.TEXT_NODE&&re.test(n.textContent))found.push({tag:e.tagName,id:e.id,text:n.textContent.trim()});}return found;});japanese.push(...rows.map(x=>({mode,screen:name,...x})));};
- await page.goto(base);await page.evaluate(async mode=>{const {Store}=await import('/sync.mjs'),{CloudClient}=await import('/cloud-client.mjs');const s=await Store.open('tasukeai-cloud'),c=new CloudClient(s,await s.identity()),g=await c.register('create',{groupName:'Venue check '+mode,activityName:'Organizer'});await c.startVenue(g.groupId,'VenueCheck123',{presentationMode:mode});await c.sync(g.groupId);s.close();},mode);
+ await page.goto(base);const fixture=await page.evaluate(async ({mode,participants})=>{const {Store}=await import('/sync.mjs'),{CloudClient}=await import('/cloud-client.mjs');const s=await Store.open('tasukeai-cloud'),c=new CloudClient(s,await s.identity()),g=await c.register('create',{groupName:'Venue check '+mode,activityName:'Organizer'});await c.startVenue(g.groupId,'VenueCheck123',{presentationMode:mode});
+ for(let i=1;i<participants;i++){
+  const j=await c.request('/venue/join',{body:{groupName:'Venue check '+mode,password:'VenueCheck123',activityName:'Participant '+(i+1),deviceId:crypto.randomUUID(),registrationToken:crypto.randomUUID().replaceAll('-','')+crypto.randomUUID().replaceAll('-','')}});
+  await c.request('/groups/'+g.groupId+'/records',{session:j,body:{records:[{collection:'incidents',record:{groupId:g.groupId,eventId:crypto.randomUUID(),incidentId:j.venue.incidentId,authorId:j.deviceId,authorName:'Participant '+(i+1),sequence:1,createdAt:Date.now(),kind:'ANSWER',safety:'SAFE'}}]}});
+ }
+ await c.sync(g.groupId);const envelope=await c.request('/groups/'+g.groupId+'/roster',{session:g}),records=[];let cursor=0;
+ while(true){const page=await c.request('/groups/'+g.groupId+'/records?after='+cursor+'&limit=100',{session:g});records.push(...page.records);cursor=page.nextCursor;if(!page.hasMore)break;}
+ s.close();return {envelope,records};},{mode,participants});
+ assert.equal(fixture.envelope.venue.placements.length,participants);
+ if(participants===32&&mode==='DRILL'&&process.env.VENUE_WRITE_FIXTURE==='1')await writeFile('android/app/src/androidTest/assets/venue-experience-fixture.json',JSON.stringify(fixture,null,2));
  await page.reload();await page.waitForFunction(()=>document.body.dataset.page==='safety'&&!document.querySelector('#safe').disabled);assert.equal(await page.locator('html').getAttribute('lang'),'en');
  for(const name of ['buildings','residents','response'])assert.equal(await page.locator(`[data-tab="${name}"]`).isDisabled(),true);assert.equal(await page.locator('#menu-open').isDisabled(),true);
  assert.equal(await page.locator('header h1').innerText(),mode==='DRILL'?'Drill':'Earthquake');await audit('safety');await page.screenshot({path:out+'/'+mode+'-safety.png'});
@@ -32,7 +42,9 @@ try{for(const mode of ['DRILL','EARTHQUAKE']){
    if(region==='demo-central')await sheet.getByRole('button').filter({hasText:person.name}).waitFor();else{assert.match(await sheet.innerText(),/You cannot view individual details because you do not belong to this neighborhood\./);assert.equal(await sheet.locator('[data-building-person]').count(),0);}
    await audit(region+'-building');await page.screenshot({path:out+'/'+mode+'-'+region+'-building.png'});await sheet.locator('.sheet-close').click();
   }
-  await page.evaluate(()=>window.qaMap.setView([35.014625,135.764],18,{animate:false}));await page.waitForTimeout(800);await page.screenshot({path:out+'/'+mode+'-compact-map.png'});
+  await page.evaluate(()=>window.qaMap.setView([35.01395,135.76395],19,{animate:false}));await page.waitForTimeout(800);await page.screenshot({path:out+'/'+mode+'-compact-map.png'});
+  await page.evaluate(()=>window.qaMap.setView([35.01395,135.76395],17.75,{animate:false}));await page.waitForTimeout(900);await page.screenshot({path:out+'/'+mode+'-neighborhoods.png'});
+  await page.evaluate(()=>window.qaMap.setView([35.01395,135.76395],19,{animate:false}));await page.waitForTimeout(700);
   await page.locator('#map-show-safe').uncheck();await page.waitForTimeout(250);await page.screenshot({path:out+'/'+mode+'-compact-focused.png'});await page.locator('#map-show-safe').check();
  }
  await page.locator('#map-report-add').click();assert.equal(await page.locator('#map-pick-confirm').isDisabled(),true);

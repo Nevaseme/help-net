@@ -4,7 +4,9 @@ import {readFile} from 'node:fs/promises';
 import {extname} from 'node:path';
 import {Journal} from '../../cloud-sync/src/journal.mjs';
 import {handle} from '../../cloud-sync/src/http.mjs';
-export async function startVenueServer({cityFixture=false}={}){
+export async function startVenueServer({cityFixture=false,publicAssets=null}={}){
+ // Public verification reads static assets only. Every API request stays in this disposable server.
+ if(publicAssets&&new URL(publicAssets).origin!=='https://tasukeai-sync.tomodachi-takumi.workers.dev')throw Error('Unexpected public asset origin');
  const groups=new Map();
  const env={SIGNUP_LIMITER:{limit:async()=>({success:true})},GROUPS:{getByName(name){
   if(!groups.has(name)){
@@ -21,7 +23,11 @@ export async function startVenueServer({cityFixture=false}={}){
   if(url.pathname.startsWith('/api/')){const chunks=[];for await(const c of req)chunks.push(c);const response=await handle(new Request(url,{method:req.method,headers:req.headers,...(req.method==='POST'?{body:Buffer.concat(chunks)}:{})}),env);res.writeHead(response.status,Object.fromEntries(response.headers));res.end(Buffer.from(await response.arrayBuffer()));return;}
   if(cityFixture&&url.pathname.startsWith('/data/cities/')){const relative=decodeURIComponent(url.pathname.slice('/data/cities/'.length));if(relative.split('/').some(p=>p==='..')||relative.includes('\\'))throw Error('path');const bytes=await readFile(new URL('../../demo/data/cities/'+relative,import.meta.url));res.writeHead(200,{'content-type':mime[extname(relative)]||'application/octet-stream'});res.end(bytes);return;}
   const file=url.pathname==='/'?'index.html':url.pathname.slice(1);if(file.includes('/')||file.includes('..'))throw Error('path');
-  let body=await readFile(new URL('../web/'+file,import.meta.url));if(cityFixture&&['city-addresses.mjs','sw.js'].includes(file))body=Buffer.from(body.toString().replace('https://nevaseme.github.io/safety_confirm/data/cities/',url.origin+'/data/cities/'));res.writeHead(200,{'content-type':mime[extname(file)]||'application/octet-stream'});res.end(body);
+  if(req.method!=='GET'){res.writeHead(405);res.end();return;}
+  let body;
+  if(publicAssets){const remote=await fetch(publicAssets+'/'+file,{method:'GET'});if(!remote.ok)throw Error('Public asset unavailable: '+file);body=Buffer.from(await remote.arrayBuffer());}
+  else body=await readFile(new URL('../web/'+file,import.meta.url));
+  if(cityFixture&&['city-addresses.mjs','sw.js'].includes(file))body=Buffer.from(body.toString().replace('https://nevaseme.github.io/safety_confirm/data/cities/',url.origin+'/data/cities/'));res.writeHead(200,{'content-type':mime[extname(file)]||'application/octet-stream'});res.end(body);
  }catch{res.writeHead(404);res.end();}});
  await new Promise(r=>server.listen(0,'127.0.0.1',r));return {base:'http://127.0.0.1:'+server.address().port,close:async()=>{await new Promise(r=>server.close(r));groups.forEach(g=>g.db.close());}};
 }

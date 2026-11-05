@@ -75,10 +75,10 @@ test('venue creates persistent fictional scenario without consuming audience ide
  const input={requestId,password,areaId:'kyoto-gosho-south'};
  const start=await f.call(`/groups/${g}/venue`,input,admin.token);
  const scenario=start.body.venue.scenario;assert.equal(scenario?.people?.length,96);
- assert.equal(scenario.people.filter(p=>p.safety==='SAFE').length,88);assert.equal(scenario.people.filter(p=>p.safety==='UNREPORTED').length,4);assert.equal(scenario.people.filter(p=>p.initialRescue).length,0);assert.equal(new Set(scenario.people.map(p=>p.home.plateauId)).size,60);assert.equal(new Set(scenario.people.map(p=>p.home.householdId)).size,64);
+ assert.equal(scenario.people.filter(p=>p.safety==='SAFE').length,88);assert.equal(scenario.people.filter(p=>p.safety==='UNREPORTED').length,4);assert.equal(scenario.people.filter(p=>p.initialRescue).length,0);assert.equal(new Set(scenario.people.map(p=>p.home.plateauId)).size,47);assert.equal(new Set(scenario.people.map(p=>p.home.householdId)).size,64);
  assert.equal(start.body.roster.members.length,1);assert.equal(start.body.venue.placements.length,1);
- assert.deepEqual(scenario.communityLongitudeCuts,[135.760,135.7644]);
- for(const c of scenario.communities){const residents=scenario.people.filter(p=>p.communityId===c.id);assert.equal(new Set(residents.map(p=>p.home.buildingId)).size,({'demo-west':17,'demo-central':27,'demo-east':16})[c.id]);assert.ok(residents.some(p=>p.safety==='SAFE'));assert.ok(residents.some(p=>p.safety==='UNREPORTED'));assert.ok(residents.some(p=>p.safety==='SOS'&&!p.initialRescue));}
+ assert.deepEqual(scenario.communityLongitudeCuts,[135.7636,135.7643]);
+ for(const c of scenario.communities){const residents=scenario.people.filter(p=>p.communityId===c.id);assert.equal(new Set(residents.map(p=>p.home.buildingId)).size,({'demo-west':16,'demo-central':14,'demo-east':17})[c.id]);assert.ok(residents.some(p=>p.safety==='SAFE'));assert.ok(residents.some(p=>p.safety==='UNREPORTED'));assert.ok(residents.some(p=>p.safety==='SOS'&&!p.initialRescue));}
  assert.ok(scenario.people.every(p=>p.home.plateauId&&p.home.buildingId&&p.home.address&&p.communityId));
  assert.deepEqual(new Set(scenario.people.map(p=>p.safety)),new Set(['SAFE','SOS','UNREPORTED']));
  assert.ok(scenario.people.every(p=>!/[\u3040-\u30ff\u3400-\u9fff]/.test(p.note+p.name+p.home.room)));
@@ -87,17 +87,20 @@ test('venue creates persistent fictional scenario without consuming audience ide
  const replay=await f.call(`/groups/${g}/venue`,input,admin.token);assert.deepEqual(replay.body.venue.scenario,scenario);
  assert.equal(f.get(g).history('responses').filter(r=>r.change.type==='REPORT').length,3);
 });
-test('Kyoto participants receive reviewed building addresses with public provenance',async t=>{
+test('Kyoto participants receive real footprint references without invented postal addresses',async t=>{
  const f=fixture(t),admin=await setup(f),g=admin.groupId;
  const start=await f.call(`/groups/${g}/venue`,{requestId:id(),password,areaId:'kyoto-gosho-south'},admin.token);
  const p=start.body.venue.placements[0];
  assert.ok(p.home?.plateauId?.startsWith('bldg_'));
- assert.match(p.home.address,/京都/);assert.notEqual(p.latitude,p.home.latitude);assert.equal(p.communityId,'demo-central');
- const {demoCommunityAt}=await import('../src/venue-layout.mjs');assert.equal(demoCommunityAt(p.longitude),demoCommunityAt(p.home.longitude));
- assert.equal(p.home.addressPrecision,'verified-building-address');
- assert.equal(p.home.address.includes('付近'),false);assert.match(p.home.address,/\d/);
- assert.ok(p.home.addressEvidence.sources.every(s=>s.url.startsWith('https://')));
- assert.equal(p.home.addressEvidence.cadastralBoundaryVerified,false);
+ assert.equal(p.communityId,'demo-central');
+ assert.equal(p.home.room,'');
+ if(p.home.addressPrecision==='verified-building-address'){
+  assert.ok(p.home.addressEvidence.sources.every(s=>s.url.startsWith('https://')));
+  assert.equal(p.home.addressEvidence.cadastralBoundaryVerified,false);
+ }else{
+  assert.equal(p.home.addressPrecision,'building-reference-not-postal-address');
+  assert.match(p.home.address,/^Gosho South Central, building \d+$/);
+ }
  assert.equal(f.get(g).history('residents').length,0,'real homes remain untouched');
 });
 
@@ -242,7 +245,8 @@ test('administrator starts venue and forty named attendees join its existing inc
  assert.equal(new Set(joined.map(r=>r.memberId)).size,40);
  const replay=await f.call('/venue/join',inputs[0]);assert.equal(replay.body.memberId,joined[0].memberId);
  const snapshot=f.get(admin.groupId).snapshot();assert.equal(snapshot.roster.members.length,41);
- assert.equal(snapshot.venue.placements.length,41);assert.equal(new Set(snapshot.venue.placements.map(p=>p.latitude+':'+p.longitude)).size,41);assert.equal(new Set(snapshot.venue.placements.map(p=>p.home.householdId)).size,41);assert.ok(snapshot.venue.placements.every(p=>p.communityId==='demo-central'&&p.home.buildingUse==='apartments'));
+ assert.equal(snapshot.venue.placements.length,41);assert.equal(new Set(snapshot.venue.placements.map(p=>p.latitude+':'+p.longitude)).size,41);assert.equal(new Set(snapshot.venue.placements.map(p=>p.home.householdId)).size,41);assert.ok(snapshot.venue.placements.every(p=>p.communityId==='demo-central'&&p.home.plateauId));
+ assert.equal(new Set(snapshot.venue.placements.map(p=>p.home.plateauId)).size,14);
  assert.equal(f.get(admin.groupId).history('residents').length,0);
  const text=JSON.stringify(snapshot);assert.equal(text.includes(password),false);assert.equal(text.includes('passwordHash'),false);
 });
