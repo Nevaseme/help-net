@@ -2,7 +2,7 @@
 export function wireSheetHandle(sheet){
  const old=sheet.querySelector('.sheet-handle');if(!old||old.tagName==='BUTTON')return;
  const handle=document.createElement('button');handle.type='button';handle.className='sheet-handle';handle.tabIndex=-1;
- handle.setAttribute('aria-label',document.documentElement.lang==='en'?'Drag to close':'下にドラッグして閉じる');old.replaceWith(handle);sheet.querySelector('header button')?.setAttribute('autofocus','');
+ handle.setAttribute('aria-label',document.documentElement.lang==='en'?'Drag to close':'下にドラッグして閉じる');old.replaceWith(handle);
  let start=null,offset=0,moved=false,animation=null;
  const reset=()=>{start=null;offset=0;sheet.style.transform='';sheet.style.willChange='';};
  const settle=close=>{const from=offset,to=close?sheet.getBoundingClientRect().height+80:0;reset();animation?.cancel();

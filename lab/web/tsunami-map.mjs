@@ -85,9 +85,9 @@ export function createTsunamiMap(){
   import('./vector-basemap.mjs').then(async({addVectorBasemap})=>{const layer=await addVectorBasemap(map);vectorMap=layer.getMaplibreMap();import('./building-risk.mjs').then(({installBuildingRisk})=>installBuildingRisk(layer.getMaplibreMap()).then(highlightRegisteredBuildings)).catch(()=>{$('tsunami-map').dataset.buildingRisk='unavailable';});layer.getMaplibreMap().on('error',()=>{$('tsunami-basemap-state').textContent=t('背景地図を取得できません。圏外で使うには市全域の地図を保存してください。');});layer.getMaplibreMap().on('idle',()=>{$('tsunami-basemap-state').textContent='';});}).catch(()=>{$('tsunami-basemap-state').textContent=t('背景地図を読み込めませんでした');});
   if(initialFocus)map.setView(initialFocus,15,{animate:false});else center();drawCases();locationControl=currentLocationControl({getDemoLocation:()=>demoLocation,button:$('tsunami-fit'),isVisible:()=>!$('buildings').hidden,onFix:fix=>{
    if(!fix){myDot?.remove();myAccuracy?.remove();myDot=null;myAccuracy=null;return;}
-   const point=[fix.latitude,fix.longitude];
+   const point=[fix.latitude,fix.longitude];if(!map.getPane('my-location'))map.createPane('my-location').style.zIndex='650';
    if(!myAccuracy)myAccuracy=L.circle(point,{className:'my-location-accuracy',radius:fix.accuracy,color:'#2675df',weight:1,opacity:.25,fillOpacity:.12,interactive:false}).addTo(map);else myAccuracy.setLatLng(point).setRadius(fix.accuracy);
-   if(!myDot)myDot=L.circleMarker(point,{className:'my-location-dot',radius:7,color:'#fff',weight:3,fillColor:'#2675df',fillOpacity:1,interactive:false}).addTo(map);else myDot.setLatLng(point);
+   if(!myDot)myDot=L.circleMarker(point,{pane:'my-location',className:'my-location-dot',radius:7,color:'#fff',weight:3,fillColor:'#2675df',fillOpacity:1,interactive:false}).addTo(map);else myDot.setLatLng(point);
   },onCenter:fix=>map.setView([fix.latitude,fix.longitude],Math.max(16,map.getZoom()),{animate:false}),onMessage:message=>$('current-location-status').textContent=message});
   map.on('dragstart zoomstart',()=>locationControl.cancelCenter());
   new MutationObserver(()=>locationControl.resume()).observe($('buildings'),{attributes:true,attributeFilter:['hidden']});locationControl.resume();

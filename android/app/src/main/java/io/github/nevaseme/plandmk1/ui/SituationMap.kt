@@ -99,6 +99,8 @@ fun SituationMap(
     val latestReport by rememberUpdatedState(onReport)
     val latestTsunami by rememberUpdatedState(tsunamiResult)
     val tsunamiEnglish by rememberUpdatedState(LocalUiLanguage.current=="en")
+    val mapLabels=remember {MapLabelLanguage()}
+    LaunchedEffect(ready,tsunamiEnglish){if(ready)controller?.style?.let {mapLabels.apply(it,tsunamiEnglish)}}
     val neighborhoodMarkers=remember {mutableMapOf<Long,String>()}
     val neighborhoodRendered=remember {mutableListOf<Marker>()}
     val neighborhoodImages=remember {mutableMapOf<String,String>()}
@@ -254,6 +256,7 @@ fun SituationMap(
                 }
             }
             map.setStyle(OfflineMapRepository.STYLE) { style ->
+                mapLabels.apply(style,tsunamiEnglish)
                 if (preview) {
                     val buildings = style.getLayer("building") as? FillLayer
                     // Preview classes only. Real strength assessments will supply their own attributes.

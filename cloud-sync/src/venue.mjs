@@ -17,10 +17,10 @@ async function passwordHash(password,salt){
 }
 const area={id:'kyoto-gosho-south',name:'御所南〜烏丸御池',south:35.011,north:35.018,west:135.758,east:135.767};
 function slots(){
- const counts=new Map();const points=catalogue.homes.map(home=>{const region=demoCommunityAt(home.longitude),slot=counts.get(region)||0;counts.set(region,slot+1);return {...demoPhonePoint(region,24+slot),home};});
- for(let n=points.length-1;n>0;n--){const r=crypto.getRandomValues(new Uint32Array(1))[0]%(n+1);[points[n],points[r]]=[points[r],points[n]];}
- return points;
+ const homes=catalogue.homes.filter(h=>demoCommunityAt(h.longitude)==='demo-central');
+ return Array.from({length:64},(_,slot)=>{const home=homes[slot%homes.length];return {...demoPhonePoint('demo-central',24+slot),communityId:'demo-central',home};});
 }
+
 export const venueMethods={
  venueInit(){
   this.s.run('CREATE TABLE IF NOT EXISTS venue_names (name TEXT PRIMARY KEY,group_id TEXT NOT NULL)');
@@ -31,7 +31,7 @@ export const venueMethods={
  venueSnapshot(){
   const config=this.venueConfig();if(!config)return null;
   const closed=this.history('quakes').some(e=>e.action==='END'&&(e.targetId===config.sessionId||e.endedIncidentIds?.includes(config.sessionId)));
-  return {version:1,mode:'VENUE_DEMO',positionMode:config.positionMode??'KYOTO',startedAt:config.startedAt??0,simulationStartedAt:config.simulationStartedAt??null,groupId:this.meta('groupId'),sessionId:config.sessionId,incidentId:config.sessionId,areaId:config.areaId,areaName:config.positionMode==='ACTUAL'?'参加者の現在地':area.name,closed,
+  return {version:1,mode:'VENUE_DEMO',positionMode:config.positionMode??'KYOTO',presentationMode:config.presentationMode??'DRILL',startedAt:config.startedAt??0,simulationStartedAt:config.simulationStartedAt??null,groupId:this.meta('groupId'),sessionId:config.sessionId,incidentId:config.sessionId,areaId:config.areaId,areaName:config.positionMode==='ACTUAL'?'参加者の現在地':area.name,closed,
    scenario:withDemoObservations(withUnknownDemoResidents(config.scenario))??null,recoveryAvailable:!config.privateTraining,inactiveMemberIds:this.inactiveMembers(),placements:this.s.all('SELECT p.body FROM venue_participants p LEFT JOIN device_access a ON a.device_id=p.device_id WHERE p.session_id=? AND COALESCE(a.revoked,0)=0 ORDER BY p.device_id',config.sessionId).map(r=>{const p=JSON.parse(r.body);if(config.positionMode==='ACTUAL')return p;const home=latestDemoHome(this.history('deviceRecords'),this.meta('groupId'),config.sessionId,p.deviceId)??p.home??config.slots[p.slotId]?.home??catalogue.homes[p.slotId];return {...p,home};})};
  },
  assignVenue(deviceId,memberId,name){
@@ -54,6 +54,7 @@ export const venueMethods={
   const actor=await this.identity(token);requireValue(actor.role==='ADMIN','admin_required',403);
   requireValue(input&&uuid(input.requestId)&&input.areaId===area.id);
   const privateTraining=input.privateTraining===true;
+  const presentationMode=input.presentationMode??'DRILL';requireValue(['DRILL','EARTHQUAKE'].includes(presentationMode),'invalid_presentation_mode',400);
   const elapsedMinutes=input.elapsedMinutes??(privateTraining?0:3);requireValue(Number.isInteger(elapsedMinutes)&&elapsedMinutes>=0&&elapsedMinutes<=1440,'invalid_demo_minutes',400);
   requireValue(input.positionMode===undefined||['KYOTO','ACTUAL'].includes(input.positionMode),'invalid_position_mode',400);
   if(!privateTraining)validateDemoPassword(input.password);
@@ -62,9 +63,9 @@ export const venueMethods={
   this.s.transaction(()=>{
    const previous=this.venueConfig();if(previous?.sessionId===input.requestId)return;
    requireValue(!previous||this.venueSnapshot().closed,'venue_already_active',409,'現在の会場デモを終了してから、新しいデモを開始してください。');
-   const config={sessionId:input.requestId,areaId:input.areaId,privateTraining,positionMode:input.positionMode??'KYOTO',startedAt:this.now(),simulationStartedAt:this.now()-elapsedMinutes*60000,salt,passwordHash:hash,slots:slots(),scenario:privateTraining?null:createVenueScenario(input.requestId)};
+   const config={sessionId:input.requestId,areaId:input.areaId,privateTraining,presentationMode,positionMode:input.positionMode??'KYOTO',startedAt:this.now(),simulationStartedAt:this.now()-elapsedMinutes*60000,salt,passwordHash:hash,slots:slots(),scenario:privateTraining?null:createVenueScenario(input.requestId)};
    this.s.run('INSERT INTO metadata(key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value','venue',JSON.stringify(config));
-   this.append(actor,{collection:'quakes',record:{groupId:this.meta('groupId'),eventId:input.requestId,actorDeviceId:actor.deviceId,operatedAt:this.now(),action:'TRAINING_START',training:true,title:privateTraining?input.title.trim():'会場デモ',area:privateTraining?input.area.trim():config.positionMode==='ACTUAL'?'参加者の現在地':area.name}});
+   this.append(actor,{collection:'quakes',record:{groupId:this.meta('groupId'),eventId:input.requestId,actorDeviceId:actor.deviceId,operatedAt:this.now(),action:'TRAINING_START',training:true,title:privateTraining?input.title.trim():presentationMode==='EARTHQUAKE'?'地震の安否確認':'安否確認の訓練',area:privateTraining?input.area.trim():config.positionMode==='ACTUAL'?'参加者の現在地':area.name}});
    if(config.scenario)seedVenueScenario(this,actor,config);
    for(const member of this.snapshot().roster.members)for(const device of member.deviceIds)if(!this.s.all('SELECT revoked FROM device_access WHERE device_id=?',device)[0]?.revoked)this.assignVenue(device,member.memberId,member.activityName);
   });await this.s.flush();return this.snapshot();

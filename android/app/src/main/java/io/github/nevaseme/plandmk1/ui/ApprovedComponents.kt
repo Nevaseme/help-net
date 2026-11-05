@@ -159,7 +159,7 @@ import androidx.compose.ui.unit.sp
         }
         HorizontalDivider()
         Text(menuText("言語 / Language"),fontSize=16.sp,fontWeight=FontWeight(750))
-        listOf("ja" to "日本語","en" to "English").forEach { (tag,label) ->
+        listOf("ja" to if(selected=="en")"Japanese" else "日本語","en" to "English").forEach { (tag,label) ->
             OutlinedCard(onClick={change(tag)},modifier=Modifier.fillMaxWidth(),border=androidx.compose.foundation.BorderStroke(1.dp,if(selected==tag)MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
                 colors=CardDefaults.outlinedCardColors(containerColor=if(selected==tag)MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface)) {
                 Row(Modifier.fillMaxWidth().heightIn(min=58.dp).padding(horizontal=16.dp),verticalAlignment=Alignment.CenterVertically) {

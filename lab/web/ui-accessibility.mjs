@@ -40,9 +40,12 @@ function setup(d){
  if(d.dataset.focusManaged)return;d.dataset.focusManaged='true';
  const close=d.close.bind(d);
  const bringToFront=()=>{const at=order.indexOf(d);if(at>=0)order.splice(at,1);order.push(d);d.inert=false;};
- for(const method of ['show','showModal']){const show=d[method].bind(d);d[method]=()=>{if(!d.open)origins.set(d,document.activeElement);show();bringToFront();syncSheets();};}
+ // Start at the heading rather than automatically highlighting the close button.
+ // Keyboard users can still Tab to every control, with its normal focus ring.
+ const focusHeading=()=>{const heading=d.querySelector('h2,h3');if(heading){heading.tabIndex=-1;heading.focus({preventScroll:true});}};
+ for(const method of ['show','showModal']){const show=d[method].bind(d);d[method]=()=>{if(!d.open)origins.set(d,document.activeElement);show();bringToFront();syncSheets();focusHeading();};}
  // Dynamically inserted dialogs may already have opened before this observer runs.
- if(d.open){bringToFront();syncSheets();}
+ if(d.open){bringToFront();syncSheets();focusHeading();}
  d.close=(...args)=>{const restore=d.contains(document.activeElement);close(...args);syncSheets();const origin=origins.get(d);if(restore){const destination=origin?.isConnected&&!origin.closest('[inert]')?origin:document.querySelector('.app-nav [aria-pressed="true"]');destination?.focus({preventScroll:true});}};
  d.addEventListener('close',()=>{if(!d.open){const at=order.indexOf(d);if(at>=0)order.splice(at,1);}syncSheets();});
 }

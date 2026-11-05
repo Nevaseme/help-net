@@ -2,7 +2,7 @@ import {usDateTime,usTime} from './date-time.mjs';
 import {buildingAge,linkedBuildingResidents,registeredBuildingForPerson,buildingAtRegisteredPlace} from './building-details.mjs';
 import {demoAddressLabel} from './demo-address-display.mjs';
 import {showCommunityScreen} from './community-screen.mjs';
-import {demoCommunityFor,communityMapOverview,communityOverview,areaCaseCategory,areaCaseCommunityIds} from './community-overview.mjs';
+import {demoCommunityAtPoint,demoCommunityFor,communityMapOverview,communityOverview,areaCaseCategory,areaCaseCommunityIds} from './community-overview.mjs';
 import {setHtml} from './dom-state.mjs';
 import {wireSheetHandle} from './sheet-handle.mjs';
 import {venuePositions} from './venue-demo.mjs';
@@ -83,7 +83,7 @@ export function personCommunity(snapshot, person) {
  const v=snapshot.venue;if(!v?.scenario)return 'group';
  const sample=v.scenario.people.find(p=>p.deviceId===person.originId);if(sample)return sample.communityId;
  if(v.positionMode==='ACTUAL')return 'venue';
- return demoCommunityFor(person.homeLongitude??person.longitude,v.scenario.communityLongitudeCuts);
+ return v.placements?.find(p=>p.deviceId===person.originId)?.communityId??demoCommunityAtPoint(person.homeLatitude??person.latitude,person.homeLongitude??person.longitude,v.scenario);
 }
 export function visiblePeople(snapshot) {
  const records=snapshot.records||[];if(!snapshot.venue?.scenario)return records;
@@ -112,7 +112,7 @@ export function responseCases(snapshot, heads) {
 
 export function createWeb1617Ui({map,snapshot,getStore,refreshSnapshot,changed,tab,selectPerson,selectBuilding}) {
  const $=id=>document.getElementById(id);
- let language='ja';try{language=localStorage.getItem('tasukeai-language')||'ja';}catch{}
+ let language='en';try{language=localStorage.getItem('tasukeai-language')==='ja'?'ja':'en';}catch{}
  let groupLabel='',groupLabelId='';const groupName=()=>groupLabelId===snapshot().group&&groupLabel?groupLabel:t('このグループ');
  let unknownOnly=false;let heads=[],history=[],positions=[],memos=[],cases=[],filter='all',areaFilter=null,target=null,busy=false,renderEpoch=0,memoDirty=false;
  const positionFor=id=>positions.find(p=>p.originId===id);
@@ -133,6 +133,9 @@ export function createWeb1617Ui({map,snapshot,getStore,refreshSnapshot,changed,t
  const coordinator=()=>['ADMIN','LEADER'].includes(member()?.role);
  function dialog(id,title){const d=document.createElement('dialog');d.id=id;d.className='design-sheet';d.setAttribute('aria-labelledby',id+'-title');d.innerHTML=`<div class="sheet-handle"></div><header><h2 id="${id}-title">${h(title)}</h2><button type="button" class="icon-button sheet-close" aria-label="${h('閉じる')}"><img src="/close.svg" alt=""></button></header><div class="sheet-body"></div>`;document.body.append(d);wireSheetHandle(d);d.querySelector('.sheet-close').onclick=()=>d.close();d.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();d.close();}});return d;}
  const incidentSheet=dialog('incident-details-sheet','訓練の詳細');
+ const locationNotice=document.createElement('dialog');locationNotice.id='venue-location-notice';locationNotice.className='venue-location-notice';locationNotice.setAttribute('aria-labelledby','venue-location-title');document.body.append(locationNotice);
+ function showLocationNotice(){if(snapshot().venue?.positionMode!=='KYOTO')return;locationNotice.innerHTML=`<h2 id="venue-location-title">${language==='en'?'Your location':'現在地'}</h2><p>${language==='en'?'This is a demo. Your location is set to Kyoto to make the experience easier to follow.':'これはデモです。わかりやすく体験していただくため、現在地を京都に設定しています。'}</p><button type="button">${language==='en'?'Continue':'続ける'}</button>`;locationNotice.querySelector('button').onclick=()=>locationNotice.close();locationNotice.showModal();}
+
  const personSheet=dialog('person-sheet','メンバー一覧');personSheet.querySelector('.sheet-body').append($('detail'));
  const personHeading=document.createElement('div');personHeading.className='person-heading';
  const headingText=document.createElement('div');headingText.className='person-heading-text';headingText.append(personSheet.querySelector('h2'));
@@ -213,13 +216,13 @@ document.querySelector('[data-menu="settings"]').onclick=()=>{$('app-menu').clos
   for(const feedback of document.querySelectorAll('.feedback')){const text=feedback.textContent.trim(),key=Object.hasOwn(words,text)?text:Object.keys(words).find(key=>words[key]===text);if(key)feedback.textContent=t(key);}
   for(const id of ['buildings','tsunami-map'])$(id).setAttribute('aria-label',t('地図'));document.querySelector('.response-filters')?.setAttribute('aria-label',t('対応記録の対象'));
 
-  $('menu-open').setAttribute('aria-label',t('メニュー'));document.querySelector('.app-nav').setAttribute('aria-label',t('画面'));
+  $('menu-close').setAttribute('aria-label',t('閉じる'));$('app-menu').querySelector('nav').setAttribute('aria-label',t('メニュー'));$('floor').placeholder=local('例：2階','Example: 2');$('menu-open').setAttribute('aria-label',t('メニュー'));document.querySelector('.app-nav').setAttribute('aria-label',t('画面'));
   for(const handle of document.querySelectorAll('.sheet-handle'))handle.setAttribute('aria-label',local('下にドラッグして閉じる','Drag to close'));for(const close of document.querySelectorAll('.sheet-close'))close.setAttribute('aria-label',t('閉じる'));map.refreshLanguage?.();for(const [node,key]of staticText)if(node.isConnected)node.textContent=t(key);for(const radio of languagePanel.querySelectorAll('input'))radio.checked=radio.value===language;
-  $('tsunami-height').setAttribute('aria-label',local('津波の高さ（m）','Tsunami height (m)'));$('tsunami-fit').setAttribute('aria-label',local('現在地','My location'));settingsSheet.querySelector('h2').textContent=t('アプリ設定');appearancePanel.querySelector('legend').textContent=t('表示モード');for(const el of appearancePanel.querySelectorAll('[data-label]'))el.textContent=t(el.dataset.label);for(const radio of appearancePanel.querySelectorAll('input'))radio.checked=radio.value===(document.documentElement.dataset.appearance||'system');languagePanel.querySelector('legend').textContent=t('言語');const currentView=snapshot().view;if(member())$('header-group').textContent=t(({ADMIN:'管理者',LEADER:'班長',MEMBER:'メンバー'})[member().role])+' · '+(groupName());if(words[$('network').textContent])$('network').textContent=t($('network').textContent);document.querySelector('.app-header h1').textContent=currentView?t(currentView.start.training?'訓練':'地震'):'';if(currentView)$('header-date').textContent=date(currentView.start.createdAt);areaButton.textContent=t('地域集計');$('report-add').textContent=t('通報を追加');$('response-export').textContent=t('CSVを書き出す');
+  $('tsunami-height').setAttribute('aria-label',local('津波の高さ（m）','Tsunami height (m)'));$('tsunami-fit').setAttribute('aria-label',local('現在地','My location'));settingsSheet.querySelector('h2').textContent=t('アプリ設定');appearancePanel.querySelector('legend').textContent=t('表示モード');for(const el of appearancePanel.querySelectorAll('[data-label]'))el.textContent=t(el.dataset.label);for(const radio of appearancePanel.querySelectorAll('input'))radio.checked=radio.value===(document.documentElement.dataset.appearance||'system');languagePanel.querySelector('legend').textContent=t('言語');languagePanel.querySelector('label span').textContent=local('日本語','Japanese');const currentView=snapshot().view;if(member())$('header-group').textContent=t(({ADMIN:'管理者',LEADER:'班長',MEMBER:'メンバー'})[member().role])+' · '+(groupName());if(words[$('network').textContent])$('network').textContent=t($('network').textContent);document.querySelector('.app-header h1').textContent=currentView?t((currentView.displayTraining??currentView.start.training)?'訓練':'地震'):'';if(currentView)$('header-date').textContent=date(currentView.start.createdAt);areaButton.textContent=t('地域集計');$('report-add').textContent=t('通報を追加');$('response-export').textContent=t('CSVを書き出す');
   $('incident-details').hidden=!currentView;$('incident-details').textContent=t('詳細');$('header-offline').setAttribute('aria-label',t('インターネット未接続'));if(incidentSheet.open)renderIncidentDetails();
   for(const d of [personSheet,caseSheet,editor,summary,settingsSheet,careEditor,incidentSheet])d.querySelector('.sheet-close').setAttribute('aria-label',t('閉じる'));
  }
- function renderIncidentDetails(){const view=snapshot().view;if(!view){incidentSheet.close();return;}incidentSheet.querySelector('h2').textContent=t(view.start.training?'訓練の詳細':'地震の詳細');incidentSheet.querySelector('.sheet-body').innerHTML=`<dl class="incident-detail-facts"><div><dt>${h('開始')}</dt><dd>${escape(date(view.start.createdAt))}</dd></div><div><dt>${h('経過時間')}</dt><dd>${Math.max(0,Math.floor((Date.now()-view.start.createdAt)/60000))}${language==='en'?' min':'分'}</dd></div></dl>`;}
+ function renderIncidentDetails(){const view=snapshot().view;if(!view){incidentSheet.close();return;}incidentSheet.querySelector('h2').textContent=t((view.displayTraining??view.start.training)?'訓練の詳細':'地震の詳細');incidentSheet.querySelector('.sheet-body').innerHTML=`<dl class="incident-detail-facts"><div><dt>${h('開始')}</dt><dd>${escape(date(view.start.createdAt))}</dd></div><div><dt>${h('経過時間')}</dt><dd>${Math.max(0,Math.floor((Date.now()-view.start.createdAt)/60000))}${language==='en'?' min':'分'}</dd></div></dl>`;}
  $('incident-details').onclick=()=>{renderIncidentDetails();if(snapshot().view)incidentSheet.show();};
  const offlineHost=$('header-offline');offlineHost.innerHTML='<span class="offline-word">No internet</span><svg class="offline-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 3l18 18M3 8c5-4 13-4 18 0M6 12c4-3 8-3 12 0M9 16c2-1 4-1 6 0"/><circle cx="12" cy="20" r="1"/></svg>';
  const header=document.querySelector('.app-header');const adaptHeader=()=>header.classList.toggle('large-header-text',parseFloat(getComputedStyle(document.documentElement).fontSize)>20);new ResizeObserver(adaptHeader).observe(header);adaptHeader();
@@ -362,7 +365,7 @@ document.querySelector('[data-menu="settings"]').onclick=()=>{$('app-menu').clos
    review.append(check,language==='en'?'The shared record changed. Review your draft before saving.':'共有された記録が更新されています。入力内容を確認してから保存してください。');form.prepend(review);
   });
   function updateLocationLabel(){const label=form.querySelector('#report-location-label');if(label)label.textContent=form.elements.latitude.value&&form.elements.longitude.value?local('地図で選択済み','Location selected on map'):local('場所を選んでください','Choose a location');}
-  if(picked&&form.elements.latitude){form.elements.latitude.value=picked.latitude;form.elements.longitude.value=picked.longitude;if(s.venue?.scenario&&picked.latitude>35&&picked.latitude<35.04&&picked.longitude>135.75&&picked.longitude<135.78)form.elements.region.value=demoCommunityFor(picked.longitude,s.venue.scenario.communityLongitudeCuts);draft.capture();}
+  if(picked&&form.elements.latitude){form.elements.latitude.value=picked.latitude;form.elements.longitude.value=picked.longitude;if(s.venue?.scenario&&picked.latitude>35&&picked.latitude<35.04&&picked.longitude>135.75&&picked.longitude<135.78)form.elements.region.value=demoCommunityAtPoint(picked.latitude,picked.longitude,s.venue.scenario)||'';draft.capture();}
   updateLocationLabel();
   const pick=form.querySelector('#report-pick-location');if(pick)pick.onclick=()=>{draft.capture();editor.close();caseSheet.close();tab('buildings');map.pickLocation(point=>{target=formTarget;edit(kind,record,point);},{language});};
   form.onsubmit=e=>{e.preventDefault();const d=new FormData(form);save(async()=>{await onSubmit(d);draft.clear();},form.querySelector('.feedback'));};
@@ -397,7 +400,7 @@ document.querySelector('[data-menu="settings"]').onclick=()=>{$('app-menu').clos
  $('own-memo').oninput=()=>{memoDirty=true;safetyForm.querySelector('.memo-count').textContent=`${$('own-memo').value.length} / 500`;};
  async function saveMemo(answer){if(!answer||answer.safety!=='SOS')throw Error(t('災害・訓練を選択してください。'));const s=snapshot(),old=memos.find(m=>m.answerId===answer.eventId);await getStore().mergeMemo({groupId:s.group,incidentId:s.incidentId,authorId:s.id,answerId:answer.eventId,revision:(old?.revision||0)+1,updatedAt:Date.now(),text:$('own-memo').value.trim()});memoDirty=false;}
  $('memo-save').onclick=()=>save(()=>saveMemo(snapshot().view?.answers[snapshot().id]),$('own-status-feedback'));
- safetyForm.onsubmit=e=>{e.preventDefault();save(async()=>{const s=snapshot();const value=safetyChoice||s.view?.answers[s.id]?.safety;if(!value)throw Error(t('情報を登録してください。'));const answer=await appendScopedIncident(getStore(),{groupId:s.group,incidentId:s.incidentId,authorId:s.id},'ANSWER',{safety:value});if(value==='SOS')await saveMemo(answer);safetyChoice=null;await changed();tab('buildings');},$('own-status-feedback'));};
+ safetyForm.onsubmit=e=>{e.preventDefault();save(async()=>{const s=snapshot();const value=safetyChoice||s.view?.answers[s.id]?.safety;if(!value)throw Error(t('情報を登録してください。'));const answer=await appendScopedIncident(getStore(),{groupId:s.group,incidentId:s.incidentId,authorId:s.id},'ANSWER',{safety:value});if(value==='SOS')await saveMemo(answer);safetyChoice=null;await changed();tab('buildings');showLocationNotice();},$('own-status-feedback'));};
  function renderSafety(){const s=snapshot(),own=s.records.find(p=>p.originId===s.id)||s.roster?.members?.filter(m=>m.deviceIds.includes(s.id)).map(m=>({name:m.activityName}))[0],answer=s.view?.answers[s.id],choice=safetyChoice||answer?.safety;const memo=memos.find(m=>m.answerId===answer?.eventId);setHtml($('own'),own?`<strong>${escape(own.name)}</strong><p>${s.view?escape(date(s.view.start.createdAt)):h('災害・訓練を選択してください。')}</p>`:h('情報を登録してください。'));
   if(!memoDirty)$('own-memo').value=memo?.text||'';
   $('memo-label').firstChild.textContent=t('SOSメモ');$('memo-save').textContent=t('メモだけ保存する');$('status-update').textContent=t('安否を更新する');

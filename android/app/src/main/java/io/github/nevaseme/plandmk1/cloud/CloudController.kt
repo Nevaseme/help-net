@@ -199,11 +199,11 @@ class CloudController(private val app:PlanDApplication) {
         }}
     }
     fun joinVenue(endpoint:String,venueName:String,password:String,name:String)=register(endpoint,name,venueName=venueName,venuePassword=password)
-    fun startVenue(password:String,privateTraining:Boolean=false,title:String="",area:String="",positionMode:String="KYOTO",elapsedMinutes:Int=if(privateTraining)0 else 3,onStarted:()->Unit={}) {
+    fun startVenue(password:String,privateTraining:Boolean=false,title:String="",area:String="",positionMode:String="KYOTO",elapsedMinutes:Int=if(privateTraining)0 else 3,presentationMode:String="DRILL",onStarted:()->Unit={}) {
         val session=settings.session(group)?:run {mutable.value=mutable.value.copy(error="割当位置を共有するにはグループへの接続が必要です");return}
         if(session.role!=MemberRole.ADMIN||!beginOperation("訓練を開始しています…"))return
         scope.launch {var started=false;lock.withLock {
-            try {val body=withContext(Dispatchers.IO){api.startVenue(session,settings.venueStart(session.groupId),password,privateTraining,title,area,positionMode,elapsedMinutes)}
+            try {val body=withContext(Dispatchers.IO){api.startVenue(session,settings.venueStart(session.groupId),password,privateTraining,title,area,positionMode,elapsedMinutes,presentationMode)}
                 rememberVenue(body);settings.setVenueOnboarding(session.groupId,checkNotNull(body.venue).sessionId);settings.finishVenueStart(session.groupId);venueAdminPasswordDraft.value="";started=true
             }catch(e:CancellationException){throw e}catch(e:Exception){mutable.value=mutable.value.copy(error=safeError(e))}
             finally {mutable.value=mutable.value.copy(busy=false)}

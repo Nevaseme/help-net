@@ -55,6 +55,9 @@ fun ResidentMap(
     val view = remember { PlanMapView(context).also { it.onCreate(null) } }
     var map by remember { mutableStateOf<MapLibreMap?>(null) }
     var ready by remember { mutableStateOf(false) }
+    val mapLabels=remember {MapLabelLanguage()}
+    val english by rememberUpdatedState(LocalUiLanguage.current=="en")
+    LaunchedEffect(ready,english){if(ready)map?.style?.let {mapLabels.apply(it,english)}}
     val latestResidents by rememberUpdatedState(residents)
     val latestCenter by rememberUpdatedState(center)
     val latestPicking by rememberUpdatedState(picking)
@@ -112,7 +115,7 @@ fun ResidentMap(
                 latestResidents.find { it.originId == markerIds[marker.id] }?.let(latestSelect)
                 true
             }
-            controller.setStyle(OfflineMapRepository.STYLE) { ready = true }
+            controller.setStyle(OfflineMapRepository.STYLE) { mapLabels.apply(it,english);ready = true }
         }
         onDispose {
             owner.lifecycle.removeObserver(observer)
@@ -129,7 +132,7 @@ fun ResidentMap(
     }
     // Rebuild annotations only when their data changes, not when a parent screen
     // recomposes for connectivity, button state, or a different callback instance.
-    LaunchedEffect(map, ready, residents, careLabels, places, incident) {
+    LaunchedEffect(map, ready, residents, careLabels, places, incident, english) {
         val controller = map
         if (ready && controller != null) {
             controller.clear(); markerIds.clear();buildingIds.clear()
@@ -145,10 +148,10 @@ fun ResidentMap(
                 canvas.drawText(when (resident.safety) { Safety.SOS -> "SOS"; Safety.SAFE -> "✓"; else -> "?" }, 32f, 40f, paint)
                 if (resident.originId in careLabels) {
                     paint.color = 0xFF875000.toInt(); canvas.drawCircle(52f, 12f, 11f, paint)
-                    paint.color = android.graphics.Color.WHITE; paint.textSize = 15f; canvas.drawText("記", 52f, 18f, paint)
+                    paint.color = android.graphics.Color.WHITE; paint.textSize = 15f; canvas.drawText(if(english)"R" else "記", 52f, 18f, paint)
                 }
                 val marker = controller.addMarker(MarkerOptions().position(LatLng(resident.latitude, resident.longitude))
-                    .title("住民の名前：${resident.displayName()}").snippet("登録住居・${resident.safety.label()}・${careLabels[resident.originId].orEmpty()}").icon(IconFactory.getInstance(context).fromBitmap(bitmap)))
+                    .title(if(english)"Resident: ${resident.displayName()}" else "住民の名前：${resident.displayName()}").snippet(if(english)"Registered home · ${UiMessages.text(resident.safety.label(),"en")} · ${UiMessages.text(careLabels[resident.originId].orEmpty(),"en")}" else "登録住居・${resident.safety.label()}・${careLabels[resident.originId].orEmpty()}").icon(IconFactory.getInstance(context).fromBitmap(bitmap)))
                 markerIds[marker.id] = resident.originId
             }
             placeBuildings(places).forEach {building->
@@ -156,9 +159,9 @@ fun ResidentMap(
                 val response=when {actions.isEmpty()->"記録なし";actions.size>1->"複数の記録";else->when(actions.single()) {BuildingAction.COMPLETED->"対応完了";BuildingAction.NEEDS_HELP->"要対応";BuildingAction.RECHECK->"再確認";BuildingAction.CHECKING->"確認中";BuildingAction.REVOKED->"記録撤回"}}
                 val bitmap=Bitmap.createBitmap(150,80,Bitmap.Config.ARGB_8888);val canvas=Canvas(bitmap);val paint=Paint(Paint.ANTI_ALIAS_FLAG)
                 paint.color=0xFF244F69.toInt();canvas.drawRect(5f,5f,145f,75f,paint)
-                paint.color=android.graphics.Color.WHITE;paint.textAlign=Paint.Align.CENTER;paint.textSize=18f;canvas.drawText("建物",75f,29f,paint)
-                paint.textSize=24f;canvas.drawText(response,75f,59f,paint)
-                val marker=controller.addMarker(MarkerOptions().position(LatLng(building.latitude!!,building.longitude!!)).title("建物名：${building.displayLabel()}").snippet(buildingSummary(places,building.buildingId!!,incident)).icon(IconFactory.getInstance(context).fromBitmap(bitmap)))
+                paint.color=android.graphics.Color.WHITE;paint.textAlign=Paint.Align.CENTER;paint.textSize=18f;canvas.drawText(if(english)"Building" else "建物",75f,29f,paint)
+                paint.textSize=24f;canvas.drawText(if(english)mapOf("記録なし" to "No records","複数の記録" to "Multiple","対応完了" to "Completed","要対応" to "Needs help","再確認" to "Recheck","確認中" to "Checking","記録撤回" to "Revoked").getValue(response)else response,75f,59f,paint)
+                val marker=controller.addMarker(MarkerOptions().position(LatLng(building.latitude!!,building.longitude!!)).title(if(english)"Building: ${UiMessages.text(building.displayLabel(),"en")}" else "建物名：${building.displayLabel()}").snippet(UiMessages.text(buildingSummary(places,building.buildingId!!,incident),if(english)"en" else "ja")).icon(IconFactory.getInstance(context).fromBitmap(bitmap)))
                 buildingIds[marker.id]=building.buildingId
             }
         }

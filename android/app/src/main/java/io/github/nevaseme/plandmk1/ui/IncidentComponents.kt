@@ -19,16 +19,18 @@ import io.github.nevaseme.plandmk1.cloud.mapMunicipalityOrNull
     val saving by model.saving.collectAsStateWithLifecycle()
     var expanded by rememberSaveable { mutableStateOf(false) }
     val current=state.current
+    val cloud by model.cloud.state.collectAsStateWithLifecycle()
+    fun drill(start:io.github.nevaseme.plandmk1.core.IncidentEvent)=cloud.venue?.displaysAsDrill(start)?:start.training
     val english=LocalUiLanguage.current=="en"
     TextButton(enabled=!saving,onClick={expanded=true},modifier=Modifier.fillMaxWidth()) {
-        Text(if(english&&current!=null) "${if(current.start.training) "Drill" else "Earthquake"}: ${menuText(sampleIncidentTitle(current.start.groupId,current.start.title))} / ${menuText(sampleAreaName(current.start.groupId,current.start.area))} · ${if(current.closed) "Ended" else "Active"} ▾" else menuText(if(current!=null) "表示中の${if(current.start.training) "訓練" else "地震"}：${menuText(sampleIncidentTitle(current.start.groupId,current.start.title))}／対象地域：${menuText(sampleAreaName(current.start.groupId,current.start.area))}${if(current.closed) "（終了）" else "（安否確認中）"} ▾"
+        Text(if(english&&current!=null) "${if(drill(current.start)) "Drill" else "Earthquake"}: ${menuText(sampleIncidentTitle(current.start.groupId,current.start.title))} / ${menuText(sampleAreaName(current.start.groupId,current.start.area))} · ${if(current.closed) "Ended" else "Active"} ▾" else menuText(if(current!=null) "表示中の${if(drill(current.start)) "訓練" else "地震"}：${menuText(sampleIncidentTitle(current.start.groupId,current.start.title))}／対象地域：${menuText(sampleAreaName(current.start.groupId,current.start.area))}${if(current.closed) "（終了）" else "（安否確認中）"} ▾"
         else if(state.selection=="legacy") "過去の情報（災害未分類・閲覧のみ） ▾" else "災害・訓練を選択 ▾"), style=MaterialTheme.typography.labelLarge, maxLines=2, overflow=TextOverflow.Ellipsis)
     }
     if(expanded) AlertDialog(onDismissRequest={expanded=false},title={Text(menuText("表示する災害・訓練"))},text={
         Column(Modifier.verticalScroll(rememberScrollState())) {
             if(state.options.isEmpty())Text(menuText("安否確認はまだありません"))
             state.options.forEach { option -> TextButton(onClick={model.selectIncident(option.start.eventId);expanded=false}) {
-                Text(if(english)"${if(option.start.training) "Drill" else "Earthquake"}: ${menuText(sampleIncidentTitle(option.start.groupId,option.start.title))}\nArea: ${menuText(sampleAreaName(option.start.groupId,option.start.area))}\nStarted by: ${publicRecordAuthor(option.start.authorId,state.residents,state.care,roster)}\nStarted: ${formatTime(option.start.createdAt)}${if(option.closed) " (Ended)" else ""}" else menuText("${if(option.start.training) "訓練" else "地震"}：${menuText(sampleIncidentTitle(option.start.groupId,option.start.title))}\n対象地域：${menuText(sampleAreaName(option.start.groupId,option.start.area))}\n開始した人：${publicRecordAuthor(option.start.authorId,state.residents,state.care,roster)}\n開始日時：${formatTime(option.start.createdAt)}${if(option.closed) "（終了）" else ""}"))
+                Text(if(english)"${if(drill(option.start)) "Drill" else "Earthquake"}: ${menuText(sampleIncidentTitle(option.start.groupId,option.start.title))}\nArea: ${menuText(sampleAreaName(option.start.groupId,option.start.area))}\nStarted by: ${publicRecordAuthor(option.start.authorId,state.residents,state.care,roster)}\nStarted: ${formatTime(option.start.createdAt)}${if(option.closed) " (Ended)" else ""}" else menuText("${if(drill(option.start)) "訓練" else "地震"}：${menuText(sampleIncidentTitle(option.start.groupId,option.start.title))}\n対象地域：${menuText(sampleAreaName(option.start.groupId,option.start.area))}\n開始した人：${publicRecordAuthor(option.start.authorId,state.residents,state.care,roster)}\n開始日時：${formatTime(option.start.createdAt)}${if(option.closed) "（終了）" else ""}"))
             } }
             TextButton(onClick={model.selectIncident("legacy");expanded=false}) { Text(menuText("過去の情報（災害未分類・閲覧のみ）")) }
         }
@@ -45,7 +47,7 @@ import io.github.nevaseme.plandmk1.cloud.mapMunicipalityOrNull
     var fictional by rememberSaveable { mutableStateOf(false) }
     val cloudState by model.cloud.state.collectAsStateWithLifecycle()
     val english=LocalUiLanguage.current=="en"
-    val area=if(training&&fictional)"京都市" else cloudState.mapMunicipalityOrNull()?.name?:cloudState.groupName.ifBlank {model.group.value}
+    val area="京都市"
     val busy=saving||cloudState.busy
     val roster by model.roster.collectAsStateWithLifecycle()
     val canTrain=roster!=null&&model.canStartTraining()
@@ -62,7 +64,7 @@ import io.github.nevaseme.plandmk1.cloud.mapMunicipalityOrNull
         } else Text(uiText(if(roster==null)"training_join" else "training_wait"))
         HorizontalDivider(Modifier.padding(vertical=12.dp))
         Text(uiText("earthquake_report_section"),style=MaterialTheme.typography.titleMedium)
-        OutlinedButton(enabled=(registered||roster!=null)&&!saving,onClick={training=false;title=if(english)"Earthquake safety check" else "地震の安否確認";showStart=true},modifier=Modifier.fillMaxWidth()) { Text(if(administrator)menuText("地震を開始")else uiText("report_earthquake")) }
+        OutlinedButton(enabled=canTrain&&!saving&&state.options.none {it.start.training&&!it.closed},onClick={training=false;title=if(english)"Earthquake safety check" else "地震の安否確認";showStart=true},modifier=Modifier.fillMaxWidth()) { Text(if(administrator)menuText("地震を開始")else uiText("report_earthquake")) }
         if(current!=null&&!current.closed) {
             if(model.canEndIncident(current.start.authorId)) OutlinedButton(enabled=!saving,onClick={showEnd=true}){Text(menuText("この安否確認を終了"))}
         }
@@ -71,14 +73,10 @@ import io.github.nevaseme.plandmk1.cloud.mapMunicipalityOrNull
     if(showStart) AlertDialog(onDismissRequest={if(!saving)showStart=false},title={Text(if(administrator&&!training)menuText("地震を開始")else uiText(if(training)"training_start"else "actual_report_start"))},text={
         Column(Modifier.verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(10.dp)) {
             OutlinedTextField(title,{title=it.take(80)},label={Text(uiText("incident_name"))},enabled=!saving)
-            if(training){
-                Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically){Checkbox(fictional,{fictional=it},enabled=!busy);Text(menuText("京都に位置を割り当てる"),Modifier.weight(1f))}
-                if(fictional)Text(menuText("管理者を含む参加者を分散表示します。住居や現在地は変更しません。"),style=MaterialTheme.typography.bodySmall)
-                cloudState.error?.let {Text(menuText(it),color=MaterialTheme.colorScheme.error)}
-            }
+            cloudState.error?.let {Text(menuText(it),color=MaterialTheme.colorScheme.error)}
             OperationFeedback(model,"incident")
         }
-    },confirmButton={TextButton(enabled=!busy&&title.isNotBlank()&&area.isNotBlank()&&(!training||canTrain),onClick={if(training&&fictional)model.cloud.startVenue("",true,title,area){showStart=false}else model.startIncident(title,area,training,administratorStart=administrator&&!training)}) { Text(if(administrator&&!training&&!saving)menuText("地震を開始")else uiText(if(saving)"saving"else if(training)"training_start"else "actual_report_start")) }},dismissButton={TextButton(enabled=!saving,onClick={showStart=false}){Text(uiText("close"))}})
+    },confirmButton={TextButton(enabled=!busy&&title.isNotBlank()&&area.isNotBlank()&&canTrain,onClick={model.cloud.startVenue("",true,title,area,presentationMode=if(training)"DRILL" else "EARTHQUAKE"){showStart=false}}) { Text(if(administrator&&!training&&!saving)menuText("地震を開始")else uiText(if(saving)"saving"else if(training)"training_start"else "actual_report_start")) }},dismissButton={TextButton(enabled=!saving,onClick={showStart=false}){Text(uiText("close"))}})
     val saveStates by model.saveStates.collectAsStateWithLifecycle()
     val initialSelection=remember(showStart){state.selection}
     LaunchedEffect(state.selection,showStart,saving) { if(showStart&&!saving&&state.selection!=initialSelection&&saveStates["incident"]?.phase==io.github.nevaseme.plandmk1.core.SavePhase.SAVED)showStart=false }

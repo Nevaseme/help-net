@@ -327,3 +327,6 @@ html[lang="en"] .map-toolbar #map-unknown img:last-child{position:static;flex:no
 @media(max-width:359px){.map-toolbar,html[lang="en"] .map-toolbar{gap:4px;padding-inline:6px}.map-toolbar .map-safe-toggle,html[lang="en"] .map-toolbar .map-safe-toggle,.map-toolbar #map-tsunami,.map-toolbar #map-unknown,html[lang="en"] .map-toolbar #map-unknown{font-size:13px}.map-toolbar #map-unknown span,html[lang="en"] .map-toolbar #map-unknown span{max-width:65px}.map-toolbar #tsunami-height{width:32px}.map-toolbar #map-tsunami{padding-inline:4px}}
 .report-map-marker .report-leader{position:absolute;width:28px;height:56px;right:22px;top:22px;overflow:visible;pointer-events:none}
 .report-map-marker>img{position:relative}
+
+.venue-location-notice{position:fixed;inset:0;margin:auto;width:min(90vw,420px);height:fit-content;max-height:80dvh;overflow:auto;padding:24px;border:0;border-radius:20px;color:var(--ink);background:var(--surface,#fff)}
+.venue-location-notice h2{margin:0 0 16px;font-size:22px}.venue-location-notice p{font-size:17px;line-height:1.5}.venue-location-notice button{width:100%;min-height:48px;margin-top:12px}.venue-location-notice::backdrop{background:#0006}

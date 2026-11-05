@@ -9,7 +9,7 @@
     <string name="approved_tab_response">Tasks</string>
     <string name="approved_tab_safety">Safety</string>
     <string name="approved_earthquake">Earthquake</string>
-    <string name="approved_training">Training</string>
+    <string name="approved_training">Drill</string>
     <string name="approved_menu">Menu</string>
     <string name="approved_open_menu">Open menu</string>
     <string name="approved_close_menu">Close menu</string>
@@ -20,7 +20,7 @@
     <string name="approved_profile">My profile and home</string>
     <string name="approved_home_building">My home and building</string>
     <string name="approved_group_sharing">Group</string>
-    <string name="approved_incident_management">Earthquakes and training</string>
+    <string name="approved_incident_management">Earthquakes and drill</string>
     <string name="approved_position_history">Location history</string>
     <string name="approved_offline_map">Offline map</string>
     <string name="approved_app_information">About</string>
@@ -84,7 +84,7 @@
     <string name="approved_area_summary">Area summary</string>
     <string name="approved_response_no_records">There are no cases yet</string>
     <string name="approved_response_requires_roster">Participant settings are required to record response work. Check Group and sharing.</string>
-    <string name="approved_response_requires_incident">Select an active earthquake or training session to record response work.</string>
+    <string name="approved_response_requires_incident">Select an active earthquake or drill session to record response work.</string>
     <string name="approved_report_detail">Incident report</string>
     <string name="approved_report_content">Report details</string>
     <string name="approved_report_category">Report type</string>
@@ -134,15 +134,15 @@
     <string name="approved_current_group_only">Records shared in this group</string>
     <string name="approved_unregistered">Not registered</string>
     <string name="approved_choose">Select</string>
-    <string name="approved_training_start">Start training</string>
-    <string name="approved_training_admin_note">One administrator can start training. It is recorded separately from actual earthquake reports.</string>
+    <string name="approved_training_start">Start drill</string>
+    <string name="approved_training_admin_note">One administrator can start drill. It is recorded separately from actual earthquake reports.</string>
     <string name="approved_actual_report_start">Report an earthquake</string>
-    <string name="approved_incident_name">Earthquake or training name</string>
+    <string name="approved_incident_name">Earthquake or drill name</string>
     <string name="approved_target_area">Affected area</string>
     <string name="approved_end_incident">End this safety confirmation</string>
     <string name="approved_end_confirm">End this safety confirmation?</string>
     <string name="approved_end">End</string>
-    <string name="approved_training_in_progress">End the active training before starting another</string>
+    <string name="approved_training_in_progress">End the active drill before starting another</string>
     <string name="approved_report_edit">Correct report</string>
     <string name="approved_report_cancel">Cancel report</string>
     <string name="approved_report_restore">Restore report</string>
@@ -187,7 +187,7 @@
     <string name="approved_report_earthquake">Report an earthquake</string>
     <string name="approved_internet_unavailable">No internet connection</string>
     <string name="approved_incident_details_action">Details</string>
-    <string name="approved_training_details">Training details</string>
+    <string name="approved_training_details">Drill details</string>
     <string name="approved_earthquake_details">Earthquake details</string>
     <string name="approved_incident_started">Started</string>
     <string name="approved_my_registration">My information</string>

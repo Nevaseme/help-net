@@ -577,6 +577,8 @@ Object.assign(englishUI, {
   "訓練・地震": "Drills and earthquakes"
 });
 
+if(globalThis.document){try{document.documentElement.lang=localStorage.getItem('tasukeai-language')==='ja'?'ja':'en';}catch{document.documentElement.lang='en';}}
+
 export function translateUI(key){key=key.replaceAll("デモ","訓練");return globalThis.document?.documentElement.lang==='en'?(englishUI[key]||translateDynamicUI(key)):key;}
 export function observeUiLanguage(callback){if(!globalThis.MutationObserver||!globalThis.document)return ()=>{};let previous=document.documentElement.lang;const observer=new MutationObserver(()=>{const next=document.documentElement.lang;if(next!==previous){previous=next;callback();}});observer.observe(document.documentElement,{attributes:true,attributeFilter:['lang']});return ()=>observer.disconnect();}
 // Capture only explicitly known UI text before a component adds user content.
@@ -598,7 +600,7 @@ export function translateDynamicUI(key){
  const failed=key.match(/^保存できませんでした：(.+)。入力を確認して再試行してください。$/);if(failed)return `Could not save: ${translateUI(failed[1])}. Check your input and try again.`;
 
  const area=key.match(/^活動地域：(.+)$/);if(area)return 'Activity area: '+(englishUI[area[1]]||area[1]);
- const rules=[[/^(?:会場)?訓練(?:開催|実施)中 · (\d+)人$/,'Drill in progress · $1 participants'],[/^活動地域：(.+)$/,'Activity area: $1'],[/^有効期限：(.+)$/,'Expires: $1'],[/^(.*) · 管理者$/,'$1 · Administrator']];
+ const rules=[[/^地震開催中 · (\d+)人$/,'Earthquake in progress · $1 participants'],[/^(?:会場)?訓練(?:開催|実施)中 · (\d+)人$/,'Drill in progress · $1 participants'],[/^活動地域：(.+)$/,'Activity area: $1'],[/^有効期限：(.+)$/,'Expires: $1'],[/^(.*) · 管理者$/,'$1 · Administrator']];
  for(const [pattern,replacement]of rules)if(pattern.test(key))return key.replace(pattern,replacement);
  return key;
 }
@@ -666,7 +668,14 @@ Object.assign(englishUI, {
   "新しく参加する": "Join as a new participant",
   "管理者から届いた招待コード全体を貼り付けてください。": "Paste the complete invitation code from your administrator.",
   "招待されたグループに参加します。": "Join the group in this invitation.",
+  "安否確認中です。安否画面から回答できます。": "A safety check is in progress. Answer from the Safety screen.",
+  "安否確認中": "Safety check in progress",
+  "安否確認の訓練": "Safety drill",
+  "地震の安否確認": "Earthquake safety check",
   "会場訓練を開始しました。": "Drill started.",
+  "地震の安否確認を開始しました。": "Earthquake safety check started.",
+  "今回の安否確認を終了します。記録は残り、次回は新しい安否回答から始められます。終了しますか？": "End this safety check? Records will be kept. The next check starts with new safety answers.",
+  "安否確認を終了しました。次の安否確認を開始できます。": "Safety check ended. You can start another check.",
   "共有しています…": "Sharing…",
   "共有中": "Sharing",
   "送信待ち": "Waiting to send",
@@ -839,3 +848,5 @@ Object.assign(englishUI, {
 });
 
 Object.assign(englishUI,{"安否更新":"Safety updated","今回の回答はまだありません":"No answer for this safety check yet","安否確認は始まっていません":"No safety check has started"});
+
+Object.assign(englishUI,{"モード":"Mode","安否確認の開始":"Start safety check","地震を開始する":"Start earthquake","管理者が開始します。以前の安否は引き継ぎません。":"The administrator starts the check. Previous answers are not carried over.","地震を終了する":"End earthquake","地震を終了しますか？":"End this earthquake?"});

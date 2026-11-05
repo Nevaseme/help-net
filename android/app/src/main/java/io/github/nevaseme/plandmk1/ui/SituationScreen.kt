@@ -158,9 +158,9 @@ fun SituationScreen(
             if(choosingReport)Surface(Modifier.align(Alignment.TopCenter).padding(top=80.dp,start=12.dp,end=12.dp),shape=RoundedCornerShape(10.dp)){Text(uiText("choose_report_point"),Modifier.padding(12.dp))}
             Surface(Modifier.align(Alignment.TopEnd).padding(12.dp), shape = RoundedCornerShape(14.dp), shadowElevation = 3.dp, color = MaterialTheme.colorScheme.surface) {
                 Column {
-                    IconButton(onClick = { camera.zoom(1.0) }) { Text("+", fontSize = 26.sp, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.semantics { contentDescription = "地図を拡大" }) }
+                    IconButton(onClick = { camera.zoom(1.0) }) { Text("+", fontSize = 26.sp, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.semantics { contentDescription = if(tsunamiEnglish)"Zoom in" else "地図を拡大" }) }
                     HorizontalDivider(Modifier.width(40.dp))
-                    IconButton(onClick = { camera.zoom(-1.0) }) { Text("−", fontSize = 26.sp, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.semantics { contentDescription = "地図を縮小" }) }
+                    IconButton(onClick = { camera.zoom(-1.0) }) { Text("−", fontSize = 26.sp, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.semantics { contentDescription = if(tsunamiEnglish)"Zoom out" else "地図を縮小" }) }
                 }
             }
             Surface(Modifier.align(Alignment.BottomStart).padding(start = 12.dp, bottom = 32.dp), shape = RoundedCornerShape(20.dp), shadowElevation = 2.dp, color = MaterialTheme.colorScheme.surface) {

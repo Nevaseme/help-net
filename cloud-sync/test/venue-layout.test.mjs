@@ -1,14 +1,13 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createVenueScenario} from '../src/venue-scenario.mjs';
-import {demoPhonePoint,demoCommunityAt} from '../src/venue-layout.mjs';
+import {demoCommunityAtPoint} from '../../lab/web/community-overview.mjs';
 import catalogue from '../src/venue-buildings.json' with {type:'json'};
-test('128 demo phone positions stay spread out within the home neighborhood; homes retain building evidence',()=>{
- const scenario=createVenueScenario(crypto.randomUUID()),counts=new Map();
- const audience=catalogue.homes.map(home=>{const region=demoCommunityAt(home.longitude),slot=counts.get(region)||0;counts.set(region,slot+1);return {home,position:demoPhonePoint(region,24+slot)};});
- const all=[...scenario.people.filter(p=>!p.positionUnknown),...audience];assert.equal(all.length,128);
- const distance=(a,b)=>Math.hypot((a.latitude-b.latitude)*111195,(a.longitude-b.longitude)*91000);
- for(const p of all){assert.equal(demoCommunityAt(p.position.longitude),demoCommunityAt(p.home.longitude));assert.ok(p.position.latitude>=35.011&&p.position.latitude<=35.018);assert.ok(p.home.plateauId);assert.equal(p.home.addressPrecision,'verified-building-address');}
- for(let i=0;i<all.length;i++)for(let j=i+1;j<all.length;j++)assert.ok(distance(all[i].position,all[j].position)>40,'no dense phone pile, including audience vs scenario');
- for(const c of scenario.communities){const pts=scenario.people.filter(p=>p.communityId===c.id&&!p.positionUnknown).map(p=>p.position);assert.ok(Math.max(...pts.map(p=>p.latitude))-Math.min(...pts.map(p=>p.latitude))>.005);assert.equal(demoCommunityAt(c.longitude),c.id);}
+test('smaller neighborhood boundaries retain reviewed homes and valid simulated phone locations',()=>{
+ const scenario=createVenueScenario(crypto.randomUUID());
+ const area=ring=>Math.abs(ring.reduce((s,p,i)=>{const q=ring[(i+1)%ring.length];return s+p[0]*q[1]-q[0]*p[1];},0))/2;
+ const former={'demo-west':.002*.007,'demo-central':.0044*.007,'demo-east':.0026*.007};
+ for(const c of scenario.communities){const ratio=area(c.boundary)/former[c.id];assert.ok(ratio>=.45&&ratio<=.6,`${c.id}: ${ratio}`);assert.equal(demoCommunityAtPoint(c.latitude,c.longitude,scenario),c.id);}
+ for(const p of scenario.people){assert.equal(demoCommunityAtPoint(p.home.latitude,p.home.longitude,scenario),p.communityId);assert.ok(catalogue.homes.some(h=>h.buildingId===p.home.buildingId));if(!p.positionUnknown){assert.equal(demoCommunityAtPoint(p.position.latitude,p.position.longitude,scenario),p.communityId);}}
+ assert.equal(demoCommunityAtPoint(35.018,135.763,scenario),null);
 });

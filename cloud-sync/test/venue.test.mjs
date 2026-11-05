@@ -91,7 +91,7 @@ test('Kyoto participants receive reviewed building addresses with public provena
  const start=await f.call(`/groups/${g}/venue`,{requestId:id(),password,areaId:'kyoto-gosho-south'},admin.token);
  const p=start.body.venue.placements[0];
  assert.ok(p.home?.plateauId?.startsWith('bldg_'));
- assert.match(p.home.address,/京都/);assert.notEqual(p.latitude,p.home.latitude);
+ assert.match(p.home.address,/京都/);assert.notEqual(p.latitude,p.home.latitude);assert.equal(p.communityId,'demo-central');
  const {demoCommunityAt}=await import('../src/venue-layout.mjs');assert.equal(demoCommunityAt(p.longitude),demoCommunityAt(p.home.longitude));
  assert.equal(p.home.addressPrecision,'verified-building-address');
  assert.equal(p.home.address.includes('付近'),false);assert.match(p.home.address,/\d/);
@@ -240,7 +240,7 @@ test('administrator starts venue and forty named attendees join its existing inc
  assert.equal(new Set(joined.map(r=>r.memberId)).size,40);
  const replay=await f.call('/venue/join',inputs[0]);assert.equal(replay.body.memberId,joined[0].memberId);
  const snapshot=f.get(admin.groupId).snapshot();assert.equal(snapshot.roster.members.length,41);
- assert.equal(snapshot.venue.placements.length,41);assert.equal(new Set(snapshot.venue.placements.map(p=>p.latitude+':'+p.longitude)).size,41);
+ assert.equal(snapshot.venue.placements.length,41);assert.equal(new Set(snapshot.venue.placements.map(p=>p.latitude+':'+p.longitude)).size,41);assert.ok(new Set(snapshot.venue.placements.map(p=>p.home.buildingId)).size>1);assert.ok(snapshot.venue.placements.every(p=>p.communityId==='demo-central'));
  assert.equal(f.get(admin.groupId).history('residents').length,0);
  const text=JSON.stringify(snapshot);assert.equal(text.includes(password),false);assert.equal(text.includes('passwordHash'),false);
 });
@@ -338,4 +338,28 @@ test('administrator can choose initial elapsed minutes without backdating origin
  }
  const f=fixture(t),admin=await setup(f);
  for(const minutes of [-1,1.5,1441,'5'])assert.equal((await f.call(`/groups/${admin.groupId}/venue`,{requestId:id(),password,areaId:'kyoto-gosho-south',elapsedMinutes:minutes},admin.token)).status,400);
+});
+
+test('earthquake presentation uses the same training lifecycle and Kyoto assignments',async t=>{
+ const f=fixture(t),admin=await setup(f),g=admin.groupId,requestId=id();
+ const start=await f.call(`/groups/${g}/venue`,{requestId,password,areaId:'kyoto-gosho-south',presentationMode:'EARTHQUAKE'},admin.token);
+ assert.equal(start.status,200);assert.equal(start.body.venue.presentationMode,'EARTHQUAKE');assert.equal(start.body.venue.positionMode,'KYOTO');
+ const event=f.get(g).history('quakes').find(e=>e.eventId===requestId);assert.equal(event.action,'TRAINING_START');assert.equal(event.training,true);assert.ok(start.body.venue.placements.every(p=>p.communityId==='demo-central'));
+ const ended=await f.call(`/groups/${g}/records`,{records:[{collection:'quakes',record:{groupId:g,eventId:id(),actorDeviceId:admin.deviceId,operatedAt:Date.now(),action:'END',training:true,targetId:requestId}}]},admin.token);assert.equal(ended.status,200);
+});
+
+test('saved running venues retain their old boundaries and assignments after a client update',async t=>{
+ const f=fixture(t),admin=await setup(f),sessionId=id();
+ await f.call(`/groups/${admin.groupId}/venue`,{requestId:sessionId,password,areaId:'kyoto-gosho-south'},admin.token);
+ const journal=f.get(admin.groupId),config=journal.venueConfig();
+ delete config.presentationMode;
+ config.scenario.communities=config.scenario.communities.map(({boundary,...c})=>c);
+ config.scenario.communityLongitudeCuts=[135.760,135.7615];
+ journal.s.run('UPDATE metadata SET value=? WHERE key=?',JSON.stringify(config),'venue');
+ const before=journal.venueSnapshot(),records=journal.history('quakes');
+ await journal.pull(admin.token);
+ assert.deepEqual(journal.venueSnapshot(),before);
+ assert.deepEqual(journal.venueConfig(),config);
+ assert.deepEqual(journal.history('quakes'),records);
+ assert.equal(before.presentationMode,'DRILL');
 });

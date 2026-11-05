@@ -9,7 +9,7 @@ import androidx.compose.ui.platform.LocalContext
 import java.util.Locale
 
 private val LocalUiResources = staticCompositionLocalOf<Resources?> { null }
-val LocalUiLanguage = staticCompositionLocalOf { "ja" }
+val LocalUiLanguage = staticCompositionLocalOf { "en" }
 val LocalSetUiLanguage = staticCompositionLocalOf<(String) -> Unit> { {} }
 
 /** Translate only named interface resources. User-entered text never passes through this function. */
@@ -25,7 +25,7 @@ val LocalSetUiLanguage = staticCompositionLocalOf<(String) -> Unit> { {} }
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
     val preferences = remember(context) { context.getSharedPreferences("interface-language", Context.MODE_PRIVATE) }
-    var language by remember { mutableStateOf(preferences.getString("language", "ja").takeIf { it == "en" } ?: "ja") }
+    var language by remember { mutableStateOf(preferences.getString("language", "en").takeIf { it in listOf("ja", "en") } ?: "en") }
     val resources = remember(context, configuration, language) {
         context.createConfigurationContext(Configuration(configuration).apply { setLocale(Locale.forLanguageTag(language)) }).resources
     }

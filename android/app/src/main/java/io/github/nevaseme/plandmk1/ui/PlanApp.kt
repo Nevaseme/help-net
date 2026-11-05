@@ -85,13 +85,16 @@ private fun PlanAppContent(model: PlanViewModel) {
     val firstAnswer = incident.groupId == group && mainDestination(incident.canEdit, incident.current?.answers?.containsKey(model.localId) == true) == MainDestination.ANSWER
     var awaitingSavedAnswer by rememberSaveable(group, incident.selection) { mutableStateOf(firstAnswer) }
     val saveStates by model.saveStates.collectAsStateWithLifecycle()
+    var showVenueNotice by rememberSaveable(group,incident.selection){mutableStateOf(false)}
     var previousSafetyPhase by remember { mutableStateOf(saveStates["safety"]?.phase) }
-    LaunchedEffect(group,incident.groupId,incident.selection,firstAnswer,tab,picking) { if(firstAnswer&&tab==1&&!picking){tab=0;lastMain=0;awaitingSavedAnswer=true} }
+    LaunchedEffect(group,incident.groupId,incident.selection,firstAnswer,tab,picking) { if(firstAnswer&&tab!=0){tab=0;lastMain=0;picking=false;awaitingSavedAnswer=true} }
     LaunchedEffect(firstAnswer, saveStates["safety"]?.phase) {
-        if (!firstAnswer && awaitingSavedAnswer) { tab = 1; lastMain = 1; awaitingSavedAnswer = false }
-        else if (previousSafetyPhase == SavePhase.SAVING && saveStates["safety"]?.phase == SavePhase.SAVED && tab == 0) { tab = 1; lastMain = 1 }
+        if(firstAnswer)awaitingSavedAnswer=true
+        if (!firstAnswer && awaitingSavedAnswer && incident.current?.answers?.containsKey(model.localId)==true) { showVenueNotice=activeVenue?.positionMode=="KYOTO";tab = 1; lastMain = 1; awaitingSavedAnswer = false }
+        else if (previousSafetyPhase == SavePhase.SAVING && saveStates["safety"]?.phase == SavePhase.SAVED && tab == 0) { showVenueNotice=activeVenue?.positionMode=="KYOTO";tab = 1; lastMain = 1 }
         previousSafetyPhase = saveStates["safety"]?.phase
     }
+    if(showVenueNotice)AlertDialog(onDismissRequest={showVenueNotice=false},title={Text(if(uiLanguage=="en")"Your location" else "現在地")},text={Text(if(uiLanguage=="en")"This is a demo. Your location is set to Kyoto to make the experience easier to follow." else "これはデモです。わかりやすく体験していただくため、現在地を京都に設定しています。")},confirmButton={TextButton(onClick={showVenueNotice=false}){Text(if(uiLanguage=="en")"Continue" else "続ける")}})
     if (preview && BuildConfig.DEBUG) { DesignDemoScreen { preview = false }; return }
     var menuOpen by rememberSaveable { mutableStateOf(false) }
     var communicationDetails by rememberSaveable(group) { mutableStateOf(false) }
@@ -179,6 +182,7 @@ private fun PlanAppContent(model: PlanViewModel) {
         message?.let { snackbar.showSnackbar(UiMessages.text(it,uiLanguage)); if (model.message.value == it) model.message.value = null }
     }
     fun navigate(destination: Int) {
+        if(firstAnswer){tab=0;lastMain=0;menuOpen=false;return}
         incidentDetails=false
         buildingFromProfile=tab==3&&destination==2
         if (tab in listOf(0, 1, 8, 10) && !picking) lastMain = tab
@@ -195,15 +199,15 @@ private fun PlanAppContent(model: PlanViewModel) {
         Scaffold(
             topBar = { Column(Modifier.background(MaterialTheme.colorScheme.surface).statusBarsPadding()) {
                 ApprovedHeader(
-                    title=when {picking->menuText("住居の位置を選択");tab in listOf(0,1,8,10)->if(incident.current!=null)uiText(if(incident.current!!.start.training)"training" else "earthquake")else "";else->uiText(when(tab){2->"home_building";3->"my_registration";4->"group_sharing";5->"offline_map";6->"training_incidents";12->"administrator";9->"position_history";11->"home";else->"app_information"})},
+                    title=when {picking->menuText("住居の位置を選択");tab in listOf(0,1,8,10)->if(incident.current!=null)uiText(if((activeVenue?:cloudState.venue?.takeIf {it.groupId==group})?.displaysAsDrill(incident.current!!.start)?:incident.current!!.start.training)"training" else "earthquake")else "";else->uiText(when(tab){2->"home_building";3->"my_registration";4->"group_sharing";5->"offline_map";6->"training_incidents";12->"administrator";9->"position_history";11->"home";else->"app_information"})},
                     date=null,
                     back=picking||tab !in listOf(0,1,8,10),
-                    onNavigate={if(picking||tab !in listOf(0,1,8,10))goBack() else {val opening=!menuOpen;languageSettings=false;incidentDetails=false;responseSummary=false;detailId=null;buildingId=null;menuOpen=opening}},
+                    onNavigate={if(firstAnswer){menuOpen=false}else if(picking||tab !in listOf(0,1,8,10))goBack() else {val opening=!menuOpen;languageSettings=false;incidentDetails=false;responseSummary=false;detailId=null;buildingId=null;menuOpen=opening}},
                     compact=tab in listOf(0,1,8,10)&&!picking,
                     noInternet=!internet,
-                    onDetails=if(tab in listOf(0,1,8,10)&&!picking&&incident.current!=null){{incidentDetails=true}}else null)
+                    onDetails=if(!firstAnswer&&tab in listOf(0,1,8,10)&&!picking&&incident.current!=null){{incidentDetails=true}}else null)
             } },
-            bottomBar = { if(tab in listOf(0,1,8,10) && !picking) Column(Modifier.background(MaterialTheme.colorScheme.surface).navigationBarsPadding()){ApprovedTabs(tab){val next=if(firstAnswer&&it==1)0 else it;tab=next;lastMain=next;languageSettings=false;responseSummary=false;incidentDetails=false;menuOpen=false}} },
+            bottomBar = { if(tab in listOf(0,1,8,10) && !picking) Column(Modifier.background(MaterialTheme.colorScheme.surface).navigationBarsPadding()){ApprovedTabs(tab){val next=if(firstAnswer)0 else it;tab=next;lastMain=next;languageSettings=false;responseSummary=false;incidentDetails=false;menuOpen=false}} },
             snackbarHost = { SnackbarHost(snackbar) },
         ) { padding ->
             Box(Modifier.fillMaxSize().padding(padding)) {
@@ -286,7 +290,7 @@ private fun PlanAppContent(model: PlanViewModel) {
                 if(incidentDetails)incident.current?.let {current->
                     var now by remember(current.start.eventId) {mutableLongStateOf(System.currentTimeMillis())}
                     LaunchedEffect(current.start.eventId){while(true){now=System.currentTimeMillis();kotlinx.coroutines.delay(60_000)}}
-                    ApprovedSheet(uiText(if(current.start.training)"training_details" else "earthquake_details"),{incidentDetails=false}) {
+                    ApprovedSheet(uiText(if((activeVenue?:cloudState.venue?.takeIf {it.groupId==group})?.displaysAsDrill(current.start)?:current.start.training)"training_details" else "earthquake_details"),{incidentDetails=false}) {
                         Text(uiText("incident_started"),color=MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(io.github.nevaseme.plandmk1.core.usDateTime(current.start.createdAt))
                         Text(uiText("elapsed",((now-current.start.createdAt)/60_000).coerceAtLeast(0)))

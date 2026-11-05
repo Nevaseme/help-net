@@ -4,6 +4,7 @@ import {clearableSearch,dismissKeyboard} from './search-controls.mjs';
 import {pickBuilding} from './building-picker.mjs';
 import {selectAddressCandidate} from './address-selection.mjs';
 import {geocodeCandidates} from './city-addresses.mjs';
+import {demoAddressLabel} from './demo-address-display.mjs';
 import {setText} from './dom-state.mjs';
 
 /** Keep coordinates in the stored profile, while editing them with a map pin. */
@@ -15,7 +16,7 @@ export function attachProfileHome({store,getGroup,onChange}){
  let working=false,pickedMetadata={},confirmedAddress='';const refreshSearch=clearableSearch($('home-address'));
  const summary=document.createElement('p');summary.className='home-selected';host.append(summary);$('profile-building').textContent='登録済みの建物・部屋から選ぶ';host.append($('profile-building'));
  const selected=()=>$('lat').value!==''&&$('lon').value!==''&&Number.isFinite(Number($('lat').value))&&Number.isFinite(Number($('lon').value));
- function render(){summary.textContent=confirmedAddress?t('選択した住居：')+confirmedAddress:'';summary.hidden=!confirmedAddress;if(!working)setText($('home-state'),selected()?t('住居の位置を選択済みです。変更するときは地図で選び直せます。'):t('住所を検索するか、地図から住んでいる場所を選んでください。'));}
+ function render(){const english=document.documentElement.lang==='en';$('home-address').placeholder=english?'Example: Sakyo-ku, Kyoto':'例：京都市左京区…';const label=demoAddressLabel(confirmedAddress,english);if([confirmedAddress,demoAddressLabel(confirmedAddress,true)].includes($('home-address').value))$('home-address').value=label;summary.textContent=confirmedAddress?t('選択した住居：')+label:'';summary.hidden=!confirmedAddress;if(!working)setText($('home-state'),selected()?t('住居の位置を選択済みです。変更するときは地図で選び直せます。'):t('住所を検索するか、地図から住んでいる場所を選んでください。'));}
  async function choose(mode){
   if(working)return;dismissKeyboard();working=true;for(const b of host.querySelectorAll('button'))b.disabled=true;
   try{

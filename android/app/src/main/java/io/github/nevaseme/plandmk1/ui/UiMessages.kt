@@ -394,6 +394,7 @@ object UiMessages {
         "災害・訓練の管理" to "Manage emergencies and drills",
         "訓練" to "Drill",
         "安否確認" to "Safety check",
+        "安否確認の訓練" to "Safety drill",
         "地震の安否確認" to "Earthquake safety check",
         "安否確認中" to "Safety check in progress",
         "安否確認の開始を待っています" to "Waiting for a safety check to start.",
@@ -776,6 +777,7 @@ object UiMessages {
             Regex("(.+)取得") to "Acquired: $1",
             Regex("共有中・接続 (.+)台") to "Sharing · $1 devices connected",
             Regex("保存しました[（(](.+)[）)]") to "Saved ($1)",
+            Regex("地震開催中 · (\\d+)人") to "Earthquake in progress · $1 participants",
             Regex("訓練開催中 · (\\d+)人") to "Drill in progress · $1 participants",
             Regex("接続済み・自動同期中（(\\d+) 台）") to "Connected · syncing ($1 devices)",
             Regex("相手が受け取った情報：(\\d+)件") to "$1 records received by peers",
@@ -789,6 +791,6 @@ object UiMessages {
         for((pattern,replacement) in patterns)if(pattern.matches(value))return pattern.replace(value,replacement)
         return value
     }
-    fun text(context:Context,value:String)=text(value,context.getSharedPreferences("interface-language",Context.MODE_PRIVATE).getString("language","ja")?:"ja")
+    fun text(context:Context,value:String)=text(value,context.getSharedPreferences("interface-language",Context.MODE_PRIVATE).getString("language","en")?:"en")
 }
 @Composable fun menuText(value:String)=UiMessages.text(value,LocalUiLanguage.current)

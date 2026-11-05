@@ -71,7 +71,7 @@ fun communityNamesFor(venue:io.github.nevaseme.plandmk1.demo.VenueSession?,group
 fun communityPeopleFor(residents:List<Resident>,care:List<CareEvent>,venue:io.github.nevaseme.plandmk1.demo.VenueSession?,roster:MemberRoster?=null):List<CommunityPerson> = residents.map {p->
     val scenarioPerson=venue?.scenario?.people?.find {it.deviceId==p.originId}
     val placement=venue?.allPlacements()?.find {it.deviceId==p.originId}
-    val region=when {venue?.scenario==null->"group";scenarioPerson!=null->scenarioPerson.communityId;venue.positionMode=="ACTUAL"->"venue";else->placement?.home?.longitude?.let {demoCommunityFor(it,venue.scenario.communityLongitudeCuts)}}
+    val region=when {venue?.scenario==null->"group";scenarioPerson!=null->scenarioPerson.communityId;venue.positionMode=="ACTUAL"->"venue";else->placement?.communityId?:placement?.home?.let {demoCommunityAtPoint(it.latitude,it.longitude,venue.scenario)}}
     CommunityPerson(p.originId,p.name,region,residentMapState(p,care,roster).name,scenarioPerson!=null,placement?.home?.buildingId)
 }
 
@@ -83,4 +83,12 @@ fun activeMaterialChanges(changes:List<ResponseChange>)=changes.filter {change->
         val progress=changes.filterIsInstance<ResponseChange.Progress>().filter {it.target==change.target}
         progress.isEmpty()||progress.any {it.status!=WorkStatus.DONE}
     }
+}
+
+fun demoCommunityAtPoint(latitude:Double,longitude:Double,scenario:io.github.nevaseme.plandmk1.demo.VenueScenario):String? {
+    val bounded=scenario.communities.filter {(it.boundary?.size?:0)>=3}
+    if(bounded.isEmpty())return demoCommunityFor(longitude,scenario.communityLongitudeCuts)
+    return bounded.firstOrNull {c->val ring=c.boundary!!;var inside=false;var j=ring.lastIndex
+        for(i in ring.indices){val a=ring[i];val b=ring[j];if((a[1]>latitude)!=(b[1]>latitude)&&longitude<(b[0]-a[0])*(latitude-a[1])/(b[1]-a[1])+a[0])inside=!inside;j=i};inside
+    }?.id
 }
