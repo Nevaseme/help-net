@@ -1,5 +1,5 @@
 const versions=[
- {id:'helpnet-report-location-pwa',title:'Help Net · PWA 1.6.50 実装確認',summary:'通報アイコンを登録地点へ戻し、Blocked roadの初期地点だけを道路上に訂正しました。建物詳細の表示範囲とPDF保存を維持し、Safetyの保存結果も言語切替に追従します。',scenes:[['pwa-map','地図','道路上のBlocked road。全通報の自動回避・引出線はありません。'],['pwa-building','建物詳細','地図を残した建物詳細と、所属町内会の範囲外という短い説明。'],['pwa-safety','Safety','英語へ切り替えた後の保存結果もSavedと表示。']]},
+ {id:'helpnet-report-location-pwa',title:'Help Net · PWA 1.6.50 実装確認',summary:'通報アイコンを登録地点へ戻し、Blocked roadの初期地点だけを道路上に訂正しました。建物詳細の表示範囲とPDF保存を維持し、Safetyの保存結果も言語切替とダーク表示に対応します。',scenes:[['pwa-map','地図','道路上のBlocked road。全通報の自動回避・引出線はありません。'],['pwa-building','建物詳細','地図を残した建物詳細と、所属町内会の範囲外という短い説明。'],['pwa-safety','Safety','英語へ切り替えた後の保存結果もSavedと表示。']]},
  {id:'helpnet-report-location-android',title:'Help Net · Android 1.5.76 実装確認',summary:'通報の自動回避を撤去し、登録地点との一致・輪郭の描画順・開閉後のMap維持をエミュレーターで確認しました。凡例の外側を押して閉じる操作も修正しています。',scenes:[['android-map','地図','訂正後の道路地点に置いた通報。登録地点からの一律移動はありません。'],['android-closed','通報を閉じた後','通報を閉じてもMapを維持。']]}
 ];
 for(const version of versions){
