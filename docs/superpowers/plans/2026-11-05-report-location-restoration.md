@@ -73,7 +73,7 @@
 ## 公開・残件
 
 - PWA公開確認済み。Cloudflare deployment `25f68e6b49cd428ea4ce4d78879bdacf`。公開配信物SHA-256 `0934fcab46b1f5d08271b5d68a9d6d7ef58d54ef02c9a19d1617e1b8ca0860e8`。
-- GitHubと比較サイトは更新準備済み。送信後の確認結果を追記する。
+- GitHub mainへ通常プッシュ済み（画面公開commit `76352ef`）。Pages run `41985788986` が成功。公開サイトでPWA 1.6.50 / Android 1.5.76の追加列、旧説明の訂正、画像切替を実際に確認した。最新画像は旧比較の右側にあり、旧画面は保持。
 - 実機はロック解除待ち。認証回避・端末設定変更はしていない。解除後に更新と約5〜10分の地図操作確認が必要。
 - [性能調査](2026-11-05-runtime-performance-audit.md)は根拠・候補・影響・回帰試験を記載した調査報告のみ。最適化は実施しない。
 
@@ -82,3 +82,7 @@
 ## 文書とコードの不一致
 
 旧監査・旧比較の自動回避を正解とした説明は撤回・訂正した。READMEの旧製品名、PWA HTMLの古い版表示、作業フォルダーの案内を現在と整合させた。過去の設計文書や試験記録の旧名称・版・フォルダーは履歴として残し、現在の実装・確認結果と区別する。旧「Material標準シート」という説明に対し、実装はApprovedSheetである。各社デザイン規則の全項目への準拠認証を行ったという意味ではない。
+
+## デザイン照合
+
+Appleの[Sheets](https://developer.apple.com/design/human-interface-guidelines/sheets)、Googleの[Bottom sheets](https://developer.android.com/develop/ui/compose/components/bottom-sheets)、米国政府の[USWDS Modal](https://designsystem.digital.gov/components/modal/)、デジタル庁の[モーダルダイアログ](https://design.digital.go.jp/dads/components/modal-dialog/)を参照先として、既存画面の閉じ方・元画面の維持・短い案内を照合した。今回は凡例の外側操作、ドラッグ、閉じた後のMap維持、テーマに合う保存結果の色を確認した。OS固有の全アクセシビリティ機能や4体系の全項目を網羅したという判定ではない。
