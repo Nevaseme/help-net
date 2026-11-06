@@ -48,4 +48,6 @@ PWAのローカルおよび公開資産での試験成功：同じ開催で2回�
 
 PWA 1.7.1/r114を公開し、4公開資産がビルド結果と一致。Cloudflare deployment `951aa7c8d12b4a8abaed97ceeb1a8500`、Worker SHA256 `31a472f53f3f5151761328a742a247d0190e6ca5ab1a2b286c304a60fffdfab5`。更新前Workerのハッシュを照合し、既存の保存領域・レート制限・互換設定・監視設定を保持。API・保存形式の変更なし。
 
-Android実機は1.7.1/code104へデータを消さず更新し、通常のMainActivityへ戻した。APKは327,726,297 bytes、SHA256 `4392656d637dced77ea378c4fe83be1af0a4641f38cef11b897e42d1581795a2`。配布APKと案内ページへの反映確認は継続中。
+Android実機は1.7.1/code104へデータを消さず更新し、通常のMainActivityへ戻した。APKは327,726,297 bytes、SHA256 `4392656d637dced77ea378c4fe83be1af0a4641f38cef11b897e42d1581795a2`。GitHub Release `android-v1.7.1`へ公開済みで、公開アセットのハッシュ・サイズが一致し、ダウンロードURLのHTTP 200を確認。参加案内はcommit `5ab2d62`、Pages run `42255563593`の配信成功を確認。公開HTMLの1.7.1リンク・熱海の注記に加え、旧URLから6端末条件の表示・日英切替とJavaScript有効/無効の転送を再検証し、すべて成功。
+
+1.7.1公開後にも実際の共有サーバーで4端末条件の参加フロー全体を再確認し、全ケース成功。安否画面まで1,762 / 1,619 / 1,977 / 1,679ms。HTTPエラー・JavaScript例外なし、試験開催終了成功。iPhone実機の利用者確認は追加前の1.7.0に対するものと区別する。
