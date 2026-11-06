@@ -42,6 +42,8 @@ ReviewedとLaterを1つのCloseに整理する。Closeは案内を閉じ、既�
 
 ビルド成功。vivo実機のAutostartGuidanceTestは4件成功（5.838秒）。日英の表示、Close、設定画面を開いても許可済みにしないこと、非対応時の非表示を確認。実アプリのApp settingsから案内を開き、短い見出し・本文・2ボタンを画面とUI階層で確認し、閉じて地図へ戻した。versionName=1.7.3/code106を確認。
 
+GitHub Release `android-v1.7.3` のAPKは327726229 bytes、SHA-256 `3cb3944839193ac7603c4c2cfb3359afd421524a392668147f9ddd73e35a661d`。公開ダウンロードのHTTP 200・サイズ・digestを確認。案内ページの公開run 42276736106は成功。旧スライドURLから6端末プロフィールでEN/JP・端末別表示・Android 1.7.3リンクを確認した。PWA本体は変更していない。
+
 既存テストにPlanD Mk1の旧文言が残っていたため、現行Help Net文言へ合わせた。「このアプリについて」の文案は別資料で修正したが、ANUGAの役割の説明も今回の確認事項のためアプリ本文には未反映。
 
 ## 同時に確認した事項
