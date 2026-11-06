@@ -258,7 +258,7 @@ document.querySelector('[data-menu="settings"]').onclick=()=>{$('app-menu').clos
   const material=({'601':local('木造','Wood'),'602':local('鉄骨鉄筋コンクリート造','Steel reinforced concrete'),'603':local('鉄筋コンクリート造','Reinforced concrete'),'604':local('鉄骨造','Steel'),'605':local('軽量鉄骨造','Light steel')})[attrs.structureCode]||unknown;
   const age=buildingAge(attrs.year);
   const time=pos?.acquiredAt?usTime(pos.acquiredAt):null;
-  const positionText=!pos?(h('位置不明')+(p.lastKnownPosition?' · '+local('最終取得：','Last updated: ')+escape(date(p.lastKnownPosition.acquiredAt)):'')):`${local('最後のスマホ位置','Last phone location')}　${time?escape(time)+local('取得',' captured')+'・'+escape(elapsed(pos.acquiredAt)):h('日時不明')}${pos.source!=='DEMO_ASSIGNED'&&Number.isFinite(pos.accuracyMeters)?'・'+local('精度 約','Accuracy ~')+escape(pos.accuracyMeters)+'m':''}`;
+  const positionText=!pos?(h('位置不明')+(p.lastKnownPosition?' · '+local('最終取得：','Last updated: ')+escape(date(p.lastKnownPosition.acquiredAt)):'')):`${local('最後のスマホ位置','Last phone location')}${local('　',' ')}${time?escape(time)+local('取得',' captured')+local('・',' · ')+escape(elapsed(pos.acquiredAt)):h('日時不明')}${pos.source!=='DEMO_ASSIGNED'&&Number.isFinite(pos.accuracyMeters)?local('・',' · ')+local('精度 約','Accuracy ~')+escape(pos.accuracyMeters)+'m':''}`;
   const sample=s.venue?.scenario?.people?.find(x=>x.deviceId===id),memo=v.disclosed?(memos.find(m=>m.answerId===s.view?.answers[id]?.eventId)?.text||sample?.note||''):'';
   const bedroom=[residenceFloorLabel(p.floor,language),p.room].filter(Boolean).join('・')||t('未登録');
   const pin='<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7m0 10a3 3 0 1 1 0-6 3 3 0 0 1 0 6"/></svg>';

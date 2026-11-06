@@ -22,6 +22,11 @@ try{for(const mode of ['DRILL','EARTHQUAKE']){
  while(true){const page=await c.request('/groups/'+g.groupId+'/records?after='+cursor+'&limit=100',{session:g});records.push(...page.records);cursor=page.nextCursor;if(!page.hasMore)break;}
  s.close();return {envelope,records};},{mode,participants});
  assert.equal(fixture.envelope.venue.placements.length,participants);
+ const central=fixture.envelope.venue.scenario.people.filter(p=>p.communityId==='demo-central');
+ assert.equal(central.length+participants,48);
+ assert.equal(central.filter(p=>p.positionUnknown).length,2);
+ for(const status of ['SOS','UNREPORTED'])assert.equal(central.filter(p=>p.safety===status&&!p.positionUnknown).length,3);
+ assert.equal(central.filter(p=>p.safety==='SAFE').length,40-participants);
  if(participants===32&&mode==='DRILL'&&process.env.VENUE_WRITE_FIXTURE==='1')await writeFile('android/app/src/androidTest/assets/venue-experience-fixture.json',JSON.stringify(fixture,null,2));
  await page.reload();await page.waitForFunction(()=>document.body.dataset.page==='safety'&&!document.querySelector('#safe').disabled);assert.equal(await page.locator('html').getAttribute('lang'),'en');
  for(const name of ['buildings','residents','response'])assert.equal(await page.locator(`[data-tab="${name}"]`).isDisabled(),true);assert.equal(await page.locator('#menu-open').isDisabled(),true);
@@ -58,7 +63,20 @@ try{for(const mode of ['DRILL','EARTHQUAKE']){
  await page.getByRole('button',{name:'Cancel',exact:true}).click();await page.locator('#response-edit-form').waitFor();assert.equal(await page.locator('#response-edit-form [name="description"]').inputValue(),'Retained report draft');
  await audit('report-preview');await page.screenshot({path:out+'/'+mode+'-report-preview.png'});
  await page.locator('#response-edit-form').evaluate(form=>form.closest('dialog').close());
+ await page.locator('[data-tab="residents"]').click();
+ for(const person of central.filter(p=>!p.positionUnknown&&p.safety!=='SAFE')){
+  await page.locator(`#list [data-person="${person.deviceId}"]`).click();
+  const sheet=page.locator('#person-sheet');await sheet.waitFor({state:'visible'});
+  assert.equal(await sheet.locator('.obs-icon.impact').count(),Number(person.observations.impact));
+  assert.equal(await sheet.locator('.obs-icon.enclosed').count(),Number(person.observations.enclosed));
+  if(await sheet.locator('#person-home-attributes').count())await page.waitForFunction(()=>document.querySelector('#person-home-attributes')?.dataset.status!=='loading');
+  await audit('sensor-pattern-'+person.safety);
+  await page.screenshot({path:`${out}/${mode}-${person.safety}-${Number(person.observations.impact)}${Number(person.observations.enclosed)}.png`});
+  await sheet.locator('.sheet-close').click();
+ }
+ await page.locator('[data-tab="buildings"]').click();
  await page.locator('#map-unknown').click();await page.waitForTimeout(250);assert.match(await page.locator('#list').innerText(),/Last updated:/);await audit('unknown');
+ assert.equal(await page.locator('#list [data-person]').count(),2);await page.screenshot({path:out+'/'+mode+'-unknown.png'});
  for(const name of ['residents','response','safety']){await page.locator(`[data-tab="${name}"]`).click();await page.waitForTimeout(350);await audit(name);}
  await page.locator('#safe').click();await page.locator('#status-update').click();await page.waitForFunction(()=>document.querySelector('#own-status-feedback').textContent==='Saved');await audit('updated-safe');
  assert.equal(await page.evaluate(()=>document.body.dataset.page),'safety');assert.equal(await page.locator('#venue-location-notice').isVisible(),false);

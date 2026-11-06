@@ -8,7 +8,7 @@ import {gunzipSync} from 'node:zlib';
 test('four-block neighborhoods contain all assigned homes and current phone positions',()=>{
  const scenario=createVenueScenario(crypto.randomUUID());
  for(const c of scenario.communities){assert.equal(layout.blocks[c.id].length,4);assert.equal(demoCommunityAtPoint(c.latitude,c.longitude,scenario),c.id);}
- for(const p of scenario.people){assert.equal(demoCommunityAtPoint(p.home.latitude,p.home.longitude,scenario),p.communityId);assert.ok(layout.households.some(h=>h.buildingId===p.home.buildingId));if(!p.positionUnknown){assert.equal(demoCommunityAtPoint(p.position.latitude,p.position.longitude,scenario),p.communityId);}}
+ for(const p of scenario.people){assert.equal(demoCommunityAtPoint(p.home.latitude,p.home.longitude,scenario),p.communityId);assert.ok([...layout.households,...layout.slots.map(s=>s.home)].some(h=>h.buildingId===p.home.buildingId));if(!p.positionUnknown){assert.equal(demoCommunityAtPoint(p.position.latitude,p.position.longitude,scenario),p.communityId);}}
  assert.equal(demoCommunityAtPoint(35.018,135.763,scenario),null);
 });
 
@@ -32,9 +32,9 @@ test('current positions have the approved indoor/road balance and distinct atten
  const known=layout.people.filter(p=>!p.positionUnknown);assert.equal(known.length,94);assert.equal(known.filter(p=>indoor(p.position)).length,66);
  assert.equal(layout.slots.slice(0,32).filter(indoor).length,24);assert.equal(new Set(layout.slots.map(p=>`${p.latitude}:${p.longitude}`)).size,64);assert.equal(indoor(layout.blockedRoadPoint),false);
 });
-test('six known SOS/no-response people plus two unknown examples retain old fixes',()=>{
+test('central six known SOS/no-response people plus two separate unknown examples',()=>{
  const start=Date.UTC(2026,10,6),s=createVenueScenario(crypto.randomUUID(),start),unknown=s.people.filter(p=>p.positionUnknown);
- assert.equal(s.people.filter(p=>p.safety==='SAFE').length,88);assert.equal(s.people.filter(p=>p.safety!=='SAFE'&&!p.positionUnknown).length,6);assert.equal(unknown.length,2);
+ assert.equal(s.people.filter(p=>p.safety==='SAFE').length,116);assert.equal(s.people.filter(p=>p.safety!=='SAFE'&&!p.positionUnknown).length,10);assert.equal(unknown.length,2);
  assert.deepEqual(unknown.map(p=>p.lastKnownPosition.acquiredAt),[start-7*86400000,start-3*86400000]);assert.ok(unknown.every(p=>p.position===null));
 });
 

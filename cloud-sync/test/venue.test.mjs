@@ -74,7 +74,7 @@ for(const mode of ['DRILL','EARTHQUAKE'])test(`${mode} starts for existing membe
  const f=fixture(t),admin=await setup(f),g=admin.groupId;
  const started=await f.call(`/groups/${g}/venue`,{requestId:id(),areaId:'kyoto-gosho-south',presentationMode:mode},admin.token);
  assert.equal(started.status,200);assert.equal(started.body.venue.presentationMode,mode);
- assert.equal(started.body.venue.scenario.people.length,96);assert.equal(started.body.venue.placements.length,1);
+ assert.equal(started.body.venue.scenario.people.length,127);assert.equal(started.body.venue.placements.length,1);
  assert.equal(f.get(g).venueConfig().passwordHash,null);
  const join=await f.call('/venue/join',{groupName:'会場テスト',password:'',activityName:'Uninvited',deviceId:id(),registrationToken:token()});assert.equal(join.status,403);
  const denied=await f.call(`/groups/${g}/venue`,{requestId:id(),areaId:'kyoto-gosho-south'});assert.notEqual(denied.status,200);
@@ -102,11 +102,11 @@ test('venue creates persistent fictional scenario without consuming audience ide
  const f=fixture(t),admin=await setup(f),g=admin.groupId,requestId=id();
  const input={requestId,password,areaId:'kyoto-gosho-south'};
  const start=await f.call(`/groups/${g}/venue`,input,admin.token);
- const scenario=start.body.venue.scenario;assert.equal(scenario?.people?.length,96);
- assert.equal(scenario.people.filter(p=>p.safety==='SAFE').length,88);assert.equal(scenario.people.filter(p=>p.safety==='UNREPORTED').length,4);assert.equal(scenario.people.filter(p=>p.initialRescue).length,0);assert.equal(new Set(scenario.people.map(p=>p.home.plateauId)).size,64);assert.equal(new Set(scenario.people.map(p=>p.home.householdId)).size,64);
+ const scenario=start.body.venue.scenario;assert.equal(scenario?.people?.length,127);
+ assert.equal(scenario.people.filter(p=>p.safety==='SAFE').length,115);assert.equal(scenario.people.filter(p=>p.safety==='UNREPORTED').length,6);assert.equal(scenario.people.filter(p=>p.initialRescue).length,0);assert.equal(new Set(scenario.people.map(p=>p.home.plateauId)).size,95);assert.equal(new Set(scenario.people.map(p=>p.home.householdId)).size,95);
  assert.equal(start.body.roster.members.length,1);assert.equal(start.body.venue.placements.length,1);
  assert.equal(scenario.communityLongitudeCuts.length,2);assert.ok(scenario.communityLongitudeCuts[0]<scenario.communityLongitudeCuts[1]);
- for(const c of scenario.communities){const residents=scenario.people.filter(p=>p.communityId===c.id);assert.equal(new Set(residents.map(p=>p.home.buildingId)).size,({'demo-west':24,'demo-central':16,'demo-east':24})[c.id]);assert.ok(residents.some(p=>p.safety==='SAFE'));assert.ok(residents.some(p=>p.safety==='UNREPORTED'));assert.ok(residents.some(p=>p.safety==='SOS'&&!p.initialRescue));}
+ for(const c of scenario.communities){const residents=scenario.people.filter(p=>p.communityId===c.id);assert.equal(new Set(residents.map(p=>p.home.buildingId)).size,({'demo-west':24,'demo-central':47,'demo-east':24})[c.id]);assert.ok(residents.some(p=>p.safety==='SAFE'));assert.ok(residents.some(p=>p.safety==='UNREPORTED'));assert.ok(residents.some(p=>p.safety==='SOS'&&!p.initialRescue));}
  assert.ok(scenario.people.every(p=>p.home.plateauId&&p.home.buildingId&&p.home.address&&p.communityId));
  assert.deepEqual(new Set(scenario.people.map(p=>p.safety)),new Set(['SAFE','SOS','UNREPORTED']));
  assert.ok(scenario.people.every(p=>!/[\u3040-\u30ff\u3400-\u9fff]/.test(p.note+p.name+p.home.room)));
@@ -170,7 +170,7 @@ test('administrator selects actual positions; join creates no invented coordinat
  assert.equal(member.venue.placements.every(p=>p.source==='DEVICE_LOCATION'&&p.latitude===null&&p.longitude===null),true);
  const {saveVenue,venuePositions}=await import('../../lab/web/venue-demo.mjs');await saveVenue({read:async()=>null,update:async(_table,_key,fn)=>fn()},member);
  const point={groupId:g,originId:member.deviceId,revision:1,latitude:35.66,longitude:139.73,acquiredAt:Date.now(),accuracyMeters:20};
- const actual=rows=>rows.filter(p=>p.originId===member.deviceId);assert.equal(actual(venuePositions(member.venue,[])).length,0);assert.equal(actual(venuePositions(member.venue,[{...point,acquiredAt:1}])).length,0);assert.deepEqual(actual(venuePositions(member.venue,[point])),[point]);assert.equal(venuePositions(member.venue,[]).length,94);
+ const actual=rows=>rows.filter(p=>p.originId===member.deviceId);assert.equal(actual(venuePositions(member.venue,[])).length,0);assert.equal(actual(venuePositions(member.venue,[{...point,acquiredAt:1}])).length,0);assert.deepEqual(actual(venuePositions(member.venue,[point])),[point]);assert.equal(venuePositions(member.venue,[]).length,124);
  assert.equal((await f.call(`/groups/${g}/records`,{records:[{collection:'positions',record:point}]},member.token)).status,200);
  assert.equal(f.get(g).history('residents').length,0);assert.equal(f.get(g).history('positions').length,1);
 });
@@ -260,21 +260,22 @@ test('only administrator can reverse another author rescue; server preserves sig
  assert.equal((await push(early,admin.token)).status,409);
  assert.equal((await push(pending,member.token)).status,200);assert.equal((await push(early,admin.token)).status,200);
 });
-test('administrator starts venue and forty named attendees join its existing incident without home records',async t=>{
+test('administrator and thirty-nine attendees fill the forty real-participant slots without home records',async t=>{
  const f=fixture(t),admin=await setup(f),sessionId=id();
  const started=await f.call(`/groups/${admin.groupId}/venue`,{requestId:sessionId,password,areaId:'kyoto-gosho-south'},admin.token);
  assert.equal(started.status,200,JSON.stringify(started.body));
  assert.equal(started.body.venue.incidentId,sessionId);
  assert.equal((await f.call('/venue/check',{groupName:'会場テスト',password})).status,200);
- const inputs=Array.from({length:40},()=>({groupName:'会場テスト',password,activityName:'同じ名前',deviceId:id(),registrationToken:token()}));
- const joined=[];for(const input of inputs){const r=await f.call('/venue/join',input);assert.equal(r.status,200,JSON.stringify(r.body));joined.push(r.body);}
+ const inputs=Array.from({length:39},()=>({groupName:'会場テスト',password,activityName:'同じ名前',deviceId:id(),registrationToken:token()}));
+ const joined=[];for(const input of inputs){const r=await f.call('/venue/join',input);assert.equal(r.status,200,JSON.stringify(r.body));joined.push(r.body);const central=r.body.venue.scenario.people.filter(p=>p.communityId==='demo-central');assert.equal(central.length+r.body.venue.placements.length,48);assert.equal(central.filter(p=>p.positionUnknown).length,2);assert.equal(central.filter(p=>!p.positionUnknown&&p.safety==='SOS').length,3);assert.equal(central.filter(p=>!p.positionUnknown&&p.safety==='UNREPORTED').length,3);}
  assert.ok(joined.every(r=>r.role==='MEMBER'&&r.venue.incidentId===sessionId));
- assert.equal(new Set(joined.map(r=>r.memberId)).size,40);
+ assert.equal(new Set(joined.map(r=>r.memberId)).size,39);
  const replay=await f.call('/venue/join',inputs[0]);assert.equal(replay.body.memberId,joined[0].memberId);
- const snapshot=f.get(admin.groupId).snapshot();assert.equal(snapshot.roster.members.length,41);
- assert.equal(snapshot.venue.placements.length,41);assert.equal(new Set(snapshot.venue.placements.map(p=>p.latitude+':'+p.longitude)).size,41);assert.equal(new Set(snapshot.venue.placements.map(p=>p.home.householdId)).size,41);assert.ok(snapshot.venue.placements.every(p=>p.communityId==='demo-central'&&p.home.plateauId));
- assert.equal(new Set(snapshot.venue.placements.map(p=>p.home.plateauId)).size,41);
+ const snapshot=f.get(admin.groupId).snapshot();assert.equal(snapshot.roster.members.length,40);
+ assert.equal(snapshot.venue.placements.length,40);assert.equal(new Set(snapshot.venue.placements.map(p=>p.latitude+':'+p.longitude)).size,40);assert.equal(new Set(snapshot.venue.placements.map(p=>p.home.householdId)).size,40);assert.ok(snapshot.venue.placements.every(p=>p.communityId==='demo-central'&&p.home.plateauId));
+ assert.equal(new Set(snapshot.venue.placements.map(p=>p.home.plateauId)).size,40);
  assert.equal(f.get(admin.groupId).history('residents').length,0);
+ const rejected=await f.call('/venue/join',{...inputs[0],deviceId:id(),registrationToken:token()});assert.equal(rejected.status,409);assert.equal(rejected.body.error.code,'venue_full');assert.deepEqual(f.get(admin.groupId).snapshot(),snapshot);
  const text=JSON.stringify(snapshot);assert.equal(text.includes(password),false);assert.equal(text.includes('passwordHash'),false);
 });
 test('wrong password, member start and conflicting group names are refused without changing membership',async t=>{

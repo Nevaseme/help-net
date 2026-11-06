@@ -1,4 +1,4 @@
-import {compactSlots} from './venue-compact.mjs';
+import {compactSlots,occupiedVenueScenario} from './venue-compact.mjs';
 import {createVenueScenario,seedVenueScenario} from './venue-scenario.mjs';
 import {ApiError,requireValue,uuid} from './validation.mjs';
 import {validateDemoPassword} from './demo-auth.mjs';
@@ -34,8 +34,9 @@ export const venueMethods={
  venueSnapshot(){
   const config=this.venueConfig();if(!config)return null;
   const closed=this.history('quakes').some(e=>e.action==='END'&&(e.targetId===config.sessionId||e.endedIncidentIds?.includes(config.sessionId)));
+  const placements=this.s.all('SELECT p.body FROM venue_participants p LEFT JOIN device_access a ON a.device_id=p.device_id WHERE p.session_id=? AND COALESCE(a.revoked,0)=0 ORDER BY p.device_id',config.sessionId).map(r=>{const p=JSON.parse(r.body);if(config.positionMode==='ACTUAL')return p;const home=latestDemoHome(this.history('deviceRecords'),this.meta('groupId'),config.sessionId,p.deviceId)??p.home??config.slots[p.slotId]?.home??catalogue.homes[p.slotId];return {...p,home};});
   return {version:1,mode:'VENUE_DEMO',positionMode:config.positionMode??'KYOTO',presentationMode:config.presentationMode??'DRILL',startedAt:config.startedAt??0,simulationStartedAt:config.simulationStartedAt??null,groupId:this.meta('groupId'),sessionId:config.sessionId,incidentId:config.sessionId,areaId:config.areaId,areaName:config.positionMode==='ACTUAL'?'参加者の現在地':area.name,closed,
-   scenario:withDemoObservations(withUnknownDemoResidents(config.scenario))??null,recoveryAvailable:!config.privateTraining,inactiveMemberIds:this.inactiveMembers(),placements:this.s.all('SELECT p.body FROM venue_participants p LEFT JOIN device_access a ON a.device_id=p.device_id WHERE p.session_id=? AND COALESCE(a.revoked,0)=0 ORDER BY p.device_id',config.sessionId).map(r=>{const p=JSON.parse(r.body);if(config.positionMode==='ACTUAL')return p;const home=latestDemoHome(this.history('deviceRecords'),this.meta('groupId'),config.sessionId,p.deviceId)??p.home??config.slots[p.slotId]?.home??catalogue.homes[p.slotId];return {...p,home};})};
+   scenario:withDemoObservations(withUnknownDemoResidents(occupiedVenueScenario(config.scenario,placements)))??null,recoveryAvailable:!config.privateTraining,inactiveMemberIds:this.inactiveMembers(),placements};
  },
  assignVenue(deviceId,memberId,name){
   const config=this.venueConfig();requireValue(config,'venue_not_started',409);

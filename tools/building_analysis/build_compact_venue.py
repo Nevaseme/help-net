@@ -121,6 +121,15 @@ def build(roads):
    p['position']=indoor_position(resident_buildings[i],(indoor_offset+6)//10>(indoor_offset+5)//10);indoor_offset+=1;indoor.append(p)
   first=indoor[0];second=max(indoor,key=lambda p:distance((p['position']['longitude'],p['position']['latitude']),(first['position']['longitude'],first['position']['latitude'])))
   for p,status in zip([first,second],['SOS','UNREPORTED']):p.update(safety=status,injury='UNKNOWN',note='I need help.' if status=='SOS' else '',observations={'impact':status=='SOS','enclosed':status=='UNREPORTED'})
+  if region=='demo-central':
+   # Six separate, known-location residents. Keep the two unknown examples separate.
+   candidates=[p for p in residents if not p.get('positionUnknown')]
+   chosen=spread([(p['position']['longitude'],p['position']['latitude']) for p in candidates],6)
+   for p in candidates:p.update(safety='SAFE',injury='UNINJURED',note='',observations={'impact':False,'enclosed':False})
+   patterns=[('SOS',False,False),('SOS',True,True),('SOS',True,False),('UNREPORTED',False,False),('UNREPORTED',True,True),('UNREPORTED',False,True)]
+   for xy,(status,impact,enclosed) in zip(chosen,patterns):
+    p=next(p for p in candidates if (p['position']['longitude'],p['position']['latitude'])==xy)
+    p.update(safety=status,injury='UNKNOWN',note='I need help.' if status=='SOS' else '',observations={'impact':impact,'enclosed':enclosed})
   k=0
   for i,b in enumerate(attendee_buildings):
    h=home(b,f'attendee-home-{i+1:02}')
@@ -128,7 +137,7 @@ def build(roads):
    if i%16 not in [3,6,9,12]:p=indoor_position(b,(k+6)//10>(k+5)//10);k+=1
    else:p=position(road_points[road_count+i//4])
    result['slots'].append({**p,'home':h,'communityId':region})
-  critical=[(p['position']['longitude'],p['position']['latitude']) for p in residents if p['position'] and p['safety']!='SAFE']+[(p['longitude'],p['latitude']) for p in result['reportPoints'].values()]
+  critical=[(p['position']['longitude'],p['position']['latitude']) for p in [first,second]]+[(p['longitude'],p['latitude']) for p in result['reportPoints'].values()]
   if region=='demo-west':
    rp=max(road_points[road_count:],key=lambda p:min(distance(p,q) for q in critical));category='ROAD_BLOCKED';result['blockedRoadPoint']=position(rp)
   else:

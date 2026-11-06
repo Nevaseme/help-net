@@ -7,7 +7,7 @@ import {fileURLToPath} from 'node:url';
 import {build} from 'esbuild';
 import {Miniflare,convertV4MiniflareOptions} from 'miniflare';
 
-test('forty same-IP concurrent venue joins survive real Worker directory RPC and SQLite restart',async t=>{
+test('thirty-nine same-IP concurrent joins reach forty total participants survive real Worker directory RPC and SQLite restart',async t=>{
  const dir=await mkdtemp(join(tmpdir(),'pland-venue-'));
  const bundle=await build({entryPoints:[fileURLToPath(new URL('../src/worker.mjs',import.meta.url))],bundle:true,format:'esm',write:false,external:['cloudflare:workers'],platform:'browser'});
  const options={...convertV4MiniflareOptions({name:'venue-test',modules:true,script:bundle.outputFiles[0].text,compatibilityDate:'2026-10-23',compatibilityFlags:['nodejs_compat'],durableObjects:{GROUPS:{className:'GroupJournal',useSQLite:true}},ratelimits:{SIGNUP_LIMITER:{namespace_id:'10302026',simple:{limit:30,period:60}}}}),resourcePersistencePath:dir,telemetry:{enabled:false}};
@@ -19,9 +19,9 @@ test('forty same-IP concurrent venue joins survive real Worker directory RPC and
  assert.equal((await call('/venue/check',{groupName,password})).status,200,'group can be joined before an incident starts');
  const requestId=id();assert.equal((await call(`/groups/${admin.groupId}/venue`,{requestId,areaId:'kyoto-gosho-south'},admin.token)).status,200);
  const checked=await Promise.all(Array.from({length:40},()=>call('/venue/check',{groupName,password})));assert.ok(checked.every(r=>r.status===200),JSON.stringify(checked.filter(r=>r.status!==200)));
- const inputs=Array.from({length:40},(_,n)=>({groupName,password,deviceId:id(),activityName:'参加者'+n,registrationToken:token()}));
+ const inputs=Array.from({length:39},(_,n)=>({groupName,password,deviceId:id(),activityName:'参加者'+n,registrationToken:token()}));
  const joined=await Promise.all(inputs.map(input=>call('/venue/join',input)));assert.ok(joined.every(r=>r.status===200),JSON.stringify(joined.filter(r=>r.status!==200)));
- const before=await call(`/groups/${admin.groupId}/roster`,undefined,admin.token);assert.equal(before.body.roster.members.length,41);assert.equal(new Set(before.body.venue.placements.map(p=>p.slotId)).size,41);
+ const before=await call(`/groups/${admin.groupId}/roster`,undefined,admin.token);assert.equal(before.body.roster.members.length,40);assert.equal(new Set(before.body.venue.placements.map(p=>p.slotId)).size,40);
  await mf.dispose();mf=new Miniflare(options);
  const replay=await call('/venue/join',inputs[0]);assert.equal(replay.status,200);assert.equal(replay.body.memberId,joined[0].body.memberId);assert.equal(replay.body.venue.incidentId,requestId);
  const after=await call(`/groups/${admin.groupId}/roster`,undefined,admin.token);assert.deepEqual(after.body.venue,before.body.venue);
