@@ -8,7 +8,7 @@ from shapely.geometry import shape, box
 from probe_address_city import tile
 
 ROOT=pathlib.Path('demo/data/cities');CACHE=pathlib.Path('.implementation/address-city/map-resources');CACHE.mkdir(parents=True,exist_ok=True)
-PUBLIC='https://nevaseme.github.io/safety_confirm/data/cities/'
+PUBLIC='https://nevaseme.github.io/help-net/data/cities/'
 lock=threading.Lock();total=0
 def fetch(url):
  global total

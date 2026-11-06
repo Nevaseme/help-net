@@ -1,5 +1,8 @@
 import {searchParcelAddresses,mergeParcelCandidates,clearParcelSearch} from './parcel-search.mjs';
 export const CITY_DATA='https://nevaseme.github.io/help-net/data/cities/';
+// Read existing offline files after the repository rename; never fetch the old URL.
+export const legacyCityUrl=url=>String(url).replace(CITY_DATA,'https://nevaseme.github.io/safety_confirm/data/cities/');
+export const cachedCityFile=async(cache,url)=>(await cache?.match(url))||(await cache?.match(legacyCityUrl(url)));
 export const CITY_CODES=['26100','22205','13103'];
 const numerals={'〇':0,'零':0,'一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9};
 function chome(s){if(/^\d+$/.test(s))return s;let value=0,digit=0;for(const c of s){if(c==='十'){value+=(digit||1)*10;digit=0;}else digit=numerals[c]??0;}return String(value+digit);}
@@ -20,14 +23,14 @@ export async function verifiedBytes(response,sha){if(!response.ok)throw Error('�
 export async function gunzipJson(bytes){return JSON.parse(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).text());}
 export async function cityFetch(url,code){
  try{const response=await fetch(url,{cache:'reload'});if(response.ok)return response;throw Error('地域データを取得できません');}catch(error){
-  if(globalThis.caches)for(const name of (await caches.keys()).reverse()){if(!name.startsWith('tasukeai-city-v2-'+code+'-')&&name!=='tasukeai-city-v1-'+code)continue;const cache=await caches.open(name);if(!await cache.match('/__city_complete__'))continue;const saved=await cache.match(url);if(saved)return saved;}throw error;
+  if(globalThis.caches)for(const name of (await caches.keys()).reverse()){if(!name.startsWith('tasukeai-city-v2-'+code+'-')&&name!=='tasukeai-city-v1-'+code)continue;const cache=await caches.open(name);if(!await cache.match('/__city_complete__'))continue;const saved=await cachedCityFile(cache,url);if(saved)return saved;}throw error;
  }
 }
 const packages=new Map();
 export async function loadCityPackage(code,refresh=false){
  if(!CITY_CODES.includes(code))throw Error('対応地域を選んでください');
  if(!refresh&&packages.has(code))return packages.get(code);
- const pending=(async()=>{const cache=globalThis.caches?await caches.open('tasukeai-address-v2'):null,key=CITY_DATA+code+'/search-package-v3';const previous=await cache?.match(key),legacy=await cache?.match(CITY_DATA+code+'/search-package-v2');
+ const pending=(async()=>{const cache=globalThis.caches?await caches.open('tasukeai-address-v2'):null,key=CITY_DATA+code+'/search-package-v3';const previous=await cachedCityFile(cache,key),legacy=await cachedCityFile(cache,CITY_DATA+code+'/search-package-v2');
  if(previous&&!refresh)return previous.json();
  try{const r=await cityFetch(CITY_DATA+code+'/city.json',code);if(!r.ok)throw Error('地域データを取得できません');const city=await r.json();
  const read=async file=>file?gunzipJson(await verifiedBytes(await cityFetch(CITY_DATA+file.path,code),file.sha256)):({rows:[]});

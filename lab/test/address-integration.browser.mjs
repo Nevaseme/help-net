@@ -3,7 +3,7 @@ import {mkdir,writeFile} from 'node:fs/promises';
 import {pathToFileURL} from 'node:url';
 import {startVenueServer} from './venue-server.mjs';
 const {chromium}=await import(pathToFileURL('C:/Users/TAKUMI/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs').href);
-const server=await startVenueServer({cityFixture:true}),base=process.env.ADDRESS_PWA_BASE||server.base,cityData=process.env.ADDRESS_PWA_BASE?'https://nevaseme.github.io/safety_confirm/data/cities/':server.base+'/data/cities/';
+const server=await startVenueServer({cityFixture:true}),base=process.env.ADDRESS_PWA_BASE||server.base,cityData=process.env.ADDRESS_PWA_BASE?'https://nevaseme.github.io/help-net/data/cities/':server.base+'/data/cities/';
 const out='C:/Users/TAKUMI/.codex/visualizations/2026/10/24/01a16c0c-f86e-7220-ad05-e96afa7746d4/address-integration';await mkdir(out,{recursive:true});
 const browser=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true,args:['--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
 const context=await browser.newContext({viewport:{width:400,height:860}}),page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(60000);

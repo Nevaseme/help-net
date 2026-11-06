@@ -1,12 +1,28 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {loadCityPackage} from '../web/city-addresses.mjs';
+import {loadCityPackage,cityFetch,CITY_DATA} from '../web/city-addresses.mjs';
 import {gzipSync} from 'node:zlib';
 import {CityDownload,hasCurrentCityFiles,fetchCityFile} from '../web/city-offline.mjs';
 test('old Kyoto downloads remain usable but require an update for parcel searches',()=>{
- const old={urls:['https://nevaseme.github.io/safety_confirm/data/cities/26100/buildings/index.json']};
+ const old={urls:['https://nevaseme.github.io/help-net/data/cities/26100/buildings/index.json']};
  assert.equal(hasCurrentCityFiles('26100',old),false);
- assert.equal(hasCurrentCityFiles('26100',{urls:[...old.urls,...['parcel-addresses','parcel-search'].map(p=>'https://nevaseme.github.io/safety_confirm/data/cities/26100/'+p+'/index.json')]}),true);
+ assert.equal(hasCurrentCityFiles('26100',{urls:[...old.urls,...['parcel-addresses','parcel-search'].map(p=>'https://nevaseme.github.io/help-net/data/cities/26100/'+p+'/index.json')]}),true);
  assert.equal(old.urls.length,1);
+});
+
+test('repository rename keeps completed offline files and address search usable',async t=>{
+ const oldBase='https://nevaseme.github.io/safety_confirm/data/cities/';
+ const oldUrls=['parcel-addresses','parcel-search'].map(p=>oldBase+'26100/'+p+'/index.json');
+ assert.equal(hasCurrentCityFiles('26100',{urls:oldUrls}),true);
+ const original=globalThis.caches,fetcher=globalThis.fetch;
+ const stored=new Map([[oldBase+'26100/city.json',Response.json({name:'saved Kyoto'})],['/__city_complete__',Response.json({urls:oldUrls,savedAt:1})]]);
+ const search={city:{name:'saved Atami'},addresses:{rows:[]},places:{rows:[]}};
+ const addressCache=new Map([[oldBase+'22205/search-package-v3',Response.json(search)]]);
+ globalThis.caches={keys:async()=>['tasukeai-city-v2-26100-before-rename'],open:async name=>({match:async url=>(name==='tasukeai-address-v2'?addressCache:stored).get(String(url))?.clone()})};
+ globalThis.fetch=async()=>{throw Error('offline');};
+ t.after(()=>{globalThis.caches=original;globalThis.fetch=fetcher;});
+ assert.equal((await (await cityFetch(CITY_DATA+'26100/city.json','26100')).json()).name,'saved Kyoto');
+ assert.deepEqual(await loadCityPackage('22205'),search);
+ assert.ok(stored.has(oldBase+'26100/city.json'),'the original saved entry is preserved');
 });
 test('failed city update leaves the previous complete package usable',async t=>{
  const buckets=new Map();const original=globalThis.caches,fetcher=globalThis.fetch;
@@ -24,7 +40,7 @@ test('completed city download refreshes the search package already in memory',as
  t.after(()=>{globalThis.caches=original;globalThis.fetch=fetcher;});
  let version=1;globalThis.fetch=async url=>url.endsWith('city.json')?Response.json({addresses:{path:'13103/addresses.json.gz'}}):new Response(gzipSync(JSON.stringify({rows:[['test','施設'+version,139,35,'poi']]})));
  assert.equal((await loadCityPackage('13103',true)).addresses.rows[0][1],'施設1');version=2;
- await new CityDownload().download({code:'13103',name:'港区',bytes:1,files:[{url:'https://nevaseme.github.io/safety_confirm/data/cities/13103/city.json'},{url:'https://nevaseme.github.io/safety_confirm/data/cities/13103/addresses.json.gz'}]});
+ await new CityDownload().download({code:'13103',name:'港区',bytes:1,files:[{url:'https://nevaseme.github.io/help-net/data/cities/13103/city.json'},{url:'https://nevaseme.github.io/help-net/data/cities/13103/addresses.json.gz'}]});
  assert.equal((await loadCityPackage('13103')).addresses.rows[0][1],'施設2');
 });
 

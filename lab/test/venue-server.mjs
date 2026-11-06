@@ -27,7 +27,7 @@ export async function startVenueServer({cityFixture=false,publicAssets=null}={})
   let body;
   if(publicAssets){const remote=await fetch(publicAssets+'/'+file,{method:'GET'});if(!remote.ok)throw Error('Public asset unavailable: '+file);body=Buffer.from(await remote.arrayBuffer());}
   else body=await readFile(new URL('../web/'+file,import.meta.url));
-  if(cityFixture&&['city-addresses.mjs','sw.js'].includes(file))body=Buffer.from(body.toString().replace('https://nevaseme.github.io/safety_confirm/data/cities/',url.origin+'/data/cities/'));res.writeHead(200,{'content-type':mime[extname(file)]||'application/octet-stream'});res.end(body);
+  if(cityFixture&&['city-addresses.mjs','sw.js'].includes(file))body=Buffer.from(body.toString().replace('https://nevaseme.github.io/help-net/data/cities/',url.origin+'/data/cities/'));res.writeHead(200,{'content-type':mime[extname(file)]||'application/octet-stream'});res.end(body);
  }catch{res.writeHead(404);res.end();}});
  await new Promise(r=>server.listen(0,'127.0.0.1',r));return {base:'http://127.0.0.1:'+server.address().port,close:async()=>{await new Promise(r=>server.close(r));groups.forEach(g=>g.db.close());}};
 }

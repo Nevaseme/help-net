@@ -21,7 +21,11 @@
 - Android `:app:assembleDebug`: passed. Installed on the existing device with `adb install -r`; package version confirmed as 1.5.88 / 101.
 - Guide tested in Chrome at 320, 390 and 900 pixels: English default even with Japanese browser locale; EN / JP switching; preference persistence; no horizontal overflow or JavaScript errors. Screenshots in local `output/helpnet-guide/`.
 - GitHub repository rename: verified stable repository ID 1425879692 and new full name `Nevaseme/help-net`.
-- Publication, APK download verification and PWA public verification will be recorded after they complete.
+- Participant guide published at `https://nevaseme.github.io/help-net/`; English/Japanese tests also passed against the public page at 320, 390 and 900 pixels.
+- Android icon visually verified on the device's app-information screen; app launched successfully into the existing earthquake session.
+- APK public download: HTTP 200, 327,709,913 bytes. Local and GitHub-upload SHA-256 both `676454d3199f7395123e9e28e0dfa63cf7933c9d66dd80ef35b6c78c70b500ac`.
+- PWA 1.6.63 published through Cloudflare; all ten changed public asset bodies matched local build output byte-for-byte. Subsequent compatibility/startup fixes are documented in `2026-11-06-pwa-startup-update-and-map-fixes.md`.
+- PWA 1.6.63 deployment `cadee30f1dc34d05a2789e8186f70788`; Worker SHA-256 `670a97eb01460b5d3dbe7fe091d5841f6b6d27e7522fbd4d1d942e0889650fc2`. Existing Durable Object bindings/data were retained.
 
 ## Documentation discrepancies
 

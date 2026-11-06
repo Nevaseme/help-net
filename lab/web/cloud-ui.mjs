@@ -123,10 +123,11 @@ export async function attachCloudUi({store,id,getGroup,setGroup,refresh,tab,onJo
   try{await inFlight;const session=await client.register(kind,input);generation++;stopped=false;await setGroup(session.groupId);window.dispatchEvent(new CustomEvent('group-change'));$('group').value=session.groupId;$('name').value=session.activityName;
    groupPage='overview';$('group-join-password').value='';$('group-create-password').value='';createGroup.open=false;$('cloud-membership').open=false;groupDetails.append($('cloud-membership'));step(false);
    for(const key of ['group-access','group-profile'])document.dispatchEvent(new CustomEvent('form-saved',{detail:{form:$(key)}}));
-   // Registration is durable even if the first background exchange fails.
-   try{await client.sync(session.groupId);}catch{}
+   // Registration already contains the roster. Pull the incident proof needed for
+   // the first safety screen; do not wait for a second roster and upload pass.
+   try{await client.pull(session);}catch{}
    await refresh();await onJoined?.();status(kind==='recover'?'参加を復元しました。安否をもう一度回答してください。':'グループに参加しました。','参加済み');$('group-recovery-code').value='';
-  }catch(e){status(e.message,'登録を確認');setText($('group-join-feedback'),e.message);}finally{busy=false;await controls();resetTimer();}
+  }catch(e){status(e.message,'登録を確認');setText($('group-join-feedback'),e.message);}finally{busy=false;await controls();run();}
  }
  $('cloud-sync').onclick=()=>{stopped=false;run(true);};
  $('group-open-safety').onclick=()=>tab?.('safety');

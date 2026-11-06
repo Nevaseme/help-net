@@ -1,5 +1,5 @@
 // Activate downloaded assets without reloading an open document or touching records.
-export async function setupAppUpdates(){
+export async function setupAppUpdates({version}={}){
  if(!('serviceWorker' in navigator))return;
  let hasSeenController=!!navigator.serviceWorker.controller;const dirtyForms=new Map();
  const fingerprint=form=>JSON.stringify([...form.elements].filter(e=>e.name||e.id).filter(e=>!['button','submit','password','file'].includes(e.type)).map(e=>[e.name||e.id,e.value,e.checked]));
@@ -15,9 +15,20 @@ export async function setupAppUpdates(){
  new MutationObserver(records=>{for(const r of records)if(r.attributeName==='data-status'&&r.target.dataset.status==='success'){const f=r.target.closest('form');if(f&&dirtyForms.has(f))dirtyForms.set(f,fingerprint(f));}if(!notice.hidden)render();}).observe(document.body,{subtree:true,attributes:true,attributeFilter:['data-status','aria-busy']});
  button.onclick=()=>{render();if(!button.disabled)location.reload();};
  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(hasSeenController){notice.hidden=false;render();}hasSeenController=!!navigator.serviceWorker.controller;});
+ // A restored document can miss controllerchange while it is suspended.
+ // Compare its own version with the already-active worker as well.
+ const checkActiveVersion=()=>{
+  if(!version||!navigator.serviceWorker.controller)return;
+  const channel=new MessageChannel(),timer=setTimeout(()=>channel.port1.close(),1500);
+  channel.port1.onmessage=event=>{clearTimeout(timer);channel.port1.close();const active=String(event.data).match(/v(\d+)\.(\d+)\.(\d+)/)?.slice(1).map(Number),current=version.split('.').map(Number);
+   if(active&&active.some((n,i)=>n>current[i]&&active.slice(0,i).every((p,j)=>p===current[j]))){notice.hidden=false;render();}
+  };
+  navigator.serviceWorker.controller.postMessage({type:'GET_VERSION'},[channel.port2]);
+ };
  const registration=await navigator.serviceWorker.register('/sw.js',{updateViaCache:'none'});
  registration.waiting?.postMessage({type:'ACTIVATE_UPDATE'});
- const check=()=>{if(navigator.onLine&&document.visibilityState==='visible')registration.update().catch(()=>{});};
+ const check=()=>{checkActiveVersion();if(navigator.onLine&&document.visibilityState==='visible')registration.update().then(checkActiveVersion).catch(()=>{});};
  document.addEventListener('visibilitychange',check);window.addEventListener('online',check);
- await navigator.serviceWorker.ready;return registration;
+ window.addEventListener('pageshow',check);checkActiveVersion();
+ await navigator.serviceWorker.ready;checkActiveVersion();return registration;
 }

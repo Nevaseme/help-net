@@ -1,12 +1,12 @@
 import {translateUI as t,bindStaticUiLanguage,observeUiLanguage} from './web1617-english.mjs';
 import {mapMunicipality,demoMapMunicipality} from './municipalities.mjs';
-import {CITY_DATA,verifiedBytes,refreshAddressPackage} from './city-addresses.mjs';
+import {CITY_DATA,legacyCityUrl,cachedCityFile,verifiedBytes,refreshAddressPackage} from './city-addresses.mjs';
 import {CITY_MAP_PATHS} from './city-map-resources.mjs';
 export const CITY_CACHE_PREFIX='tasukeai-city-v2-';
 export function hasCurrentCityFiles(code,saved){
  if(!saved)return false;
  const paths=code==='26100'?['26100/parcel-addresses/index.json','26100/parcel-search/index.json']:code==='13103'?['13103/risk/index.json']:[];
- return paths.every(path=>saved.urls.includes(CITY_DATA+path));
+ return paths.every(path=>saved.urls.includes(CITY_DATA+path)||saved.urls.includes(legacyCityUrl(CITY_DATA+path)));
 }
 async function completedCaches(code){const names=(await caches.keys()).filter(n=>n.startsWith(CITY_CACHE_PREFIX+code+'-')||n==='tasukeai-city-v1-'+code);const found=[];for(const name of names){const cache=await caches.open(name),marker=await cache.match('/__city_complete__');if(marker)found.push({name,cache,value:await marker.json()});}return found.sort((a,b)=>b.value.savedAt-a.value.savedAt);}
 export const mapResourceUrl=url=>{if(!url.startsWith('https://tiles.openfreemap.org/'))return url;const path=new URL(url).pathname;return CITY_MAP_PATHS.has(path)?CITY_DATA+'map-assets/'+path.slice(1):url;};
@@ -60,7 +60,7 @@ export class CityDownload {
    const space=await navigator.storage?.estimate?.();if(space?.quota&&space.quota-space.usage<plan.bytes*1.2)throw Error('保存する空き容量が不足しています。端末の空き容量を増やしてください');
    await navigator.storage?.persist?.();
    const worker=async()=>{while(next<plan.files.length){signal.throwIfAborted();const file=plan.files[next++];let response=file.sha256?await cache.match(file.url):null;let data;
-    if(!response&&file.sha256)for(const p of previous){response=await p.cache.match(file.url);if(response)break;}
+    if(!response&&file.sha256)for(const p of previous){response=await cachedCityFile(p.cache,file.url);if(response)break;}
     if(response){try{const copy=response.clone();data=await verifiedBytes(response,file.sha256);await cache.put(file.url,copy);}catch{await cache.delete(file.url);response=null;}}
     if(!response){response=await fetchCityFile(file.url,signal);const type=response.headers.get('content-type')||'application/octet-stream';data=await verifiedBytes(response,file.sha256);signal.throwIfAborted();await cache.put(file.url,new Response(data,{headers:{'Content-Type':type}}));}
     bytes+=data.byteLength;count++;this.onProgress({count,total:plan.files.length,bytes});
