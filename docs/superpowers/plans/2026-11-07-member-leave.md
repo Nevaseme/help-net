@@ -22,7 +22,7 @@ PWA 1.6.66 / r112、Android 1.5.89 / 102。URL変更、比較画面更新、性�
 - Web／サーバー回帰354件成功。復元後の退会を追加し、サーバー開催試験34件成功。
 - PWAの地震・訓練それぞれで、取消・通信失敗時の所属維持、退会後の参加入口、再読込後の未参加維持、同じグループへの再参加が成功。公開資産を使った試験も成功。書込み先は使い捨てローカルAPI。
 - サーバーは管理者退会の拒否、旧資格の拒否、枠解放・再割当、履歴保持、誤パスワード・無効招待拒否、管理者による停止との区別を検証。
-- Androidビルド・既存単体試験成功。実機試験は試験用ActivityのMapLibre初期化不足と同名ボタンの選択条件を訂正して再実行中。利用者の実グループは退会させない。
+- Androidビルド・既存単体試験成功。実機試験は試験用ActivityのMapLibre初期化不足と同名ボタンの選択条件を訂正し、最終試験成功（4.336秒）。実際のGroup settings、取消、退会、参加入口を操作し、同じ端末の再参加と管理者退会拒否を確認した。試験はローカルHTTPSの使い捨てグループのみ。利用者のグループを退会させず、最後に元の選択へ復元した。
 - PWAのメニュー試験は初期同期完了前に操作して失敗したため、同期完了を待つよう訂正。英訳試験で新規サーバーエラー1件の不足を検出し、修正して成功。
 - 公開用HTML・app・cloud-ui・cloud-client・英訳・SWの6ファイルが配信内容と一致。最初のHTML照合は変換前ソースを使ったため不一致で、公開用ビルドとの照合で成功。
 
@@ -30,7 +30,9 @@ PWA 1.6.66 / r112、Android 1.5.89 / 102。URL変更、比較画面更新、性�
 
 Cloudflare deployment `ebca4dd41093480fa61566ac6a194b7a`、Worker SHA256 `e0012b3d405bf6f166330839ed1a8625e47a855dc1d04924313197253c57f2af`。既存Workerと新ビルドのハッシュを照合して公開し、元のGROUPS保存領域・レート制限・互換設定・監視設定を維持。マイグレーションなし。
 
-Android配布・実機最終結果は確認後追記する。既存のAndroid試験fixtureとVenueExperienceDeviceTestの未コミット変更、presentaion/、plan.txt、add.txtは今回のコミットに含めない。
+Android実機は1.5.89 / code102へ更新済み。通常のMainActivityへ戻し、試験用ADB転送を解除。APK SHA256 `081b1bffe916eb56b1dcdb02b2a6cb065c0f1ad465c81dd1ae4b2bcf2f85e8b4`。[Android 1.5.89](https://github.com/Nevaseme/help-net/releases/tag/android-v1.5.89)へ公開済み。アップロードされたAPKのSHA256とローカルが一致。
+
+実装・試験をGitHub commit `a86c751`へ保存。既存のAndroid試験fixtureとVenueExperienceDeviceTestの未コミット変更、presentaion/、plan.txt、add.txtは今回のコミットに含めない。
 
 ## 以前の記録との差
 
