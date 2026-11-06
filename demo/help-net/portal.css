@@ -5,3 +5,4 @@
 html[data-device="ios"] #android-guide,html[data-device="android"] #ios-guide,html[data-device="desktop"] .platforms,html[data-device="ios"] #desktop-guide,html[data-device="android"] #desktop-guide,html[data-device="ios"] .sharing-note,html[data-device="desktop"] .sharing-note{display:none}
 html[data-device="ios"] .platforms,html[data-device="android"] .platforms{grid-template-columns:1fr}
 .platform .native{margin-top:20px}.browser-option{margin-top:28px}
+.button{font-family:inherit;cursor:pointer}button.button{width:100%}.device-choice{margin-top:28px}.device-buttons{display:flex;flex-wrap:wrap;gap:8px}.device-buttons .button{width:auto;flex:1;min-width:125px;margin-top:8px}.device-buttons [aria-pressed="true"]{background:var(--ink);color:white}
