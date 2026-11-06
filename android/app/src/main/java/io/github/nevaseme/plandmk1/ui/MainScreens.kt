@@ -168,9 +168,16 @@ import io.github.nevaseme.plandmk1.core.*
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
         Text("Help Net", style = MaterialTheme.typography.headlineMedium)
         Text((if(LocalUiLanguage.current=="en")"Version " else "バージョン ")+BuildConfig.VERSION_NAME, style = MaterialTheme.typography.labelLarge)
-        Text(if(LocalUiLanguage.current=="en")"Building assessment: JMA instrumental intensity 6.2. Damage rates are estimates for buildings of the same structural type and age." else "建物評価の想定計測震度：6.2。同じ構造・年代の建物に対する全壊率の試算です。")
+        Text(if(LocalUiLanguage.current=="en")"Help Net lets your group share safety updates, locations, incident reports, and rescue progress during earthquakes and drills." else "Help Netは、地震や訓練の際に、地域の安否・位置情報・通報・救助の進捗をグループで共有するアプリです。")
+        Text(if(LocalUiLanguage.current=="en")"Records are saved on your device and shared with your group when a connection is available. Access to your location requires your device’s permission." else "記録は端末に保存され、通信できるときにグループへ共有されます。位置情報の取得には端末の許可が必要です。")
+        Text(if(LocalUiLanguage.current=="en")"Building collapse risk: We estimate collapse rates using PLATEAU building structure, construction year, and number of stories, together with digitized damage-rate curves from Japan’s Cabinet Office. Buildings with 16 or more stories are currently assigned 0%." else "建物の全壊率：PLATEAUの構造・建築年・階数と、内閣府の被害率曲線を数値化したデータから、全壊率を推定します。16階以上は現在の設定で0%としています。")
+        Text(if(LocalUiLanguage.current=="en")"Tsunami inundation: We use a 20-meter grid of terrain and water depth in central Atami and solve the shallow-water equations to calculate wave propagation and flooding on land. Results are precomputed for coastal tsunami heights from 0 to 35 meters in 1-meter steps. The map shows the maximum inundation depth for the height you enter." else "津波の浸水：熱海中心部の地形と水深を20m格子に分け、浅水流方程式で波の伝播と陸上への浸水を計算しています。海岸での津波高0〜35mを1m刻みで事前計算し、入力した高さに対応する最大浸水深を表示します。")
         HorizontalDivider()
-        Text((if(LocalUiLanguage.current=="en")"Map: " else "地図：")+"OpenFreeMap / OpenMapTiles / OpenStreetMap", style = MaterialTheme.typography.bodySmall)
-        Text((if(LocalUiLanguage.current=="en")"Impact icon: " else "衝撃アイコン：")+"Font Awesome Free Burst / Fonticons, Inc. / CC BY 4.0", style = MaterialTheme.typography.bodySmall)
+        Text(if(LocalUiLanguage.current=="en")"Data and credits" else "データ・クレジット", style = MaterialTheme.typography.titleMedium)
+        Text(if(LocalUiLanguage.current=="en")"Maps: OpenFreeMap / OpenMapTiles / © OpenStreetMap contributors (ODbL)." else "地図：OpenFreeMap / OpenMapTiles / © OpenStreetMap contributors（ODbL）。", style = MaterialTheme.typography.bodySmall)
+        Text(if(LocalUiLanguage.current=="en")"Addresses: Geolonia / Digital Agency (CC BY 4.0), MLIT position reference data. Municipal boundaries: MLIT." else "住所：Geolonia / デジタル庁（CC BY 4.0）、国土交通省・位置参照情報。市境：国土交通省。", style = MaterialTheme.typography.bodySmall)
+        Text(if(LocalUiLanguage.current=="en")"Buildings: Kyoto City / MLIT Project PLATEAU 2025. Collapse rates: Cabinet Office damage estimation methodology (2025)." else "建物：京都市・国土交通省 Project PLATEAU 2025。全壊率：内閣府の2025年被害想定手法。", style = MaterialTheme.typography.bodySmall)
+        Text(if(LocalUiLanguage.current=="en")"Tsunami terrain: Shizuoka Prefecture ALB point clouds (2019). Calculation: Help Net shallow-water model. ANUGA 3.3.10 is used for separate calculations and validation." else "津波地形：静岡県2019年ALB点群。計算：Help Net浅水流モデル。ANUGA 3.3.10は別の計算・検証に使用。", style = MaterialTheme.typography.bodySmall)
+        Text(if(LocalUiLanguage.current=="en")"Icons: Phosphor Icons (MIT), Font Awesome Free / Fonticons, Inc. (CC BY 4.0)." else "アイコン：Phosphor Icons（MIT）、Font Awesome Free / Fonticons, Inc.（CC BY 4.0）。", style = MaterialTheme.typography.bodySmall)
     }
 }
