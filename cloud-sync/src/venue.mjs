@@ -54,6 +54,25 @@ export const venueMethods={
   this.s.run('UPDATE metadata SET value=? WHERE key=?',JSON.stringify(config),'venue');await this.s.flush();return this.snapshot();
  },
  async authorizeVenue(token){const actor=await this.identity(token);requireValue(actor.role==='ADMIN','admin_required',403);return {groupName:this.meta('groupName')};},
+ async renameGroup(token,input){
+  const actor=await this.identity(token);requireValue(actor.role==='ADMIN','admin_required',403);
+  requireValue(typeof input?.groupName==='string'&&input.groupName.trim().length>0&&input.groupName.trim().length<=80,'invalid_group_name',400,'グループ名を1〜80文字で入力してください。');
+  this.s.run('UPDATE metadata SET value=? WHERE key=?',input.groupName.trim(),'groupName');await this.s.flush();return this.snapshot();
+ },
+ async directoryRename(args,call){
+  await call(args.groupId,'authorizeVenue',null,args.token);
+  const display=args.input?.groupName,name=normalize(display);
+  requireValue(typeof display==='string'&&display.trim().length>0&&display.trim().length<=80&&name.length<=80,'invalid_group_name',400,'グループ名を1〜80文字で入力してください。');
+  // Reserve the target before updating the group's display name. If the RPC reply
+  // is interrupted, the same request can complete the reservation on retry.
+  this.s.transaction(()=>{
+   const current=this.s.all('SELECT group_id FROM venue_names WHERE name=?',name)[0];
+   requireValue(!current||current.group_id===args.groupId,'venue_name_exists',409,'同じ名前のグループがあります。別の名前を使用してください。');
+   if(!current)this.s.run('INSERT INTO venue_names(name,group_id) VALUES (?,?)',name,args.groupId);
+  });await this.s.flush();
+  const result=await call(args.groupId,'renameGroup',{groupName:display.trim()},args.token);
+  this.s.run('DELETE FROM venue_names WHERE group_id=? AND name<>?',args.groupId,name);await this.s.flush();return result;
+ },
  async configureVenue(token,input){
   const actor=await this.identity(token);requireValue(actor.role==='ADMIN','admin_required',403);
   requireValue(input&&uuid(input.requestId)&&input.areaId===area.id);
@@ -99,8 +118,12 @@ export const venueMethods={
  async directoryCreate(args,call){
   const name=normalize(args.groupName);requireValue(name.length>0&&name.length<=80);validateDemoPassword(args.password);
   const current=this.s.all('SELECT group_id FROM venue_names WHERE name=?',name)[0];requireValue(!current||current.group_id===args.groupId,'venue_name_exists',409,'同じ名前のグループがあります。別の名前を使用してください。');
-  const result=await call(args.groupId,'create',args,null);
-  this.s.run('INSERT INTO venue_names(name,group_id) VALUES (?,?) ON CONFLICT(name) DO NOTHING',name,args.groupId);await this.s.flush();return result;
+  // Claim the same directory key used by rename before awaiting another group.
+  if(!current)this.s.run('INSERT INTO venue_names(name,group_id) VALUES (?,?)',name,args.groupId);await this.s.flush();
+  try{return await call(args.groupId,'create',args,null);}catch(error){
+   if(!current&&error.status>=400&&error.status<500){this.s.run('DELETE FROM venue_names WHERE name=? AND group_id=?',name,args.groupId);await this.s.flush();}
+   throw error;
+  }
  },
  async directoryConfigure(args,call){
   const authorized=await call(args.groupId,'authorizeVenue',null,args.token),name=normalize(authorized.groupName);

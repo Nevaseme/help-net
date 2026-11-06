@@ -73,6 +73,10 @@ class CloudController(private val app:PlanDApplication) {
     fun hasSession(target:String)=settings.session(target)!=null
     fun isVenue(target:String)=settings.venue(target)?.let {it.positionMode=="KYOTO"&&it.active(target,app.installation.incidentSelection(target))}==true
     private fun rememberVenue(body:CloudRosterEnvelope) {
+        if(body.groupName.isNotBlank())settings.session(body.groupId)?.let {session->
+            if(session.groupName!=body.groupName)settings.complete(session.copy(groupName=body.groupName))
+            if(group==body.groupId)mutable.value=mutable.value.copy(groupName=body.groupName)
+        }
         if(body.venue?.closed==false&&settings.venue(body.groupId)?.sessionId!=body.venue.sessionId)settings.setVenueOnboarding(body.groupId,body.venue.sessionId)
         if(settings.venue(body.groupId)!=body.venue||settings.municipality(body.groupId)!=body.municipality){settings.saveVenue(body);venueChanges.value++}
         if(group==body.groupId)mutable.value=mutable.value.copy(venue=body.venue,municipality=body.municipality)
@@ -248,6 +252,16 @@ class CloudController(private val app:PlanDApplication) {
             finally {mutable.value=mutable.value.copy(busy=false)}
         }}
     }
+    fun renameGroup(name:String) {
+        val session=settings.session(group)?:return
+        if(session.role!=MemberRole.ADMIN||name.trim().length !in 1..80||!beginOperation("グループ名を保存しています…"))return
+        scope.launch {lock.withLock {
+            try {val body=withContext(Dispatchers.IO){api.renameGroup(session,name.trim())};rememberVenue(body)
+                if(group==session.groupId)mutable.value=mutable.value.copy(status="グループ名を変更しました")
+            }catch(e:CancellationException){throw e}catch(e:Exception){if(group==session.groupId)mutable.value=mutable.value.copy(error=safeError(e))}
+            finally{if(group==session.groupId)mutable.value=mutable.value.copy(busy=false)}
+        }}
+    }
     fun setMunicipality(code:String) {
         val session=settings.session(group)?:return
         if(session.role!=MemberRole.ADMIN||!beginOperation("活動地域を保存しています…"))return
@@ -287,7 +301,8 @@ class CloudController(private val app:PlanDApplication) {
             "session_expired"->"接続の有効期限が切れました。復元コードを使うか、管理者に確認してください"
             "member_recovery_only"->"管理者の認証はこの操作では変更できません"
             "venue_closed"->"この会場訓練は終了しています"
-            "venue_name_exists"->"同じ名前の会場訓練があります。別のグループ名を使用してください"
+            "venue_name_exists"->"同じ名前のグループがあります。別の名前を使用してください"
+            "invalid_group_name"->"グループ名を1〜80文字で入力してください"
             "rate_limited"->"入力が集中しています。1分ほど待って再試行してください"
             else->error.message?:"共有サーバーに接続できません"
         }

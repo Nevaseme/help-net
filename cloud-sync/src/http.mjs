@@ -29,14 +29,14 @@ export async function handle(request,env){
   if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{...responseHeaders,'Access-Control-Allow-Methods':'GET, POST, OPTIONS','Access-Control-Allow-Headers':'Authorization, Content-Type, X-PlanD-Records-Version','Access-Control-Max-Age':'600'}});
   if(['/api/v1/health','/api/v1/info'].includes(url.pathname)&&request.method==='GET')return json({service:'tasukeai-sync',version:1});
   const venueAccess=/^\/api\/v1\/venue\/(check|join|recover)$/.exec(url.pathname);
-  const venueConfigure=/^\/api\/v1\/groups\/([^/]+)\/venue$/.exec(url.pathname);
+  const venueConfigure=/^\/api\/v1\/groups\/([^/]+)\/(venue|name)$/.exec(url.pathname);
   if(venueAccess||venueConfigure){
    requireValue(request.method==='POST','method_not_allowed',405);
    const input=await readJson(request);let operation,args;
    if(venueConfigure){
     const groupId=venueConfigure[1];requireValue(uuid(groupId));
     const token=request.headers.get('authorization')?.match(/^Bearer ([a-f0-9]{64})$/)?.[1];requireValue(token,'unauthorized',401);
-    operation='directoryConfigure';args={groupId,token,input};
+    operation=venueConfigure[2]==='name'?'directoryRename':'directoryConfigure';args={groupId,token,input};
    }else {operation='directoryAccess';args={input,join:venueAccess[1]==='join',recover:venueAccess[1]==='recover',ip:request.headers.get('CF-Connecting-IP')??'local'};}
    const result=await env.GROUPS.getByName('venue-directory-v1').dispatch(operation,'',args);
    return json(result.body,result.status);

@@ -445,3 +445,45 @@ test('administrator recovery after voluntary leave can leave again',async t=>{
  assert.equal((await f.call(`/groups/${g}/roster`,undefined,recovered.body.token)).status,401);
  assert.equal(f.get(g).venueSnapshot().placements.length,1);
 });
+
+test('admin renames an active group without changing records and frees the former name',async t=>{
+ const f=fixture(t),admin=await setup(f),g=admin.groupId;
+ await f.call(`/groups/${g}/venue`,{requestId:id(),password,areaId:'kyoto-gosho-south'},admin.token);
+ const member=(await f.call('/venue/join',{groupName:'会場テスト',password,activityName:'Member',deviceId:id(),registrationToken:token()})).body;
+ const j=f.get(g),before=j.snapshot(),history=['quakes','incidents','responses','positions'].map(c=>j.history(c));
+ const renamed=await f.call(`/groups/${g}/name`,{groupName:'Previous event'},admin.token);
+ assert.equal(renamed.status,200);assert.deepEqual(renamed.body,{...before,groupName:'Previous event'});
+ assert.deepEqual(['quakes','incidents','responses','positions'].map(c=>j.history(c)),history);
+ assert.equal((await f.call('/venue/check',{groupName:'PREVIOUS EVENT',password})).body.groupId,g);
+ assert.equal((await f.call('/venue/check',{groupName:'会場テスト',password})).status,403);
+ assert.equal((await f.call(`/groups/${g}/roster`,undefined,member.token)).body.groupName,'Previous event');
+ const fresh=await f.call('/groups',{requestId:id(),deviceId:id(),groupName:'会場テスト',password,activityName:'New host',registrationToken:token()});
+ assert.equal(fresh.status,200);assert.notEqual(fresh.body.groupId,g);
+ assert.equal((await f.call('/venue/check',{groupName:'会場テスト',password})).body.groupId,fresh.body.groupId);
+ assert.deepEqual((await f.call(`/groups/${g}/name`,{groupName:'Previous event'},admin.token)).body,renamed.body);
+});
+
+test('rename rejects unauthorized, duplicate and invalid names without changing the group',async t=>{
+ const f=fixture(t),admin=await setup(f),g=admin.groupId;
+ await f.call(`/groups/${g}/venue`,{requestId:id(),password,areaId:'kyoto-gosho-south'},admin.token);
+ const member=(await f.call('/venue/join',{groupName:'会場テスト',password,activityName:'Member',deviceId:id(),registrationToken:token()})).body;
+ const before=f.get(g).snapshot();
+ assert.equal((await f.call(`/groups/${g}/name`,{groupName:'Other'},member.token)).status,403);
+ assert.equal((await f.call(`/groups/${g}/name`,{groupName:'Other'})).status,401);
+ for(const groupName of ['', '  ',null,'x'.repeat(81)])assert.equal((await f.call(`/groups/${g}/name`,{groupName},admin.token)).status,400);
+ const other=await f.call('/groups',{requestId:id(),deviceId:id(),groupName:'Other',password,activityName:'Host',registrationToken:token()});assert.equal(other.status,200);
+ const denied=await f.call(`/groups/${g}/name`,{groupName:'ＯＴＨＥＲ'},admin.token);assert.equal(denied.status,409);
+ assert.deepEqual(f.get(g).snapshot(),before);
+});
+
+test('rename retries after a lost group reply and case-only changes retain a single directory entry',async t=>{
+ const f=fixture(t),admin=await setup(f),g=admin.groupId,j=f.get(g),directory=f.get('venue-directory-v1');
+ await f.call(`/groups/${g}/venue`,{requestId:id(),password,areaId:'kyoto-gosho-south'},admin.token);
+ const args={groupId:g,token:admin.token,input:{groupName:'Archive'}};
+ await assert.rejects(directory.directoryRename(args,async(group,method,input,auth)=>{const result=await f.get(group)[method](auth,input);if(method==='renameGroup')throw Object.assign(Error('reply lost'),{status:503});return result;}));
+ assert.equal(j.meta('groupName'),'Archive');
+ assert.equal((await f.call(`/groups/${g}/name`,args.input,admin.token)).status,200);
+ assert.equal((await f.call(`/groups/${g}/name`,{groupName:'ARCHIVE'},admin.token)).status,200);
+ assert.deepEqual(directory.s.all('SELECT name,group_id FROM venue_names WHERE group_id=?',g).map(r=>({...r})),[{name:'archive',group_id:g}]);
+ assert.equal((await f.call('/venue/check',{groupName:'archive',password})).body.groupName,'ARCHIVE');
+});

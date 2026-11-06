@@ -28,4 +28,11 @@ test('thirty-nine same-IP concurrent joins reach forty total participants surviv
  const ended=await call(`/groups/${admin.groupId}/records`,{records:[{collection:'quakes',record:{groupId:admin.groupId,eventId:id(),actorDeviceId:admin.deviceId,operatedAt:Date.now(),action:'END',training:true,targetId:requestId}}]},admin.token);assert.equal(ended.status,200,JSON.stringify(ended.body));
  assert.equal((await call('/venue/check',{groupName,password})).status,200);
  assert.equal((await call(`/groups/${admin.groupId}/roster`,undefined,admin.token)).body.venue.closed,true);
+ const renamed=await call(`/groups/${admin.groupId}/name`,{groupName:'Archived runtime group'},admin.token);assert.equal(renamed.status,200,JSON.stringify(renamed.body));
+ assert.deepEqual(renamed.body.venue,(await call(`/groups/${admin.groupId}/roster`,undefined,admin.token)).body.venue);
+ const replacement=await call('/groups',{requestId:id(),deviceId:id(),groupName,password,activityName:'New administrator',registrationToken:token()});assert.equal(replacement.status,200);assert.notEqual(replacement.body.groupId,admin.groupId);
+ await mf.dispose();mf=new Miniflare(options);
+ assert.equal((await call('/venue/check',{groupName:'Archived runtime group',password})).body.groupId,admin.groupId);
+ assert.equal((await call('/venue/check',{groupName,password})).body.groupId,replacement.body.groupId);
+
 });

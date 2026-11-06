@@ -23,4 +23,4 @@
 
 ## Group naming
 
-No group was ended, renamed or recreated during these checks. Name lookup applies NFKC normalization, trimming and lowercase conversion; Tomodachi and TOMODACHI are the same lookup name. A new group needs a genuinely different name. The requested name-reuse change is cancelled pending any new instruction.
+No group was ended, renamed or recreated during these checks. Name lookup applies NFKC normalization, trimming and lowercase conversion; Tomodachi and TOMODACHI are the same lookup name. A new group needs a genuinely different name. The user subsequently authorized adding an administrator rename control; the 1.7.6 implementation is documented separately.

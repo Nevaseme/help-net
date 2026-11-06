@@ -63,6 +63,9 @@ fun CloudSharingPanel(model:PlanViewModel,ownName:String,onCommunication:()->Uni
             if(page=="recovery") DemoAccessPanel(model) else {
                 SectionTitle(menuText("グループの設定"))
                 if(state.admin){
+                    var editedGroupName by rememberSaveable(state.groupId,state.groupName){mutableStateOf(state.groupName)}
+                    OutlinedTextField(editedGroupName,{if(it.length<=80)editedGroupName=it},label={Text(menuText("グループ名"))},singleLine=true,enabled=!state.busy,modifier=Modifier.fillMaxWidth())
+                    Button(onClick={model.cloud.renameGroup(editedGroupName)},enabled=!state.busy&&editedGroupName.isNotBlank()&&editedGroupName.trim()!=state.groupName){Text(if(LocalUiLanguage.current=="en")"Save name" else "名前を保存")}
                     Text(if(LocalUiLanguage.current=="en")"Injury and urgency permissions" else "負傷登録・緊急度設定の権限",style=MaterialTheme.typography.titleMedium)
                     if(permissionRoster?.members?.none {it.role!=io.github.nevaseme.plandmk1.core.MemberRole.ADMIN}!=false)Text(if(LocalUiLanguage.current=="en")"No participants to assign permissions to yet." else "権限を設定する参加者はまだいません。")
                     permissionRoster?.members?.filter {it.role!=io.github.nevaseme.plandmk1.core.MemberRole.ADMIN}?.forEach {person->

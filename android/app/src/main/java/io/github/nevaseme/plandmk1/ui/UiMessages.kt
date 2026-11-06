@@ -5,6 +5,10 @@ import androidx.compose.runtime.Composable
 
 object UiMessages {
     private val english = mapOf(
+        "グループ名を保存しています…" to "Saving group name…",
+        "グループ名を変更しました" to "Group name saved",
+        "グループ名を1〜80文字で入力してください" to "Enter a group name with 1–80 characters",
+        "同じ名前のグループがあります。別の名前を使用してください" to "This group name is already in use. Choose another name.",
         "京都モードは京都、現在地モードは虎ノ門ヒルズ周辺の地図・住所を自動で準備します。" to "Maps and addresses are prepared automatically: Kyoto for assigned locations, Toranomon Hills for actual locations.",
         "活動地域は通常の地図保存と住所検索に使います。会場訓練の地図は位置モードから自動で準備します。" to "The group area is used for everyday maps and address search. Drill maps are prepared automatically for the selected location mode.",
         "地震発生" to "Earthquake",

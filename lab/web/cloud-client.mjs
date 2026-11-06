@@ -85,10 +85,15 @@ export class CloudClient {
   await clearPending();
   return session;
  }
+ async rememberGroupName(body){
+  if(typeof body?.groupName!=='string'||!body.groupName.trim())return;
+  await this.store.update('meta','cloud-session:'+body.groupId,old=>old&&old.groupName!==body.groupName?{...old,groupName:body.groupName}:undefined);
+ }
+ async renameGroup(group,groupName){const body=await this.request(`/groups/${group}/name`,{session:await this.requireSession(group),body:{groupName}});await this.rememberGroupName(body);return body.groupName;}
  async setMunicipality(group,code){const body=await this.request(`/groups/${group}/municipality`,{session:await this.requireSession(group),body:{code}});await saveMunicipality(this.store,body);return body.municipality;}
  async invitation(group){return this.request(`/groups/${encodeURIComponent(group)}/invitations`,{session:await this.requireSession(group),body:{}});}
  async requireSession(group){const session=await this.session(group);if(!session)throw Error('グループを作成するか、招待コードで参加してください');return session;}
- async roster(session){const body=await this.request(`/groups/${session.groupId}/roster`,{session});const roster=await this.store.importCloudRoster(body,this.deviceId);await saveVenue(this.store,body);await saveMunicipality(this.store,body);return roster;}
+ async roster(session){const body=await this.request(`/groups/${session.groupId}/roster`,{session});await this.rememberGroupName(body);const roster=await this.store.importCloudRoster(body,this.deviceId);await saveVenue(this.store,body);await saveMunicipality(this.store,body);return roster;}
  async merge(table,record){
   const s=this.store;
   switch(table){
