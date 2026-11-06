@@ -4,16 +4,30 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#ffffff"><meta name="referrer" content="no-referrer">
 <title>Join Help Net</title>
-<link rel="icon" href="./icon-192.png"><link rel="stylesheet" href="./portal.css">
-<script type="module" src="./portal.mjs"></script>
+<meta name="description" content="Join Help Net: group Tomodachi. Open on iPhone, iPad or Android, with Home Screen and Android app instructions.">
+<link rel="icon" href="./icon-192.png"><link rel="stylesheet" href="./portal.css?v=2">
+<script type="module" src="./portal.mjs?v=2"></script>
 </head>
 <body>
 <header><div class="brand"><img src="./icon-192.png" alt="" width="44" height="44">Help Net</div><nav class="languages" aria-label="Language"><button type="button" data-language="en" aria-pressed="true" lang="en">EN</button><button type="button" data-language="ja" aria-pressed="false" lang="ja">JP</button></nav></header>
 <main>
 <section class="intro"><h1 data-i18n="title">Join Help Net</h1><dl class="credentials"><div><dt data-i18n="group">Group name</dt><dd>Tomodachi</dd></div><div><dt data-i18n="password">Join password</dt><dd>Boeing</dd></div></dl><p data-i18n="join">Open Help Net and enter these details to join the group.</p></section>
 <div class="platforms">
-<section class="platform" aria-labelledby="ios-title"><h2 id="ios-title">iPhone / iPad</h2><a class="button" data-pwa data-i18n="open" href="https://tasukeai-sync.tomodachi-takumi.workers.dev/">Open Help Net</a><p class="url"><a data-pwa href="https://tasukeai-sync.tomodachi-takumi.workers.dev/">tasukeai-sync.tomodachi-takumi.workers.dev</a></p><h3 data-i18n="homescreen">Add to your Home Screen</h3><ol><li data-i18n="ios1">Open the link above in Safari.</li><li data-i18n="ios2">Tap Share. Depending on your Safari layout, open More first.</li><li data-i18n="ios3">Choose Add to Home Screen. If shown, turn on Open as Web App, then tap Add.</li><li data-i18n="ios4">Open Help Net from your Home Screen and join the group.</li></ol><a data-i18n="apple" href="https://support.apple.com/guide/iphone/open-as-web-app-iphea86e5236/ios">Apple’s instructions</a></section>
-<section class="platform" aria-labelledby="android-title"><h2 id="android-title">Android</h2><a class="button" data-pwa data-i18n="browser" href="https://tasukeai-sync.tomodachi-takumi.workers.dev/">Use in your browser</a><p data-i18n="noapk">You can use Help Net without downloading an APK.</p><h3 data-i18n="homescreen">Add to your Home Screen</h3><ol><li data-i18n="android1">Open Help Net in Chrome.</li><li data-i18n="android2">Open the ⋮ menu and choose Add to Home screen, then Install if offered.</li><li data-i18n="android3">Open Help Net and join the group.</li></ol><a data-i18n="google" href="https://support.google.com/chrome/answer/9658361?co=GENIE.Platform%3DAndroid&amp;hl=en">Google’s instructions</a><hr class="separator"><h3 data-i18n="native">Android app</h3><a id="apk" class="button secondary" data-i18n="download" href="https://github.com/Nevaseme/help-net/releases/download/android-v1.5.88/Help-Net-1.5.88.apk">Download APK</a><p class="note">Help Net 1.5.88</p><ol><li data-i18n="apk1">Download the APK and open the downloaded file.</li><li data-i18n="apk2">If Android asks, allow installation from the browser you used. Follow the installation prompts.</li><li data-i18n="apk3">Open Help Net and enter the group name and join password above.</li></ol><p class="note" data-i18n="difference">Nearby sharing without internet is available in the Android app. The browser version needs internet to share updates with others.</p></section>
+<section class="platform" aria-labelledby="ios-title">
+<h2 id="ios-title">iPhone / iPad</h2>
+<p data-i18n="iosBrowser">Open in Safari, then add Help Net to your Home Screen.</p>
+<a class="button" data-pwa data-i18n="open" href="https://tasukeai-sync.tomodachi-takumi.workers.dev/">Open Help Net</a>
+<details><summary data-i18n="homescreen">Add to your Home Screen</summary><div class="instructions"><ol><li data-i18n="ios1">Open the link above in Safari.</li><li data-i18n="ios2">Tap Share. Depending on your Safari layout, open More first.</li><li data-i18n="ios3">Choose Add to Home Screen. If shown, turn on Open as Web App, then tap Add.</li><li data-i18n="ios4">Open Help Net from your Home Screen and join the group.</li></ol><a data-i18n="apple" href="https://support.apple.com/guide/iphone/open-as-web-app-iphea86e5236/ios">Apple’s instructions</a></div></details>
+</section>
+<section class="platform" aria-labelledby="android-title">
+<h2 id="android-title">Android</h2>
+<p data-i18n="noapk">Use in Chrome without downloading an APK.</p>
+<a class="button" data-pwa data-i18n="browser" href="https://tasukeai-sync.tomodachi-takumi.workers.dev/">Use in your browser</a>
+<details><summary data-i18n="homescreen">Add to your Home Screen</summary><div class="instructions"><ol><li data-i18n="android1">Open Help Net in Chrome.</li><li data-i18n="android2">Open the ⋮ menu and choose Add to Home screen, then Install if offered.</li><li data-i18n="android3">Open Help Net and join the group.</li></ol><a data-i18n="google" href="https://support.google.com/chrome/answer/9658361?co=GENIE.Platform%3DAndroid&amp;hl=en">Google’s instructions</a></div></details>
+<div class="native"><h3 data-i18n="native">Android app</h3><a id="apk" class="button secondary" data-i18n="download" href="https://github.com/Nevaseme/help-net/releases/download/android-v1.5.88/Help-Net-1.5.88.apk">Download APK</a><p class="note">Help Net 1.5.88 <span aria-hidden="true">·</span> 328 MB</p>
+<details><summary data-i18n="install">Installation instructions</summary><div class="instructions"><ol><li data-i18n="apk1">Download the APK and open the downloaded file.</li><li data-i18n="apk2">If Android asks, allow installation from the browser you used. Follow the installation prompts.</li><li data-i18n="apk3">Open Help Net and enter the group name and join password above.</li></ol></div></details></div>
+</section>
 </div>
+<p class="sharing-note" data-i18n="difference">The browser version needs internet to share updates. The Android app also supports nearby sharing without internet.</p>
 </main><footer>Help Net</footer>
 </body></html>
