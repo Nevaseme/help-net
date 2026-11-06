@@ -17,7 +17,10 @@
 - `lab/test/late-join.browser.mjs`: earthquake and drill both pass; correct current incident, assigned home, initial safety gate, notice once, subsequent safety updates remain in Safety, membership survives reload. All group/API writes use a disposable local server.
 - `node --test lab/test/*.test.mjs`: 257 passed, zero failed.
 - City-cache regression: completed files saved under the old repository URL remain readable offline, including the address search package; old entries are preserved.
-- Actual public Kyoto package download and offline read verification are running separately; results are recorded after completion.
+- Actual public Kyoto download: all 3,538 files / 286,538,547 bytes saved in 382.7 seconds. With network disabled, the city package and map style returned successfully (55 style layers). Evidence: `output/helpnet-city-download-result.json`.
+- This test also exposed missing compressed byte sizes in Kyoto's building index, making the pre-download size estimate NaN. Sizes were added from existing files, and the generator now emits them. No building geometry, coordinates, residents or chunk content changed. A regression test verifies that the actual published dataset produces a finite size estimate.
+- PWA 1.6.64 published: deployment `a721b3c3ab2a4d96b0eaf3d6e564c27d`, Worker SHA-256 `d086a7b35a491a31af84f6da2fb02cb354ea6baa84bdf3da4f412ed9285f2391`. All seven changed public files matched local build output. The startup/flash regression also passed against these public assets.
+- User confirmed that relaunching into 1.6.63 restored map visibility. Final iPhone confirmation of the 1.6.64 startup/flash fix is still pending.
 
 ## Limits / pending approval
 

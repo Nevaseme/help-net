@@ -62,7 +62,7 @@ def build(cache, output):
         (output/filename).write_bytes(payload)
         bbox=[min(b[0] for b in bounds),min(b[1] for b in bounds),max(b[2] for b in bounds),max(b[3] for b in bounds)] if bounds else None
         chunks.append({'mesh':item['code'],'file':filename,'bbox':bbox,'count':len(rows),
-                       'sha256':hashlib.sha256(payload).hexdigest(),'source':source['source']})
+                       'bytes':len(payload),'sha256':hashlib.sha256(payload).hexdigest(),'source':source['source']})
     index={'schemaVersion':1,'cityCode':'26100','datasetYear':2025,'modelId':model['modelId'],
            'modelSha256':hashlib.sha256((output/'model.json').read_bytes()).hexdigest(),
            'coverage':'PLATEAU Kyoto 2025 published building meshes; not all land or all real buildings in Kyoto.',

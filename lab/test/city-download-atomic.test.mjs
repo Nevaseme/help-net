@@ -1,7 +1,15 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {loadCityPackage,cityFetch,CITY_DATA} from '../web/city-addresses.mjs';
 import {gzipSync} from 'node:zlib';
-import {CityDownload,hasCurrentCityFiles,fetchCityFile} from '../web/city-offline.mjs';
+import {readFile} from 'node:fs/promises';
+import {CityDownload,hasCurrentCityFiles,fetchCityFile,cityDownloadPlan} from '../web/city-offline.mjs';
+
+test('published Kyoto metadata produces a finite city-download size',async t=>{
+ const original=globalThis.fetch;t.after(()=>{globalThis.fetch=original;});
+ globalThis.fetch=async url=>{assert.ok(String(url).startsWith(CITY_DATA));return new Response(await readFile(new URL('../../demo/data/cities/'+String(url).slice(CITY_DATA.length),import.meta.url)));};
+ const plan=await cityDownloadPlan('26100');
+ assert.equal(plan.files.length,3538);assert.ok(Number.isFinite(plan.bytes));assert.ok(plan.bytes>200_000_000);
+});
 test('old Kyoto downloads remain usable but require an update for parcel searches',()=>{
  const old={urls:['https://nevaseme.github.io/help-net/data/cities/26100/buildings/index.json']};
  assert.equal(hasCurrentCityFiles('26100',old),false);

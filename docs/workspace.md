@@ -27,8 +27,9 @@ SDKの場所はローカルの `android/local.properties`、JavaはAndroid Studi
 ## 公開
 
 - PWAとAPI: `cloud-sync/` の既存Workerへ公開する。`node cloud-sync/scripts/build.mjs --standalone` が単一配信物を生成する。既存のDurable Objectと設定を維持する。
-- 比較サイト: `demo/` を更新し、GitHubの `main` に反映すると既存Pagesワークフローが公開する。過去の比較を残し、最新の確認済み画面を右側へ追加する。
-- 公開後はPWAの版、主要操作、比較サイトの追加画面をブラウザーで確認する。ビルド・送信成功だけを公開確認とはしない。
+- 参加案内: `demo/help-net/` を編集する。`node tools/build-pages.mjs` が `output/pages/` を生成し、GitHubの `main` への反映でPagesワークフローが公開する。公開先は `https://nevaseme.github.io/help-net/`。
+- 比較サイト: 過去の比較は `https://nevaseme.github.io/help-net/comparison.html` に保持する。追加・更新・公開確認は利用者が明示的に依頼した場合にのみ行い、その場合は最新の確認済み画面を右側へ追加する。
+- 公開後は変更した参加案内やPWAの版・主要操作をブラウザーで確認する。ビルド・送信成功だけを公開確認とはしない。PWA本体のGitHub Pagesへの移転は未承認で、現在のWorker URLを維持する。
 
 認証操作が必要な場合は利用者の帰席を待つ。既存認証を回避する設定変更はしない。
 
