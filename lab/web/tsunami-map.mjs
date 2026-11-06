@@ -4,11 +4,11 @@ import {mapBuildingFeatures} from './building-details.mjs';
 import {tsunamiDepthColor} from './tsunami-map-model.mjs';
 
 /** One map for normal browsing and exact, previously checked height results. */
-export function createTsunamiMap(){
+export function createTsunamiMap({getIncidentKey=()=>''}={}){
  const $=id=>document.getElementById(id);let map,home=null,initialFocus=null,result=null,layers=[],generation=0,controller=null;
  let locationControl=null,myDot=null,myAccuracy=null,lastLanguage=null,demoLocation=null;
  let selectedBuildingPin=null,selectedBuildingOutline=null;const communityMarkers=new Map();
- let tsunamiEnabled=false,heightTimer,vectorMap,selectBuilding=()=>{},buildingRequest=0;
+ let tsunamiEnabled=false,tsunamiIncidentKey=null,heightTimer,vectorMap,selectBuilding=()=>{},buildingRequest=0;
  let statusKey='off',statusHeight=null,loadStarted=null;
  function status(key,height=null){statusKey=key;statusHeight=height;renderStatus();}
  function renderStatus(){const messages={off:local('津波表示はオフです。','Tsunami overlay is off.'),enter:local('津波の高さを入力してください','Enter the tsunami height'),range:local('0〜35m・1m刻みで入力してください','Enter a whole number from 0 to 35m'),loading:local('計算済みの結果を読み込んでいます…','Loading saved results…'),result:local(`津波高 ${statusHeight}m の条件計算を表示しています。`,`Showing results for a ${statusHeight}m tsunami.`),error:local('津波データを読み込めませんでした。通信を確認してもう一度お試しください。','Unable to load tsunami data. Check your connection and try again.')};$('tsunami-status').textContent=messages[statusKey]+(statusKey==='loading'&&loadStarted?local(`（経過 ${Math.floor((Date.now()-loadStarted)/1000)}秒）`,` (${Math.floor((Date.now()-loadStarted)/1000)}s)`):'');}
@@ -17,6 +17,17 @@ export function createTsunamiMap(){
  const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const en=()=>document.documentElement.lang==='en';
  const local=(ja,english)=>en()?english:ja;
+ const guidance=document.createElement('dialog');guidance.id='tsunami-guidance';guidance.className='venue-location-notice';guidance.setAttribute('aria-labelledby','tsunami-guidance-title');document.body.append(guidance);
+ const guidanceSeen=new Set();
+ function showGuidance(){
+  const key='help-net-tsunami-guidance:'+getIncidentKey();let seen=guidanceSeen.has(key);try{seen||=localStorage.getItem(key)==='1';}catch{}
+  if(seen)return;
+  guidance.innerHTML=`<h2 id="tsunami-guidance-title" tabindex="-1" autofocus>${local('津波','Tsunami')}</h2><p>${local('津波の浸水表示は熱海のみ対応しています。津波の高さをメートル単位で入力してください（0〜35m）。','Tsunami inundation is shown for Atami only. Enter the tsunami height in meters (0–35).')}</p><button type="button" data-atami>${local('熱海へ移動','Go to Atami')}</button><button type="button" class="secondary" data-close>${local('閉じる','Close')}</button>`;
+  guidance.querySelector('[data-atami]').onclick=()=>{guidance.close();locationControl?.cancelCenter();map.setView([35.095,139.07],15,{animate:false});};
+  guidance.querySelector('[data-close]').onclick=()=>guidance.close();
+  guidance.showModal();guidance.querySelector('h2').focus({preventScroll:true});
+  guidanceSeen.add(key);try{localStorage.setItem(key,'1');}catch{}
+ }
  const validPosition=p=>Number.isFinite(p?.latitude)&&Number.isFinite(p?.longitude)&&Math.abs(p.latitude)<=85&&Math.abs(p.longitude)<=180;
  function drawCases(){
   if(!map||!map._loaded)return;const signature=JSON.stringify([people,reports,communities,showSafe,en(),map.getCenter(),map.getZoom()]);if(signature===caseSignature)return;caseSignature=signature;
@@ -106,6 +117,7 @@ export function createTsunamiMap(){
  }
  $('tsunami-height').oninput=scheduleHeight;
  $('map-tsunami').onclick=()=>{
+  const key=getIncidentKey();if(key!==tsunamiIncidentKey){tsunamiEnabled=false;tsunamiIncidentKey=key;}
   tsunamiEnabled=!tsunamiEnabled;
   clearTimeout(heightTimer);if(!tsunamiEnabled){controller?.abort();generation++;$('tsunami-height-form').setAttribute('aria-busy','false');}
   $('map-tsunami').setAttribute('aria-pressed',String(tsunamiEnabled));
@@ -114,6 +126,7 @@ export function createTsunamiMap(){
 
   if(tsunamiEnabled&&!result)scheduleHeight();
   drawResult();
+  if(tsunamiEnabled)showGuidance();
  };
  $('tsunami-height-form').onsubmit=async event=>{
   event.preventDefault();clearTimeout(heightTimer);const raw=$('tsunami-height').value.trim(),heightM=Number(raw);if(!raw||!Number.isInteger(heightM)||heightM<0||heightM>35){status('range');$('tsunami-status').dataset.status='error';return;}

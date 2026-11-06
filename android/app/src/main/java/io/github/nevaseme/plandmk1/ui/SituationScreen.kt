@@ -67,6 +67,7 @@ fun positionDescription(person: MapPerson, now: Long): String = when {
 fun SituationScreen(
     people: List<MapPerson>, homes: List<MapHome>, center: MapPoint, now: Long,
     preview: Boolean = false, canRescue: Boolean = true, assignedLocation:MapPoint?=null,
+    incidentKey:String="",
     canUndo: (MapPerson) -> Boolean = { true },
     onRescue: (MapPerson) -> Unit = {}, onUndo: (MapPerson) -> Unit = {},
     history: @Composable (MapPerson) -> Unit = {},
@@ -85,7 +86,10 @@ fun SituationScreen(
     var choosingReport by rememberSaveable {mutableStateOf(false)}
     var reportPreview by remember(choosingReport) {mutableStateOf<MapPoint?>(null)}
     var showSafe by rememberSaveable { mutableStateOf(true) }
-    var tsunami by rememberSaveable { mutableStateOf(false) }
+    var tsunami by rememberSaveable(incidentKey) { mutableStateOf(false) }
+    val guidanceContext=androidx.compose.ui.platform.LocalContext.current
+    val guidancePrefs=remember(guidanceContext){guidanceContext.getSharedPreferences("tsunami-guidance",0)}
+    var showTsunamiGuidance by rememberSaveable(incidentKey) {mutableStateOf(false)}
     val tsunamiEnglish=LocalUiLanguage.current=="en"
     var tsunamiStatus by remember(tsunamiEnglish) {mutableStateOf(tsunamiText("enter",tsunamiEnglish))}
     var tsunamiHeight by rememberSaveable {mutableStateOf("")}
@@ -134,7 +138,7 @@ fun SituationScreen(
                 }
             }
             if(!preview) Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp)) {
-                Surface(onClick={tsunami=!tsunami},modifier=Modifier.heightIn(min=48.dp),shape=RoundedCornerShape(6.dp),border=androidx.compose.foundation.BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant),color=if(tsunami)MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface) {
+                Surface(onClick={tsunami=!tsunami;if(tsunami&&!guidancePrefs.getBoolean(incidentKey,false)){showTsunamiGuidance=true;guidancePrefs.edit().putBoolean(incidentKey,true).apply()}},modifier=Modifier.heightIn(min=48.dp),shape=RoundedCornerShape(6.dp),border=androidx.compose.foundation.BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant),color=if(tsunami)MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface) {
                     Box(Modifier.padding(horizontal=6.dp),contentAlignment=Alignment.Center){Text(tsunamiText("title",tsunamiEnglish),fontSize=14.sp,color=MaterialTheme.colorScheme.primary)}
                 }
                 BasicTextField(value=tsunamiHeight,onValueChange={tsunamiHeight=it},singleLine=true,
@@ -178,6 +182,13 @@ fun SituationScreen(
             }
         }
     }
+    if(showTsunamiGuidance&&LocalMapVisible.current) AlertDialog(
+        onDismissRequest={showTsunamiGuidance=false},
+        title={Text(tsunamiText("title",tsunamiEnglish))},
+        text={Text(tsunamiText("guidance",tsunamiEnglish))},
+        confirmButton={TextButton(onClick={showTsunamiGuidance=false;keyboard?.hide();camera.cancelLocationCenter();camera.move(MapPoint(35.095,139.07),15.0)}){Text(if(tsunamiEnglish)"Go to Atami" else "熱海へ移動")}},
+        dismissButton={TextButton(onClick={showTsunamiGuidance=false}){Text(if(tsunamiEnglish)"Close" else "閉じる")}}
+    )
     if (sheet != null && LocalMapVisible.current && (sheet != "person" || selectedPerson != null)) {
         key(sheet) {
         ApprovedSheet("",close,scrollContent=false,maxHeightFraction=when(sheet){"home"->0.48f;"legend"->0.8f;else->1f},footer=if(sheet=="person") {{selectedPerson?.let {PersonDetailActions(it,canRescue,canUndo(it),onRescue,onUndo)}}} else null) {

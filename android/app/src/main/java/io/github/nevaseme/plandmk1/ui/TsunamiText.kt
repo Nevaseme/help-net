@@ -2,6 +2,7 @@ package io.github.nevaseme.plandmk1.ui
 
 fun tsunamiText(key:String,english:Boolean,height:String=""):String = when(key) {
     "title" -> if(english) "Tsunami" else "津波"
+    "guidance" -> if(english) "Tsunami inundation is shown for Atami only. Enter the tsunami height in meters (0–35)." else "津波の浸水表示は熱海のみ対応しています。津波の高さをメートル単位で入力してください（0〜35m）。"
     "height" -> if(english) "Tsunami height (m)" else "津波の高さ（m）"
     "legend" -> if(english) "Tsunami inundation depth" else "津波の浸水深"
     "depth" -> if(english) "Maximum inundation depth" else "最大浸水深"
