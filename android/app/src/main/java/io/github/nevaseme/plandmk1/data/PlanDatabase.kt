@@ -142,7 +142,7 @@ class RoomRecordStore(private val db: PlanDatabase,private val localDeviceId:Str
         if(quakes.roster(group)!=null)require(quakes.states(group).any {incident in it.incidentIds&&!it.closed}) {"成立済みで開始中の災害を指定してください"}
     }
     suspend fun recordOwnPosition(group: String, origin: String, fix: io.github.nevaseme.plandmk1.location.PositionFix): Boolean = db.withTransaction {
-        checkNotNull(get(group, origin)) { "先に自分の情報を登録してください" }
+        check(get(group, origin) != null || QuakeStore(db).roster(group)?.members?.any { origin in it.deviceIds } == true) { "先に自分の情報を登録してください" }
         val previous = db.localSituation().position(group, origin)?.value
         if (previous != null && fix.acquiredAt <= previous.acquiredAt) return@withTransaction false
         val next = PhonePosition(group, origin, Math.addExact(previous?.revision ?: 0, 1), fix.acquiredAt, fix.latitude, fix.longitude, fix.accuracy)

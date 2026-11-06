@@ -7,7 +7,7 @@ export const menuEnglish = {
   "地図：OpenFreeMap / OpenMapTiles / © OpenStreetMap contributors（ODbL）。": "Maps: OpenFreeMap / OpenMapTiles / © OpenStreetMap contributors (ODbL).",
   "住所：Geolonia / デジタル庁（CC BY 4.0）、国土交通省・位置参照情報。市境：国土交通省。": "Addresses: Geolonia / Digital Agency (CC BY 4.0), MLIT position reference data. Municipal boundaries: MLIT.",
   "建物：京都市・国土交通省 Project PLATEAU 2025。全壊率：内閣府の2025年被害想定手法。": "Buildings: Kyoto City / MLIT Project PLATEAU 2025. Collapse rates: Cabinet Office damage estimation methodology (2025).",
-  "津波地形：静岡県2019年ALB点群。計算：Help Net浅水流モデル。ANUGA 3.3.10は別の計算・検証に使用。": "Tsunami terrain: Shizuoka Prefecture ALB point clouds (2019). Calculation: Help Net shallow-water model. ANUGA 3.3.10 is used for separate calculations and validation.",
+  "津波地形：静岡県2019年ALB点群。計算：Help Net浅水流モデル。": "Tsunami terrain: Shizuoka Prefecture ALB point clouds (2019). Calculation: Help Net shallow-water model.",
   "アイコン：Phosphor Icons（MIT）、Font Awesome Free / Fonticons, Inc.（CC BY 4.0）。": "Icons: Phosphor Icons (MIT), Font Awesome Free / Fonticons, Inc. (CC BY 4.0).",
 
   "建物評価の想定計測震度：6.2。同じ構造・年代の建物に対する全壊率の試算です。": "Building assessment: JMA instrumental intensity 6.2. Damage rates are estimates for buildings of the same structural type and age.",

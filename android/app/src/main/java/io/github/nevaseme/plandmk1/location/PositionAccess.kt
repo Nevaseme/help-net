@@ -47,16 +47,16 @@ class PositionAccess(private val activity: ComponentActivity, private val app: P
     private fun advance() {
         if (!registered || busy || !activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return
         val position = app.position
+        if (!position.hasLocationPermission()) {
+            ask("location", arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION),
+                details(), "位置記録には位置情報の許可が必要です。許可を再確認してください")
+            return
+        }
         if (!NotificationManagerCompat.from(activity).areNotificationsEnabled()) {
             val intent = if (Build.VERSION.SDK_INT >= 26) Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
                 .putExtra(Settings.EXTRA_APP_PACKAGE, activity.packageName) else details()
             ask("notifications", if (Build.VERSION.SDK_INT >= 33) arrayOf(Manifest.permission.POST_NOTIFICATIONS) else emptyArray(),
                 intent, "記録状態と災害通知を受け取るため、通知を許可してください")
-            return
-        }
-        if (!position.hasLocationPermission()) {
-            ask("location", arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION),
-                details(), "位置記録には位置情報の許可が必要です。許可を再確認してください")
             return
         }
         if (!position.state.value.active) position.start()

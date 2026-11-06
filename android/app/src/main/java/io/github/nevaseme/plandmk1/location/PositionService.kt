@@ -41,7 +41,12 @@ class PositionService : Service() {
         val source = app.positionSourceFactory()
         val session = PositionRecording(scope, source, { fix ->
             check(app.position.current(requested) && app.installation.group.value == group)
-            app.store.recordOwnPosition(group, app.installation.localId, fix).also {saved->
+            val venue = app.cloud.state.value.takeIf { it.groupId == group }?.venue
+            // A new member can grant permission before the venue/profile has arrived.
+            // Wait for that context instead of sharing real coordinates in a Kyoto session.
+            val measured = if (venue != null) venue.recordingFix(app.installation.localId, fix)
+                else fix.takeIf { app.store.get(group, app.installation.localId) != null }
+            if (measured == null) false else app.store.recordOwnPosition(group, app.installation.localId, measured).also {saved->
                 if(saved) {app.recordsChanged()}
             }
         })

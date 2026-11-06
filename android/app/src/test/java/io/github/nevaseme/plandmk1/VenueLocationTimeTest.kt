@@ -13,6 +13,18 @@ class VenueLocationTimeTest {
     private val venue=VenueSession(groupId="group",sessionId=session,incidentId=session,areaId="kyoto-gosho-south",startedAt=1000,placements=listOf(placement))
     private val fix=PhonePosition("group",device,1,2345,35.0145,135.7625,0.0)
 
+    @Test fun recordingUsesAssignedKyotoPointWithActualAcquisitionTime() {
+        val actual=io.github.nevaseme.plandmk1.location.PositionFix(35.6665,139.7495,12.0,2345)
+        val measured=venue.recordingFix(device,actual)!!
+        assertEquals(35.0145,measured.latitude,0.0)
+        assertEquals(135.7625,measured.longitude,0.0)
+        assertEquals(0.0,measured.accuracy,0.0)
+        assertEquals(actual.acquiredAt,measured.acquiredAt)
+        assertEquals(actual,venue.copy(positionMode="ACTUAL").recordingFix(device,actual))
+        assertNull(venue.recordingFix("unknown",actual))
+        assertNull(venue.copy(placements=listOf(placement.copy(latitude=null))).recordingFix(device,actual))
+    }
+
     @Test fun kyotoDisplaysOnlyMatchingReceivedAcquisitionTimes() {
         assertNull(venue.assignedPositionTime(placement,null))
         assertEquals(2345L,venue.assignedPositionTime(placement,fix))

@@ -42,6 +42,12 @@ import kotlinx.serialization.Serializable
     fun projectClock(view:IncidentView)=if(!closed&&simulationStartedAt!=null&&view.start.eventId==sessionId)view.copy(start=view.start.copy(createdAt=simulationStartedAt))else view
     fun allPlacements()=placements+(scenario?.people.orEmpty().mapIndexed {i,p->DemoPlacement(sessionId,p.deviceId,p.deviceId,p.name,64+i,if(p.positionUnknown)null else p.position?.latitude?:p.home.latitude,if(p.positionUnknown)null else p.position?.longitude?:p.home.longitude,"SCENARIO",p.home)})
     /** A fixed Kyoto point does not imply that this participant has acquired a GPS fix. */
+    fun recordingFix(deviceId:String,fix:io.github.nevaseme.plandmk1.location.PositionFix):io.github.nevaseme.plandmk1.location.PositionFix? {
+        val placement=placements.find {it.deviceId==deviceId} ?: return null
+        if(positionMode=="ACTUAL")return fix
+        if(positionMode!="KYOTO"||placement.latitude==null||placement.longitude==null)return null
+        return fix.copy(latitude=placement.latitude,longitude=placement.longitude,accuracy=0.0)
+    }
     fun assignedPositionTime(placement:DemoPlacement,measured:PhonePosition?):Long? {
         if(placement.source=="SCENARIO")return startedAt
         if(positionMode!="KYOTO"||placement.sessionId!=sessionId||placement.latitude?.isFinite()!=true||placement.longitude?.isFinite()!=true)return null

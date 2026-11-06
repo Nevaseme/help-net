@@ -54,7 +54,7 @@ class MainActivity : ComponentActivity() {
             repeatOnLifecycle(Lifecycle.State.RESUMED) {
                 app.installation.group.collectLatest { group ->
                     combine(app.store.observe(group),app.cloud.state) { residents,cloud->
-                        residents.any {it.originId==app.installation.localId}||cloud.groupId==group&&cloud.venue?.let {it.positionMode=="ACTUAL"&&!it.closed&&it.placements.any {p->p.deviceId==app.installation.localId}}==true
+                        residents.any {it.originId==app.installation.localId} || (cloud.groupId==group && app.cloud.hasSession(group))
                     }.collect { registered ->
                         positionAccess.registered(group, registered)
                     }

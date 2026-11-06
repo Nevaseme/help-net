@@ -169,8 +169,8 @@ private fun PlanAppContent(model: PlanViewModel) {
             NearbyTransport.permissions().all { ContextCompat.checkSelfPermission(context,it)==PackageManager.PERMISSION_GRANTED } &&
             NotificationManagerCompat.from(context).areNotificationsEnabled()) model.startSharing()
     }
-    LaunchedEffect(group,cloudState.nearbyReady,roster) {
-        if (cloudState.groupId==group && cloudState.nearbyReady && !autoAttempted && roster?.members?.any { model.localId in it.deviceIds }==true) {
+    LaunchedEffect(group,cloudState.nearbyReady,roster,permissionRequestActive) {
+        if (cloudState.groupId==group && cloudState.nearbyReady && !permissionRequestActive && !autoAttempted && roster?.members?.any { model.localId in it.deviceIds }==true) {
             autoAttempted=true
             if (!nearby.active) start()
         }
@@ -240,7 +240,7 @@ private fun PlanAppContent(model: PlanViewModel) {
                         10 -> ResponseScreen(model,responseSummary,{responseSummary=false},reportPoint,{reportPoint=null},reportTarget,{reportTarget=null},onOpenSummary={responseSummary=true})
                         11 -> PeaceHome(model, own != null, onProfile={navigate(3)}, onIncident={navigate(6)}, onPreview={preview=true})
                         3 -> SettingsScreen(model, storedOwn, group, saving, onBuildings={navigate(2)}, onPick={picking=true;tab=1})
-                        9 -> PositionSettings(model, own != null)
+                        9 -> PositionSettings(model, own != null || model.hasCloudSession())
                         4 -> LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
                         if(!communicationDetails)item { CloudSharingPanel(model,own?.name.orEmpty(),onCommunication={communicationDetails=true},onIncidents={navigate(6)}) }
                         if(communicationDetails) {
