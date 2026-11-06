@@ -11,8 +11,8 @@
 
 今回撮影・保存して確認した画像：
 
-- `C:/Users/TAKUMI/.codex/visualizations/2026/10/25/01a1730a-acec-7d41-8e9b-4af7419e2c8b/map-audit-01-before.jpg`
-- `C:/Users/TAKUMI/.codex/visualizations/2026/10/25/01a1730a-acec-7d41-8e9b-4af7419e2c8b/map-audit-02-summary-before.jpg`
+- `<local-evidence>/map-audit-01-before.jpg`
+- `<local-evidence>/map-audit-02-summary-before.jpg`
 
 ## 利用者との確認
 

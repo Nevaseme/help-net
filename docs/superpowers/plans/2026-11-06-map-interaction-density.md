@@ -116,7 +116,7 @@ PWAは現在地描画面のpointer-eventsを無効にしてアイコンへのタ
 - コード・試験・資料・承認済み試験画像をコミット `b44e4570013efd6567101286a9ddf1ea6d8d7343` としてGitHub mainへ通常プッシュした。旧比較資産に差分はなく、新しい `demo/helpnet-density/` に追加した。
 - GitHub Pages [公開処理42125339503](https://github.com/Nevaseme/safety_confirm/actions/runs/42125339503) が成功。[公開比較サイト](https://nevaseme.github.io/safety_confirm/#helpnet-density-pwa) で新規13画面の画像読込み・切り替え、末尾のPWA/Android 2列、全31列、ページ例外0件を確認した。最終実機画像でShow safeの表示状態、通報案内の非重複、プレビューと英語の保存結果も視認した。
 - [公開PWA](https://tasukeai-sync.tomodachi-takumi.workers.dev/) の応答200と1.6.54表示、公開に使ったバンドルのSHA256を再確認した。Androidは上記最終hashの1.5.81/code94が実機へ導入済み。
-- `plan.txt`、`add.txt` は操作・コミット対象に含めず、Git管理対象にもない。接続情報、端末原本、APK、ビルド出力、依存パッケージ、調査用一時ファイルは公開していない。作業場所は本来の `C:/Users/TAKUMI/projects/planD`。
+- `plan.txt`、`add.txt` は操作・コミット対象に含めず、Git管理対象にもない。接続情報、端末原本、APK、ビルド出力、依存パッケージ、調査用一時ファイルは公開していない。作業場所は本来の `.`。
 - 新しい人数・町内会・配置は次の開催から適用する。既存開催の配置や履歴は変更しない。
 
 位置取得・衝撃検知の調査は `2026-11-06-location-impact-audit.md`、実測値と長時間/全機種の限界は `2026-11-06-android-memory-investigation.md` を参照。コード内の日本語は日本語モード・保存値・利用者入力にも存在するため、単なる文字列検索を英語画面全体の証明とは扱わない。今回操作した英語画面の固定文言を検査し、見つかった残留を修正した。

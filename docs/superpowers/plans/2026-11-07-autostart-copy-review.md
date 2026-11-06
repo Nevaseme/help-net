@@ -4,7 +4,7 @@
 
 利用者が提示したvivo画面と現行 `AutostartGuidance.kt`、`AutostartSettings.kt`、日英リソースを確認。新しい画面操作試験やアクセシビリティ適合試験は行っていない。frontend-designの文言指針とProduct Designの限定範囲のレビューを適用した。
 
-![利用者提示の現行画面](</C:/Users/TAKUMI/projects/planD/unnamed (2).jpg>)
+![利用者提示の現行画面](</./unnamed (2).jpg>)
 
 1. 安否登録後にMapへ進む：提示画像ではMapへの遷移を確認できる。ただし自動起動案内が操作を遮る。
 2. 案内を読む：目的は示されているが、見出し・本文・手順・補足が長く、再起動後の共有に関する任意設定だと素早く理解しにくい。

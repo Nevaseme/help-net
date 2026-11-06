@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
 import {readFile} from 'node:fs/promises';
-import {chromium} from 'file:///C:/Users/TAKUMI/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
+import {chromium} from '../../tools/browser-runtime.mjs';
 const server=createServer(async(req,res)=>{
  if(req.url==='/sw.js'){res.setHeader('Content-Type','text/javascript');res.end(`self.addEventListener('install',e=>e.waitUntil(self.skipWaiting()));self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));self.addEventListener('message',e=>{if(e.data?.type==='GET_VERSION')e.ports[0]?.postMessage('pland-lab-v1.6.64-r110-helpnet');});`);return;}
  if(req.url==='/app-update.mjs'){res.setHeader('Content-Type','text/javascript');res.end(await readFile(new URL('../web/app-update.mjs',import.meta.url)));return;}

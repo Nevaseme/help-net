@@ -2,9 +2,9 @@ import assert from 'node:assert/strict';
 import {writeFile} from 'node:fs/promises';
 import {pathToFileURL} from 'node:url';
 import {resolve} from 'node:path';
-const {chromium}=await import(pathToFileURL('C:/Users/TAKUMI/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs').href);
+import {chromium} from './browser-runtime.mjs';
 const browser=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true});
-const results=[],out='C:/Users/TAKUMI/.codex/visualizations/2026/10/24/01a16c0c-f86e-7220-ad05-e96afa7746d4/sync-1544';
+const results=[],out='output/qa/sync-1544';
 try {
  for(const url of [pathToFileURL(resolve('demo/cloud-sharing.html')).href,...(process.env.LOCAL_ONLY?[]:['https://nevaseme.github.io/safety_confirm/cloud-sharing.html?sync=1544'])]) {
   const page=await browser.newPage({viewport:{width:1280,height:1000}}),errors=[];

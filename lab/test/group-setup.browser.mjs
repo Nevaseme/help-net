@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {mkdir,writeFile} from 'node:fs/promises';
-import {chromium} from 'file:///C:/Users/TAKUMI/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
+import {chromium} from '../../tools/browser-runtime.mjs';
 import {startVenueServer} from './venue-server.mjs';
 // Browser plugin not available; isolated Playwright profile, no personal browser state.
 const server=await startVenueServer(),base=process.env.GROUP_TEST_URL||server.base;

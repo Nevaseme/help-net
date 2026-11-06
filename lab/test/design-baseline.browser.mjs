@@ -1,7 +1,7 @@
 // Isolated 1.6.17 design audit. Uses a real service worker and a newly created test group only.
 import assert from 'node:assert/strict';
 import {mkdir,writeFile} from 'node:fs/promises';
-import {chromium} from 'file:///C:/Users/TAKUMI/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
+import {chromium} from '../../tools/browser-runtime.mjs';
 import {startVenueServer} from './venue-server.mjs';
 const out=process.env.COMMUNITY_TEST_OUTPUT;assert.ok(out,'COMMUNITY_TEST_OUTPUT is required');await mkdir(out,{recursive:true});
 const server=process.env.COMMUNITY_TEST_URL?null:await startVenueServer({cityFixture:true}),base=process.env.COMMUNITY_TEST_URL||server.base;let fixtureGroup=null;

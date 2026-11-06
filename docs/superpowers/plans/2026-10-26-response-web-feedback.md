@@ -37,4 +37,4 @@
 - 公開先でも通報取り消し9→8、理由・開始／解除の履歴表示、復元で9へ戻ることを確認。
 - 地図の中央をタップした座標130.81900／32.79040が通報記号に保存され、追加後に総数10・道路閉塞3へ変化することを確認。
 - 公開先コンソールerror0件。確認後は再読込し、初期データへ戻した。
-- スクリーンショット：`C:/Users/TAKUMI/.codex/visualizations/2026/10/25/01a1730a-acec-7d41-8e9b-4af7419e2c8b/feedback-public-fixed.png`。
+- スクリーンショット：`<local-evidence>/feedback-public-fixed.png`。

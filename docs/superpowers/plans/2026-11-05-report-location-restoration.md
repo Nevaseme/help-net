@@ -24,7 +24,7 @@
 | エミュレーター | 1.5.75（88） | 1.5.76（89）をインストールし試験 |
 | vivo実機 | 1.5.74（87） | 1.5.76（89）へ更新し、実機で連続移動・通報開閉・画面往復を確認 |
 
-作業場所は `C:/Users/TAKUMI/projects/planD` に統一。旧 `C:/Users/TAKUMI/.codex/worktrees/building-vulnerability/planD` は保持し、削除していない。Android Studioはcanonicalのandroidを開く。AndroidStudioProjectsの旧コピーは変更していない。
+作業場所は `.` に統一。旧 `<local-worktrees>/building-vulnerability/planD` は保持し、削除していない。Android Studioはcanonicalのandroidを開く。AndroidStudioProjectsの旧コピーは変更していない。
 
 共通履歴efc13f4を基準に、元canonical e418d2aと旧worktree 5a83f81の変更をファイル単位で統合した。7426ファイルを取り込み、canonical独自10ファイルを保持。6件の競合は既存比較の読込と両文書内容を残して解決。origin/main 6b0444dから独自追加された3934ファイルも照合し、欠けていた参加入口demo/help-net/index.htmlを復元した。比較indexの追加列を除いてorigin側の更新内容は一致する。
 

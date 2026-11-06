@@ -9,7 +9,7 @@ assert.ok(process.env.RELAY_FIXTURE,'RELAY_FIXTURE must name the private Android
 const fixture=JSON.parse(await readFile(process.env.RELAY_FIXTURE,'utf8'));
 for(const key of ['endpoint','groupId','token','authorId','answerId','reportId','incidentId'])assert.ok(fixture[key],`Missing fixture field: ${key}`);
 const base=fixture.endpoint.replace(/\/$/,''),out=resolve(process.env.PWA_TEST_OUTPUT||process.env.TEMP+'/pland-relay-pwa-proof');await mkdir(out,{recursive:true});
-const {chromium}=await import(pathToFileURL(process.env.PLAYWRIGHT_MODULE||'C:/Users/TAKUMI/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs').href);
+import {chromium} from '../../tools/browser-runtime.mjs';
 async function api(path,body){const response=await fetch(base+'/api/v1/groups/'+fixture.groupId+path,{method:body===undefined?'GET':'POST',headers:{Authorization:'Bearer '+fixture.token,'Content-Type':'application/json','X-PlanD-Records-Version':'2'},...(body===undefined?{}:{body:JSON.stringify(body)})});assert.equal(response.status,200,'Fictional relay group API request must succeed');return response.json();}
 const remote=[];let cursor=0;
 for(let i=0;i<200;i++){const page=await api('/records?after='+cursor+'&limit=100');remote.push(...page.records);cursor=page.nextCursor;if(!page.hasMore)break;}

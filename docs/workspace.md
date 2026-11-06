@@ -1,6 +1,6 @@
 # 統合後の作業場所と確認手順
 
-作業場所: `C:\Users\TAKUMI\projects\planD`。Android Studioでは、この中の `android/` を開く。
+作業場所: このリポジトリのルート。Android Studioでは、この中の `android/` を開く。
 旧worktreeは退避用として保持する。旧 `AndroidStudioProjects/PlanDMk1` は同期しない。
 
 ## ローカル確認
@@ -42,3 +42,16 @@ SDKの場所はローカルの `android/local.properties`、JavaはAndroid Studi
 
 過去の設計文書は、その時点の案を含む。旧名称Tasukeai／PlanDや旧画面の説明は現在の実装を表さない。
 実装・試験・公開の状態は、日付付き確認報告と各配信物のバージョンで確認する。
+
+## 開発・端末試験のローカル設定
+
+ブラウザー試験は `playwright` をプロジェクトまたは実行中のNode.jsから解決する。別のインストールを使う場合は `PLAYWRIGHT_MODULE` にそのモジュールの絶対パスを指定する。個人のホームディレクトリはソースに書かない。
+
+端末試験用ADBは `ADB`、`PATH`、`ANDROID_SDK_ROOT` / `ANDROID_HOME` から指定できる。実機用スクリプトは `adb devices` で対象を確認し、`ANDROID_SERIAL` を設定して実行する。端末番号は公開ファイルへ記録しない。
+
+```powershell
+$env:ANDROID_SERIAL = '<test-device-serial>'
+python tools/ui-vivo-check.py
+```
+
+比較試験の画像などはGit管理外の `output/qa/` に保存する。`plan.txt` と `add.txt` は置き場所にかかわらずローカル専用とする。

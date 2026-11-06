@@ -1,6 +1,6 @@
 # Help Net 追加修正と error.txt 全項目への回答
 
-対象は利用者指定チャットの最新版 `C:/Users/TAKUMI/.codex/worktrees/building-vulnerability/planD`。PWA 1.6.41（cache r75）、Android 1.5.69（82）。`plan.txt` と旧AndroidStudioProjectsは変更していない。以下は今回と前回までの実装を合わせた状態であり、計画だけの項目を完了扱いにしていない。
+対象は利用者指定チャットの最新版 `<local-worktrees>/building-vulnerability/planD`。PWA 1.6.41（cache r75）、Android 1.5.69（82）。`plan.txt` と旧AndroidStudioProjectsは変更していない。以下は今回と前回までの実装を合わせた状態であり、計画だけの項目を完了扱いにしていない。
 
 ## 今回の追加指摘
 

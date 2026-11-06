@@ -1,8 +1,9 @@
 """Exercise the normal group's disclosure without editing records or starting/stopping sharing."""
+from android_device import adb_command
 import json, pathlib, re, subprocess, sys, time
 import xml.etree.ElementTree as ET
 serial = sys.argv[1]
-adb = [r'C:/Users/TAKUMI/AppData/Local/Android/Sdk/platform-tools/adb.exe', '-s', serial]
+adb = adb_command(serial)
 out = pathlib.Path('output/group-details-1535') / serial
 out.mkdir(parents=True, exist_ok=True)
 def call(*args): return subprocess.check_output(adb + list(args))

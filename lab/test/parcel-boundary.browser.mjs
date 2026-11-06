@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {chromium} from 'file:///C:/Users/TAKUMI/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
+import {chromium} from '../../tools/browser-runtime.mjs';
 import {startVenueServer} from './venue-server.mjs';
 const server=await startVenueServer({cityFixture:true}),browser=await chromium.launch({headless:true,executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe'}),page=await browser.newPage({viewport:{width:390,height:844}});page.setDefaultTimeout(60000);
 try{await page.goto(server.base);await page.waitForFunction(()=>document.querySelector('#offline')?.textContent.includes('オフライン起動の準備ができました'));await page.waitForTimeout(2000);await page.evaluate(async()=>{const original=L.map;L.map=(...a)=>{const m=original(...a);window.testMap=m;window.testPoint={lat:34.882794223037465,lng:135.7266745795094};// Retain exact coordinates for this sub-2m regression; Leaflet rounds to display pixels.

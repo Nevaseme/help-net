@@ -1,10 +1,11 @@
 """Read-only observation of the already-open sharing screen, including automatic refresh."""
+from android_device import adb_command
 import collections, io, json, pathlib, re, subprocess, sys, time
 import xml.etree.ElementTree as ET
 sys.path.insert(0, str(pathlib.Path('.implementation/tsunami-plot-deps').resolve()))
 from PIL import Image
 
-ADB = [r'C:/Users/TAKUMI/AppData/Local/Android/Sdk/platform-tools/adb.exe', '-s', '10AE9Y3GDY000JU']
+ADB = adb_command()
 OUT = pathlib.Path('output/sync-inspection-private')
 samples, states = [], []
 start, last_tree = time.monotonic(), -100

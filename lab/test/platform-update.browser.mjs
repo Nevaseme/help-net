@@ -3,7 +3,7 @@ import {createServer} from 'node:http';
 import {readFile,mkdir,writeFile} from 'node:fs/promises';
 import {extname,resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
-const {chromium}=await import(pathToFileURL('C:/Users/TAKUMI/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs').href);
+import {chromium} from '../../tools/browser-runtime.mjs';
 const out='output/platform-quality/upgrade-current';await mkdir(out,{recursive:true});
 const old=new Map();for(const f of ['index.html','app.mjs','sw.js','style.css','web1617-ui.mjs','cloud-ui.mjs']){const r=await fetch('https://tasukeai-sync.tomodachi-takumi.workers.dev/'+f);assert.ok(r.ok);old.set('/'+f,await r.text());}
 const oldVersion=old.get('/app.mjs').match(/PWA (\d+\.\d+\.\d+)/)?.[1];assert.ok(oldVersion);

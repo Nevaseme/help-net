@@ -1,6 +1,6 @@
 from pathlib import Path
 import shutil
-source=Path('C:/Users/TAKUMI/.codex/visualizations/2026/10/24/01a16c0c-f86e-7220-ad05-e96afa7746d4/address-pin-1543');assets=Path('demo/assets/address-pin-1543');assets.mkdir(parents=True,exist_ok=True)
+source=Path('output/qa/address-pin-1543');assets=Path('demo/assets/address-pin-1543');assets.mkdir(parents=True,exist_ok=True)
 for key,files in [('android',['pin','training','search']),('pwa',['pin','training','risk'])]:
  for name in files:shutil.copyfile(source/key/(name+'.png'),assets/(key+'-'+name+'.png'))
 columns=''
