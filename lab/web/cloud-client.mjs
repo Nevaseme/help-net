@@ -30,6 +30,12 @@ export class CloudClient {
   await this.request(`/groups/${group}/records`,{session,body:{records:[{collection:'quakes',record}]}});await this.sync(group);await this.store.update('meta',key,()=>null);
  }
  async access(group,action,memberId){const result=await this.request(`/groups/${group}/access`,{session:await this.requireSession(group),body:{action,memberId}});if(action==='revoke'){await this.store.importCloudRoster(result,this.deviceId);await saveVenue(this.store,result);}return result;}
+ async leaveGroup(group){
+  const result=await this.request(`/groups/${group}/access`,{session:await this.requireSession(group),body:{action:'leave'}});
+  if(result.left!==true||result.groupId!==group)throw Error('Could not confirm that you left the group. Please retry.');
+  await this.store.update('meta','cloud-session:'+group,()=>null);
+  if(await this.store.read('meta','group')===group)await this.store.update('meta','group',()=>crypto.randomUUID());
+ }
  async setMemberPermission(group,memberId,canTriage){const body=await this.request(`/groups/${group}/member-permission`,{session:await this.requireSession(group),body:{memberId,canTriage}});await this.store.importCloudRoster(body,this.deviceId);return body;}
  async setVenueClock(group,minutes){
   const venue=await this.store.read('meta','venue:'+group);

@@ -398,3 +398,50 @@ test('saved running venues retain their old boundaries and assignments after a c
  assert.deepEqual(journal.history('quakes'),records);
  assert.equal(before.presentationMode,'DRILL');
 });
+
+test('member leave preserves history, revokes access, frees a slot and permits password rejoin',async t=>{
+ const f=fixture(t),admin=await setup(f),g=admin.groupId;
+ await f.call(`/groups/${g}/venue`,{requestId:id(),password,areaId:'kyoto-gosho-south'},admin.token);
+ const deviceId=id(),joinInput={groupName:'会場テスト',password,activityName:'Participant',deviceId,registrationToken:token()};
+ const joined=await f.call('/venue/join',joinInput);assert.equal(joined.status,200);const member=joined.body;
+ const j=f.get(g),history=j.history('responses'),slot=member.venue.placements.find(p=>p.deviceId===deviceId).slotId;
+ assert.equal((await f.call(`/groups/${g}/access`,{action:'leave'},admin.token)).status,403);
+ const recovery=await f.call(`/groups/${g}/access`,{action:'issue'},member.token);assert.equal(recovery.status,200);
+ for(let i=0;i<2;i++)assert.deepEqual(await f.call(`/groups/${g}/access`,{action:'leave'},member.token),{status:200,body:{groupId:g,left:true}});
+ assert.equal((await f.call(`/groups/${g}/roster`,undefined,member.token)).status,401);
+ assert.ok(!j.venueSnapshot().placements.some(p=>p.deviceId===deviceId));assert.deepEqual(j.history('responses'),history);
+ assert.equal(j.s.all('SELECT * FROM recovery_codes WHERE member_id=?',member.memberId).length,0);
+ const other=await f.call('/venue/join',{...joinInput,deviceId:id(),registrationToken:token(),activityName:'Other'});assert.equal(other.status,200);
+ assert.equal(other.body.venue.placements.find(p=>p.deviceId===other.body.deviceId).slotId,slot);
+ assert.equal((await f.call('/venue/join',{...joinInput,password:'wrong',registrationToken:token()})).status,403);
+ const input={...joinInput,registrationToken:token(),activityName:'Returned'};
+ const rejoined=await f.call('/venue/join',input);assert.equal(rejoined.status,200,JSON.stringify(rejoined.body));assert.equal(rejoined.body.memberId,member.memberId);
+ assert.equal(rejoined.body.venue.placements.length,3);assert.equal(new Set(rejoined.body.venue.placements.map(p=>p.slotId)).size,3);
+ assert.deepEqual(j.history('responses'),history);assert.equal((await f.call(`/groups/${g}/roster`,undefined,member.token)).status,401);
+ assert.equal((await f.call('/venue/join',input)).status,200);
+ await f.call(`/groups/${g}/access`,{action:'revoke',memberId:member.memberId},admin.token);
+ assert.equal((await f.call('/venue/join',{...input,registrationToken:token()})).status,409);
+});
+
+test('member can leave before an event and rejoin with an invitation; admin cannot leave',async t=>{
+ const f=fixture(t),admin=await setup(f),g=admin.groupId;
+ const invite=(await f.call(`/groups/${g}/invitations`,{},admin.token)).body;
+ const input={deviceId:id(),activityName:'Member',code:invite.code,registrationToken:token()};
+ const member=(await f.call(`/groups/${g}/join`,input)).body;
+ assert.equal((await f.call(`/groups/${g}/access`,{action:'leave'},member.token)).status,200);
+ assert.equal((await f.call(`/groups/${g}/join`,{...input,code:token(),registrationToken:token()})).status,403);
+ const joined=await f.call(`/groups/${g}/join`,{...input,registrationToken:token()});assert.equal(joined.status,200);assert.equal(joined.body.memberId,member.memberId);
+ assert.equal((await f.call(`/groups/${g}/access`,{action:'leave',memberId:member.memberId},admin.token)).status,403);
+});
+
+test('administrator recovery after voluntary leave can leave again',async t=>{
+ const f=fixture(t),admin=await setup(f),g=admin.groupId;
+ await f.call(`/groups/${g}/venue`,{requestId:id(),password,areaId:'kyoto-gosho-south'},admin.token);
+ const member=(await f.call('/venue/join',{groupName:'会場テスト',password,activityName:'Participant',deviceId:id(),registrationToken:token()})).body;
+ await f.call(`/groups/${g}/access`,{action:'leave'},member.token);
+ const code=(await f.call(`/groups/${g}/access`,{action:'issue',memberId:member.memberId},admin.token)).body.code;
+ const recovered=await f.call('/venue/recover',{groupName:'会場テスト',code,deviceId:id(),registrationToken:token()});assert.equal(recovered.status,200);
+ assert.equal((await f.call(`/groups/${g}/access`,{action:'leave'},recovered.body.token)).status,200);
+ assert.equal((await f.call(`/groups/${g}/roster`,undefined,recovered.body.token)).status,401);
+ assert.equal(f.get(g).venueSnapshot().placements.length,1);
+});

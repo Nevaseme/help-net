@@ -15,6 +15,7 @@ class CloudSettings(context:Context,preferencesName:String="cloud-sharing") {
     private val prefs=context.getSharedPreferences(preferencesName,Context.MODE_PRIVATE)
     private val json=Json {ignoreUnknownKeys=true}
     fun session(group:String):CloudSession?=prefs.getString("session:$group",null)?.let {json.decodeFromString(it)}
+    fun leaveGroup(group:String) {check(prefs.edit().remove("session:$group").remove("nearby:$group").remove("relay-key:$group").commit())}
     fun venue(group:String):io.github.nevaseme.plandmk1.demo.VenueSession?=prefs.getString("venue:$group",null)?.let {json.decodeFromString(it)}
     fun municipality(group:String):GroupMunicipality?=prefs.getString("municipality:$group",null)?.let {json.decodeFromString(it)}
     fun saveVenue(body:CloudRosterEnvelope) {body.venue?.validate(body.roster);body.municipality?.validate();check(prefs.edit().putString("venue:${body.groupId}",body.venue?.let {json.encodeToString(it)}).putString("municipality:${body.groupId}",body.municipality?.let {json.encodeToString(it)}).commit())}

@@ -46,6 +46,8 @@ export async function attachCloudUi({store,id,getGroup,setGroup,refresh,tab,onJo
  const settingsLink=document.createElement('button');settingsLink.type='button';settingsLink.className='secondary';settingsLink.id='group-settings-open';settingsLink.textContent='グループの設定';host.append(settingsLink);
  const accessLink=document.createElement('button');accessLink.type='button';accessLink.className='text-button';accessLink.textContent='参加の復元・管理';groupDetails.append(accessLink);
  const communicationLink=document.createElement('button');communicationLink.type='button';communicationLink.className='text-button';communicationLink.textContent='通信の詳細';groupDetails.append(communicationLink);
+ const leaveButton=document.createElement('button');leaveButton.id='group-leave';leaveButton.type='button';leaveButton.className='text-button';leaveButton.hidden=true;groupDetails.append(leaveButton);
+ const leaveFeedback=document.createElement('p');leaveFeedback.id='group-leave-feedback';leaveFeedback.setAttribute('role','alert');groupDetails.append(leaveFeedback);
  const eventControls=document.createElement('section');eventControls.id='event-controls';
  document.getElementById('training-page').prepend(eventControls);eventControls.append(venueDetails,clock,$('venue-end'));
  const eventLink=document.createElement('button');eventLink.type='button';eventLink.className='secondary';eventLink.id='group-events-open';overview.append(eventLink);
@@ -75,6 +77,7 @@ export async function attachCloudUi({store,id,getGroup,setGroup,refresh,tab,onJo
  let cityDraftGroup=null,cityDirty=false;$('cloud-city').onchange=()=>{cityDirty=true;};
  $('cloud-city-form').onsubmit=async event=>{event.preventDefault();if(busy||!$('cloud-city').value)return;busy=true;await controls();try{await inFlight;await client.setMunicipality(getGroup(),$('cloud-city').value);cityDirty=false;status('活動地域を保存しました');}catch(e){status(e.message);}finally{busy=false;await controls();await refresh();}};
  async function controls(){const session=await client.session(getGroup());document.body.classList.toggle('registration-needed',!session);setText(host.querySelector(':scope > h3'),session?.groupName||'グループ');setText($('cloud-group-state'),session?`${await activityName(session)}${session.role==='ADMIN'?' · 管理者':''}`:'管理者から案内された参加情報を入力してください。');setText($('header-group'),session?`${session.groupName} / ${await activityName(session)}`:'安否と対応の共有');setProperty($('cloud-sync'),'disabled',busy||!session);setProperty($('cloud-invite'),'hidden',session?.role!=='ADMIN');setProperty($('cloud-invite'),'disabled',busy);for(const button of host.querySelectorAll('form button'))setProperty(button,'disabled',busy);for(const button of document.querySelectorAll('[data-stop]'))button.disabled=!session;
+  leaveButton.hidden=session?.role!=='MEMBER';leaveButton.disabled=busy;leaveButton.textContent=document.documentElement.lang==='en'?'Leave group':'グループを退会';
   const city=await store.read('meta','municipality:'+getGroup());setProperty($('cloud-city-state'),'hidden',!session);setText($('cloud-city-state'),`活動地域：${city?.name||'未設定'}`);setProperty($('cloud-city-form'),'hidden',session?.role!=='ADMIN');setProperty($('cloud-city'),'disabled',busy);
   if(cityDraftGroup!==getGroup()||!cityDirty){$('cloud-city').value=city?.code||'';cityDraftGroup=getGroup();cityDirty=false;}
   const venue=await store.read('meta','venue:'+getGroup());const live=!!venue&&!venue.closed;
@@ -134,6 +137,13 @@ export async function attachCloudUi({store,id,getGroup,setGroup,refresh,tab,onJo
   }catch(e){status(e.message,'登録を確認');$('group-join-feedback').setAttribute('role','alert');setText($('group-join-feedback'),e.message);}finally{busy=false;button.removeAttribute('aria-busy');setText(button,label);await controls();run();}
  }
  $('cloud-sync').onclick=()=>{stopped=false;run(true);};
+ leaveButton.onclick=async()=>{
+  const en=document.documentElement.lang==='en';
+  if(busy||!confirm(en?'Leave this group? Sharing will stop. Past records will be kept. You can join again with the group name and password.':'このグループを退会しますか？ 共有を停止し、過去の記録は残します。グループ名とパスワードで再参加できます。'))return;
+  busy=true;leaveFeedback.textContent='';await controls();
+  try{await inFlight;await client.leaveGroup(getGroup());stopped=true;generation++;clearTimeout(timer);location.reload();}
+  catch(e){leaveFeedback.textContent=en?'Could not leave the group. Check your connection and try again.':'退会できませんでした。通信を確認して、もう一度お試しください。';busy=false;await controls();resetTimer();}
+ };
  $('group-open-safety').onclick=()=>tab?.('safety');
  $('venue-end').onclick=async()=>{if(busy||!confirm(document.documentElement.lang==='en'?'End this event? Records will be kept.':'今回の安否確認を終了しますか？ 記録は残ります。'))return;busy=true;await controls();try{await inFlight;await client.endVenue(getGroup());await refresh();status('安否確認を終了しました。次の安否確認を開始できます。');}catch(e){status(e.message);}finally{busy=false;await controls();resetTimer();}};
  async function manageAccess(action){if(busy)return;const session=await client.session(getGroup()),memberId=session.role==='ADMIN'?$('access-member').value:session.memberId;if(action==='revoke'&&!confirm('この参加登録の接続を停止します。会場の地図から外れますが、過去の記録は残ります。停止しますか？'))return;busy=true;await controls();try{await inFlight;const result=await client.access(getGroup(),action,memberId);if(action==='issue'){$('access-code').value=result.code;$('access-code-label').hidden=false;setText($('access-feedback'),'24時間以内に1回使えます。本人以外には渡さないでください。');}else{$('access-code-label').hidden=true;setText($('access-feedback'),'参加登録を停止しました。');await refresh();}}catch(e){setText($('access-feedback'),e.message);}finally{busy=false;await controls();}}

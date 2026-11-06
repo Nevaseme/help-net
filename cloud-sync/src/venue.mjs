@@ -91,7 +91,7 @@ export const venueMethods={
   this.s.transaction(()=>{
    const active=this.venueConfig()&&!this.venueSnapshot().closed;
    const existing=this.s.all('SELECT member_id,token_hash FROM devices WHERE device_id=?',input.deviceId)[0];
-   if(existing){requireValue(existing.token_hash===hash,'device_exists',409);if(active)this.assignVenue(input.deviceId,existing.member_id,this.snapshot().roster.members.find(m=>m.memberId===existing.member_id).activityName);}
+   if(existing){if(!this.rejoinMember(input.deviceId,hash,input.activityName)){requireValue(existing.token_hash===hash,'device_exists',409);if(active)this.assignVenue(input.deviceId,existing.member_id,this.snapshot().roster.members.find(m=>m.memberId===existing.member_id).activityName);}}
    else {this.addMember(input.deviceId,memberId,input.activityName,'MEMBER',hash);if(active)this.assignVenue(input.deviceId,memberId,input.activityName.trim());}
   });
   return this.registrationReplay(input.deviceId,input.registrationToken,hash);

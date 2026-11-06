@@ -76,14 +76,15 @@ export class Journal {
  async join(input){
   this.mustExist();requireValue(input&&uuid(input.deviceId)&&text(input.activityName,60)&&typeof input.code==='string'&&/^[a-f0-9]{64}$/.test(input.registrationToken));
   const token=input.registrationToken,tokenHash=await hashSecret(token);
-  if(this.s.all('SELECT device_id FROM devices WHERE device_id=?',input.deviceId).length)return this.registrationReplay(input.deviceId,token,tokenHash);
+  const existing=this.s.all('SELECT member_id FROM devices WHERE device_id=?',input.deviceId)[0];
+  if(existing&&!this.meta('member-left:'+existing.member_id))return this.registrationReplay(input.deviceId,token,tokenHash);
   requireValue(!this.venueConfig()||this.venueConfig().privateTraining||!this.venueSnapshot().closed,'venue_closed',409,'この会場デモは終了しています。');
   requireValue(/^[a-f0-9]{64}$/.test(input.code),'invalid_invitation',403);
   const codeHash=await hashSecret(input.code),memberId=crypto.randomUUID();
   this.s.transaction(()=>{
    const invite=this.s.all('SELECT expires_at FROM invitations WHERE code_hash=?',codeHash)[0];requireValue(invite&&invite.expires_at>this.now(),'invalid_invitation',403);
-   this.addMember(input.deviceId,memberId,input.activityName,'MEMBER',tokenHash);
-  });await this.s.flush();return {...this.snapshot(),deviceId:input.deviceId,memberId,role:'MEMBER',token};
+   if(!this.rejoinMember(input.deviceId,tokenHash,input.activityName))this.addMember(input.deviceId,memberId,input.activityName,'MEMBER',tokenHash);
+  });return this.registrationReplay(input.deviceId,token,tokenHash);
  }
  async roster(token){await this.identity(token);return this.snapshot();}
  async setMemberPermission(token,input){

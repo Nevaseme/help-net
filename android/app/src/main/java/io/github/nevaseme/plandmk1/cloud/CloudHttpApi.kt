@@ -15,6 +15,10 @@ import kotlin.coroutines.resumeWithException
 class CloudHttpException(val status:Int,val code:String):IOException(if(code=="client_update_required")"このグループの新しい対応記録を読むには、アプリを最新版へ更新してください。端末内の記録は保持されています。" else "共有サーバーに保存できませんでした（$status / $code）")
 class CloudHttpApi(private val client:OkHttpClient=OkHttpClient.Builder().callTimeout(30,TimeUnit.SECONDS).followRedirects(false).followSslRedirects(false).build()):CloudApi {
     private val json=Json {ignoreUnknownKeys=true}
+    suspend fun leaveGroup(session:CloudSession) {
+        val result=json.parseToJsonElement(request(session.endpoint,"groups/${session.groupId}/access",session.token,buildJsonObject {put("action","leave")})).jsonObject
+        check(result["left"]?.jsonPrimitive?.booleanOrNull==true&&result["groupId"]?.jsonPrimitive?.content==session.groupId)
+    }
     companion object {
         fun endpoint(value:String):String=value.trim().toHttpUrl().also {
             require(it.isHttps && it.username.isEmpty()&&it.password.isEmpty()&&it.query==null&&it.fragment==null&&it.encodedPath=="/") {"HTTPSの共有サーバーアドレスを指定してください"}

@@ -16,6 +16,7 @@ export const demoAuthMethods={
   return this.s.all('SELECT DISTINCT member_id FROM devices').filter(r=>!this.s.all('SELECT d.device_id FROM devices d LEFT JOIN device_access a ON a.device_id=d.device_id WHERE d.member_id=? AND COALESCE(a.revoked,0)=0',r.member_id).length).map(r=>r.member_id);
  },
  async access(token,input){
+  if(input?.action==='leave')return this.leaveGroup(token);
   const actor=await this.identity(token),memberId=input?.memberId??actor.memberId;
   requireValue(uuid(memberId));
   requireValue(actor.memberId===memberId||actor.role==='ADMIN','admin_required',403);
@@ -32,9 +33,44 @@ export const demoAuthMethods={
   }
   requireValue(input.action==='revoke'&&actor.role==='ADMIN','admin_required',403);
   this.s.transaction(()=>{
+   this.s.run('DELETE FROM metadata WHERE key=?','member-left:'+memberId);
    for(const device of member.deviceIds)this.s.run('INSERT INTO device_access(device_id,revoked,last_seen) VALUES (?,1,?) ON CONFLICT(device_id) DO UPDATE SET revoked=1',device,this.now());
    this.s.run('DELETE FROM recovery_codes WHERE member_id=?',memberId);
   });await this.s.flush();return this.snapshot();
+ },
+ async leaveGroup(token){
+  this.mustExist();requireValue(typeof token==='string'&&/^[a-f0-9]{64}$/.test(token),'unauthorized',401);
+  const row=this.s.all('SELECT device_id,member_id,role FROM devices WHERE token_hash=?',await hash(token))[0];
+  requireValue(row,'unauthorized',401);requireValue(row.role==='MEMBER','member_leave_only',403,'管理者は退会できません。');
+  // A lost response can be retried with the same credential after it was revoked.
+  if(!this.meta('member-left:'+row.member_id)){
+   await this.identity(token);
+   this.s.transaction(()=>{
+    this.s.run('INSERT INTO metadata(key,value) VALUES (?,?)','member-left:'+row.member_id,JSON.stringify({leftAt:this.now()}));
+    for(const device of this.s.all('SELECT device_id FROM devices WHERE member_id=?',row.member_id))this.s.run('INSERT INTO device_access(device_id,revoked,last_seen) VALUES (?,1,?) ON CONFLICT(device_id) DO UPDATE SET revoked=1',device.device_id,this.now());
+    this.s.run('DELETE FROM recovery_codes WHERE member_id=?',row.member_id);
+   });
+  }
+  await this.s.flush();return {groupId:this.meta('groupId'),left:true};
+ },
+ rejoinMember(deviceId,tokenHash,activityName){
+  const row=this.s.all('SELECT member_id,role FROM devices WHERE device_id=?',deviceId)[0];
+  if(!row||row.role!=='MEMBER'||!this.meta('member-left:'+row.member_id))return false;
+  const snapshot=this.snapshot(),roster=structuredClone(snapshot.roster),member=roster.members.find(m=>m.memberId===row.member_id);
+  member.activityName=activityName.trim();
+  this.s.run('INSERT INTO roster_history(revision,body) VALUES (?,?)',snapshot.rosterRevision+1,canonical(roster));
+  this.s.run('UPDATE devices SET token_hash=? WHERE device_id=?',tokenHash,deviceId);
+  // Slots may have been taken by another participant while this member was away.
+  const config=this.venueConfig();
+  if(config&&!snapshot.venue.closed){
+   const used=new Set(snapshot.venue.placements.map(p=>p.slotId)),slotId=config.slots.findIndex((_,i)=>!used.has(i));
+   requireValue(slotId>=0,'venue_full',409,'この会場デモの定員に達しています。');
+   const placement={sessionId:config.sessionId,deviceId,memberId:row.member_id,name:member.activityName,slotId,...(config.positionMode==='ACTUAL'?{latitude:null,longitude:null,source:'DEVICE_LOCATION'}:{...config.slots[slotId],source:'DEMO_ASSIGNED'})};
+   this.s.run('INSERT INTO venue_participants(session_id,device_id,body) VALUES (?,?,?) ON CONFLICT(session_id,device_id) DO UPDATE SET body=excluded.body',config.sessionId,deviceId,JSON.stringify(placement));
+  }
+  this.s.run('UPDATE device_access SET revoked=0,last_seen=? WHERE device_id=?',this.now(),deviceId);
+  this.s.run('DELETE FROM metadata WHERE key=?','member-left:'+row.member_id);
+  return true;
  },
  async recoverVenue(_token,input){
   this.mustExist();const config=this.venueConfig();
@@ -60,6 +96,7 @@ export const demoAuthMethods={
    const replacement={...placement,deviceId:input.deviceId};
    this.s.run('INSERT INTO venue_participants(session_id,device_id,body) VALUES (?,?,?) ON CONFLICT(session_id,device_id) DO UPDATE SET body=excluded.body',config.sessionId,input.deviceId,JSON.stringify(replacement));
    this.s.run('UPDATE recovery_codes SET redeemed_device=?,redeemed_token=? WHERE code_hash=?',input.deviceId,tokenHash,codeHash);
+   this.s.run('DELETE FROM metadata WHERE key=?','member-left:'+member.memberId);
   });
   const result=await this.registrationReplay(input.deviceId,input.registrationToken,tokenHash);
   return {...result,activityName:result.roster.members.find(m=>m.memberId===result.memberId).activityName,recovered:true};

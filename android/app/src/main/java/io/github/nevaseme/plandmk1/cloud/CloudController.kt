@@ -20,6 +20,23 @@ class CloudController(private val app:PlanDApplication) {
     private val lock=Mutex()
     private val mutable=MutableStateFlow(CloudState())
     val state=mutable.asStateFlow()
+    fun leaveGroup() {
+        val session=settings.session(group)?:return
+        if(session.role!=MemberRole.MEMBER||!beginOperation("退会しています…"))return
+        scope.launch {lock.withLock {
+            try {
+                withContext(Dispatchers.IO){api.leaveGroup(session);settings.leaveGroup(session.groupId)}
+                app.position.stop();app.sharing.stop();app.lab.stop(text="グループを退会しました")
+                queuedGroups.remove(session.groupId);dirty=false;again=false
+                group=java.util.UUID.randomUUID().toString()
+                app.installation.setGroup(group)
+                venuePasswordDraft.value="";venueNameStep.value=false;recoveryCode.value=null
+                refresh();restartPolling()
+            }catch(e:CancellationException){throw e}
+            catch(e:Exception){mutable.value=mutable.value.copy(error="退会できませんでした。通信を確認して、もう一度お試しください。")}
+            finally{mutable.value=mutable.value.copy(busy=false)}
+        }}
+    }
     // Transport activity belongs only to communication details. It must not invalidate
     // forms, map screens, or training controls every time the polling timer fires.
     private val syncActivity=MutableStateFlow(false)

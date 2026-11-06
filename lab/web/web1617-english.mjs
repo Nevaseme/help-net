@@ -2,6 +2,7 @@ import {menuEnglish} from './menu-english.mjs';
 // Approved terminology: docs/superpowers/plans/2026-10-30-english-ui-glossary.csv
 // Context-specific labels and composed messages are handled by language.mjs.
 export const englishUI = {
+  "管理者は退会できません。":"Administrators cannot leave the group.",
   "開始時の経過時間を設定します。開始後も変更できます。":"Set the elapsed time at the start. You can change it later.",
   "同じ名前のグループがあります。別の名前を使用してください。":"A group with this name already exists. Choose another name.",
   "日時不明":"Time unavailable",

@@ -38,6 +38,7 @@ fun CloudSharingPanel(model:PlanViewModel,ownName:String,onCommunication:()->Uni
     var help by rememberSaveable {mutableStateOf(false)}
     var entry by rememberSaveable {mutableStateOf("join")}
     var choosingCity by remember {mutableStateOf(false)}
+    var confirmingLeave by remember {mutableStateOf(false)}
     val nameStep by model.cloud.venueNameStep.collectAsStateWithLifecycle()
     val entryPositionMode by model.cloud.venueEntryPositionMode.collectAsStateWithLifecycle()
     val password by model.cloud.venuePasswordDraft.collectAsStateWithLifecycle()
@@ -81,6 +82,7 @@ fun CloudSharingPanel(model:PlanViewModel,ownName:String,onCommunication:()->Uni
                 if(live&&state.venue?.recoveryAvailable==true)TextButton(onClick={page="recovery"}){Text(menuText("参加の復元・管理"))}
                 TextButton(onClick=onCommunication){Text(menuText("通信の詳細"))}
                 TextButton(onClick={changing=true},enabled=!state.busy){Text(menuText("別のグループに参加"))}
+                if(!state.admin)TextButton(onClick={confirmingLeave=true},enabled=!state.busy){Text(menuText("グループを退会"))}
                 if(state.admin) {
                     TextButton(onClick={page="invite"},enabled=!state.busy&&page!="invite"){Text(menuText("招待コードを使う"))}
                     if(page=="invite") {
@@ -134,6 +136,7 @@ fun CloudSharingPanel(model:PlanViewModel,ownName:String,onCommunication:()->Uni
         }
         state.error?.let {InfoCard(menuText(it),true)}
     }
+    if(confirmingLeave)AlertDialog(onDismissRequest={confirmingLeave=false},title={Text(menuText("グループを退会"))},text={Text(menuText("共有を停止し、過去の記録は残します。グループ名とパスワードで再参加できます。"))},confirmButton={TextButton(onClick={confirmingLeave=false;model.cloud.leaveGroup()}){Text(menuText("退会する"))}},dismissButton={TextButton(onClick={confirmingLeave=false}){Text(menuText("キャンセル"))}})
 }
 
 @Composable private fun DemoAccessPanel(model:PlanViewModel) {

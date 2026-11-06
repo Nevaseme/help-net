@@ -2,6 +2,12 @@ package io.github.nevaseme.plandmk1.ui
 
 internal object AdditionalUiMessages {
     val english=mapOf(
+        "グループを退会" to "Leave group",
+        "退会する" to "Leave group",
+        "退会しています…" to "Leaving the group…",
+        "グループを退会しました" to "You left the group.",
+        "共有を停止し、過去の記録は残します。グループ名とパスワードで再参加できます。" to "Sharing will stop. Past records will be kept. You can join again with the group name and password.",
+        "退会できませんでした。通信を確認して、もう一度お試しください。" to "Could not leave the group. Check your connection and try again.",
         "管理者から案内されたグループ名と参加パスワードを入力してください。" to "Enter the group name and password provided by your administrator.",
         "グループ名またはパスワードを確認してください。" to "Check the group name and password.",
         "この会場訓練の定員に達しています。" to "This drill has reached its participant limit.",
