@@ -295,7 +295,7 @@ private fun PlanAppContent(model: PlanViewModel) {
                 }
                 if(menuOpen) ApprovedMenu(groupLabel,{menuOpen=false},::navigate,{menuOpen=false;languageSettings=true},administrator=model.canStartTraining())
                 if(languageSettings) LanguageSettings(onClose={languageSettings=false},onNavigate={languageSettings=false;navigate(it);appSettingsChild=true},
-                    onAutostart=if(autostart.vendor!=null){{languageSettings=false;autostartRequested=true}}else null)
+                    onAutostart=if(autostart.available){{languageSettings=false;autostartRequested=true}}else null)
                 if(incidentDetails)incident.current?.let {current->
                     var now by remember(current.start.eventId) {mutableLongStateOf(System.currentTimeMillis())}
                     LaunchedEffect(current.start.eventId){while(true){now=System.currentTimeMillis();kotlinx.coroutines.delay(60_000)}}

@@ -38,6 +38,24 @@ class AutostartSettings(
     private val mutableHandled = MutableStateFlow(preferences.contains("acknowledgement-v1"))
     val handled = mutableHandled.asStateFlow()
 
+    private val components get() = when (vendor) {
+        AutostartVendor.XIAOMI -> listOf(ComponentName("com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity"))
+        AutostartVendor.VIVO -> listOf(
+            ComponentName("com.vivo.permissionmanager", "com.vivo.permissionmanager.activity.BgStartUpManagerActivity"),
+            ComponentName("com.iqoo.secure", "com.iqoo.secure.ui.phoneoptimize.BgStartUpManager"),
+        )
+        null -> emptyList()
+    }
+
+    val available: Boolean get() = components.any { component ->
+        try {
+            val info = context.packageManager.getActivityInfo(component, 0)
+            info.enabled && info.exported && info.applicationInfo?.enabled != false &&
+                (info.permission == null || context.checkSelfPermission(info.permission) == android.content.pm.PackageManager.PERMISSION_GRANTED)
+        } catch (_: android.content.pm.PackageManager.NameNotFoundException) { false
+        } catch (_: SecurityException) { false }
+    }
+
     fun acknowledge(reviewed: Boolean) {
         // No "enabled" flag: visiting settings or dismissing does not prove permission was granted.
         preferences.edit().putString("acknowledgement-v1", if (reviewed) "reviewed" else "later").apply()
@@ -47,14 +65,6 @@ class AutostartSettings(
     fun open(): AutostartDestination = openWith { context.startActivity(it) }
 
     internal fun openWith(launch: (Intent) -> Unit): AutostartDestination {
-        val components = when (vendor) {
-            AutostartVendor.XIAOMI -> listOf(ComponentName("com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity"))
-            AutostartVendor.VIVO -> listOf(
-                ComponentName("com.vivo.permissionmanager", "com.vivo.permissionmanager.activity.BgStartUpManagerActivity"),
-                ComponentName("com.iqoo.secure", "com.iqoo.secure.ui.phoneoptimize.BgStartUpManager"),
-            )
-            null -> emptyList()
-        }
         for (component in components) {
             try {
                 launch(Intent().setComponent(component).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))

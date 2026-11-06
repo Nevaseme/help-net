@@ -204,8 +204,8 @@
     <string name="approved_earthquake_report_section">実際の地震</string>
     <string name="approved_building_choose">住んでいる建物・住戸を選ぶ</string>
     <string name="approved_coordinates">緯度・経度を入力する</string>
-    <string name="approved_autostart_title">再起動後も安否共有を続ける</string>
-    <string name="approved_autostart_explanation">この端末では「自動起動」の許可が必要な場合があります。裏側の共有処理を再開する設定です。アプリの画面が勝手に開くことはありません。</string>
+    <string name="approved_autostart_title">端末再起動後の共有</string>
+    <string name="approved_autostart_explanation">端末の再起動後に共有を再開できるよう、端末設定で自動起動を許可してください。</string>
     <string name="approved_autostart_xiaomi_steps">「自動起動」または「バックグラウンド自動起動」で、Help Netをオンにしてください。</string>
     <string name="approved_autostart_vivo_steps">「自動起動」で、Help Netをオンにしてください。</string>
     <string name="approved_autostart_open">設定を開く</string>

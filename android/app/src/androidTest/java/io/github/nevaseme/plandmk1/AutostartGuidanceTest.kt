@@ -56,26 +56,26 @@ class AutostartGuidanceTest {
         var opens = 0
         shellComposeContent { PlanLocalization { PlanDMk1Theme {
             AutostartGuidanceHost(settings, eligible && !blocked, manual, {manual=false},
-                openSettings={opens++;AutostartDestination.APP_DETAILS})
+                openSettings={opens++;AutostartDestination.APP_DETAILS},available=true)
         } } }
-        compose.onNodeWithText("再起動後も安否共有を続ける").assertDoesNotExist()
+        compose.onNodeWithText("端末再起動後の共有").assertDoesNotExist()
         compose.runOnIdle { blocked=true;eligible=true }
-        compose.onNodeWithText("再起動後も安否共有を続ける").assertDoesNotExist()
+        compose.onNodeWithText("端末再起動後の共有").assertDoesNotExist()
         compose.runOnIdle { blocked=false }
         compose.waitUntil(5_000) { compose.onAllNodesWithText("設定を開く").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("設定を開く").performClick()
-        compose.onNodeWithText("設定画面を直接開けませんでした。端末の設定で「自動起動」を検索し、PlanD Mk1をオンにしてください。").assertExists()
+        compose.onNodeWithText("設定画面を直接開けませんでした。端末の設定で「自動起動」を検索し、Help Netをオンにしてください。").assertExists()
         compose.runOnIdle { assertEquals(1, opens);assertFalse(settings.handled.value) }
-        compose.onNodeWithText("確認した").performClick()
+        compose.onNodeWithText("閉じる").performClick()
         compose.runOnIdle { assertTrue(settings.handled.value);eligible=false }
         compose.runOnIdle { eligible=true }
-        compose.onNodeWithText("再起動後も安否共有を続ける").assertDoesNotExist()
+        compose.onNodeWithText("端末再起動後の共有").assertDoesNotExist()
         // Recreated preference reader stays dismissed; user can still reopen from settings.
         assertTrue(AutostartSettings(context, AutostartVendor.XIAOMI, prefs).handled.value)
         compose.runOnIdle { manual=true }
-        compose.waitUntil(5_000) { compose.onAllNodesWithText("再起動後も安否共有を続ける").fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithText("再起動後も安否共有を続ける").assertExists()
-        compose.onNodeWithText("あとで").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("端末再起動後の共有").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("端末再起動後の共有").assertExists()
+        compose.onNodeWithText("閉じる").performClick()
         compose.runOnIdle { assertFalse(manual) }
         prefs.edit().clear().commit()
     }
@@ -86,12 +86,26 @@ class AutostartGuidanceTest {
         prefs.edit().clear().commit()
         languagePreferences.edit().putString("language","en").commit()
         shellComposeContent { PlanLocalization {
-            PlanDMk1Theme { AutostartGuidanceHost(AutostartSettings(context,AutostartVendor.VIVO,prefs),true,false,{},openSettings={AutostartDestination.UNAVAILABLE}) }
+            PlanDMk1Theme { AutostartGuidanceHost(AutostartSettings(context,AutostartVendor.VIVO,prefs),true,false,{},openSettings={AutostartDestination.UNAVAILABLE},available=true) }
         } }
         compose.onNodeWithText("Open settings").performClick()
-        compose.onNodeWithText("Could not open settings. Open your phone settings and search for Autostart, then enable PlanD Mk1.").assertExists()
-        compose.onNodeWithText("Later").performClick()
-        compose.onNodeWithText("Keep safety sharing after a restart").assertDoesNotExist()
+        compose.onNodeWithText("Could not open settings. Open your phone settings and search for Autostart, then enable Help Net.").assertExists()
+        compose.onNodeWithText("Reviewed").assertDoesNotExist()
+        compose.onNodeWithText("Later").assertDoesNotExist()
+        compose.onNodeWithText("Close").performClick()
+        compose.onNodeWithText("Sharing after a restart").assertDoesNotExist()
         prefs.edit().clear().commit()
+    }
+
+    @Test fun noGuidanceWithoutAnAccessibleAutostartPage() {
+        val context=InstrumentationRegistry.getInstrumentation().targetContext
+        val settings=AutostartSettings(context,null)
+        assertFalse(settings.available)
+        // A known brand with an absent/inaccessible settings page must also stay hidden.
+        shellComposeContent { PlanLocalization { PlanDMk1Theme {
+            AutostartGuidanceHost(AutostartSettings(context,AutostartVendor.VIVO),true,true,{},available=false)
+        } } }
+        compose.onNodeWithText("端末再起動後の共有").assertDoesNotExist()
+        compose.onNodeWithText("設定を開く").assertDoesNotExist()
     }
 }

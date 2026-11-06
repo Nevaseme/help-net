@@ -21,8 +21,9 @@ fun AutostartGuidanceHost(
     requested: Boolean,
     onRequestHandled: () -> Unit,
     openSettings: () -> AutostartDestination = settings::open,
+    available: Boolean = settings.available,
 ) {
-    if (settings.vendor == null) return
+    if (!available) return
     val handled by settings.handled.collectAsStateWithLifecycle()
     var visible by rememberSaveable { mutableStateOf(false) }
     var destination by rememberSaveable { mutableStateOf<AutostartDestination?>(null) }
@@ -54,10 +55,8 @@ fun AutostartGuidanceHost(
                 Button(onClick = { destination = openSettings() }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
                     Text(uiText("autostart_open"))
                 }
-                Text(uiText("autostart_later_hint"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },
-        confirmButton = { TextButton(onClick = { close(true) }, modifier = Modifier.heightIn(min = 48.dp)) { Text(uiText("autostart_reviewed")) } },
-        dismissButton = { TextButton(onClick = { close(false) }, modifier = Modifier.heightIn(min = 48.dp)) { Text(uiText("autostart_later")) } },
+        confirmButton = { TextButton(onClick = { close(true) }, modifier = Modifier.heightIn(min = 48.dp)) { Text(uiText("close")) } },
     )
 }

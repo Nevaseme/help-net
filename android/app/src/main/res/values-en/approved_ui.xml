@@ -204,8 +204,8 @@
     <string name="approved_earthquake_report_section">Actual earthquake</string>
     <string name="approved_building_choose">Choose your building and dwelling</string>
     <string name="approved_coordinates">Enter coordinates</string>
-    <string name="approved_autostart_title">Keep safety sharing after a restart</string>
-    <string name="approved_autostart_explanation">This phone may need Autostart permission to resume sharing in the background. It will not open the app screen by itself.</string>
+    <string name="approved_autostart_title">Sharing after a restart</string>
+    <string name="approved_autostart_explanation">To help Help Net resume sharing after your phone restarts, enable Autostart in your phone settings.</string>
     <string name="approved_autostart_xiaomi_steps">In Autostart or Background autostart, turn on Help Net.</string>
     <string name="approved_autostart_vivo_steps">In Autostart, turn on Help Net.</string>
     <string name="approved_autostart_open">Open settings</string>
