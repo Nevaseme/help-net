@@ -38,6 +38,16 @@ try{for(const mode of ['DRILL','EARTHQUAKE']){
  const full=await page.locator('.person-map-marker').count();await page.locator('#map-show-safe').uncheck();await page.waitForTimeout(500);const focused=await page.locator('.person-map-marker').count();assert.equal(full,50);assert.equal(focused,6);assert.ok(focused<full,`${full} > ${focused}`);console.log(JSON.stringify({mode,full,focused}));await page.screenshot({path:out+'/'+mode+'-hide-safe.png'});await page.locator('#map-show-safe').check();
  assert.equal(await page.evaluate(()=>window.qaMap.getPane('my-location').style.zIndex),'650');
  assert.equal(await page.evaluate(()=>window.qaMap.getPane('my-location').style.pointerEvents),'none');
+ // Force a report/card overlap locally; both visual stacking and hit testing must prefer the card.
+ const overlap=await page.evaluate(()=>{
+  const map=window.qaMap,card=document.querySelector('.community-map-marker'),rect=card.getBoundingClientRect();
+  const report=Object.values(map._layers).find(l=>l.getElement?.()?.classList.contains('report-map-marker'));
+  const before=report.getLatLng(),container=map.getContainer().getBoundingClientRect(),x=rect.left+rect.width/2,y=rect.top+rect.height/2;
+  report.setLatLng(map.containerPointToLatLng([x-container.left,y-container.top]));
+  const top=document.elementFromPoint(x,y),result={cardOnTop:!!top?.closest('.community-map-marker'),sameIconPane:report.getPane()===map.getPane('markerPane'),cardPane:card.parentElement.style.zIndex};
+  report.setLatLng(before);return result;
+ });
+ assert.deepEqual(overlap,{cardOnTop:true,sameIconPane:true,cardPane:'675'});
  assert.equal(await page.evaluate(()=>window.qaMap.getMaxZoom()),20);assert.equal(await page.evaluate(()=>window.qaMap.options.bounceAtZoomLimits),false);
  if(mode==='DRILL'){
   const people=await page.evaluate(async()=>{const {Store}=await import('/sync.mjs');const s=await Store.open('tasukeai-cloud'),v=await s.read('meta','venue:'+await s.read('meta','group'));s.close();return v.scenario.people;});

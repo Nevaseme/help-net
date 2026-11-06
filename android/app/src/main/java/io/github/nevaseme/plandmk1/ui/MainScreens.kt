@@ -102,6 +102,7 @@ import io.github.nevaseme.plandmk1.core.*
     val venue by model.activeVenue.collectAsStateWithLifecycle()
     val app=LocalContext.current.applicationContext as PlanDApplication
     val registeredBuildings=remember(places){placeBuildings(places)}
+    val buildingCounts=remember(residents,places,care,roster){buildingResidentCounts(residents,places,care,roster)}
     val homes by produceState(registeredBuildings.map {MapHome(it.buildingId!!,it.displayLabel(),MapPoint(it.latitude!!,it.longitude!!))},registeredBuildings) {
         value=registeredBuildings.map {building->
             val home=MapHome(building.buildingId!!,building.displayLabel(),MapPoint(building.latitude!!,building.longitude!!),plateauId=building.locationReference?.plateauId)
@@ -154,7 +155,7 @@ import io.github.nevaseme.plandmk1.core.*
         val source=remember(app){app.positionSourceFactory()}
         HomeLocationPicker(center,onPick,onCancelPick) {source().let {MapPoint(it.latitude,it.longitude)}}
     } else SituationScreen(visiblePeople, homes.filter {home->visiblePeople.any {it.home?.id==home.id&&it.registeredPlaceVisible}}, center, now, assignedLocation=venue?.takeIf {it.positionMode=="KYOTO"}?.placements?.find {it.deviceId==model.localId}?.let {p->p.latitude?.let {lat->p.longitude?.let {lon->MapPoint(lat,lon)}}}, neighborhoods=neighborhoods,ownNeighborhoodId=ownNeighborhood,onPersonResponse=onPersonResponse, initialZoom=if(venue!=null)14.5 else 16.8, canRescue = own != null && incident.canEdit && !saving,
-        outsideBuildingIds=outsideBuildingIds,buildingCounts=buildingResidentCounts(residents,places,care,roster),registeredBuildingIds=homes.filter {h->(buildingResidentCounts(residents,places,care,roster)[h.id]?.total?:0)>0}.mapNotNull {it.plateauId},
+        outsideBuildingIds=outsideBuildingIds,buildingCounts=buildingCounts,registeredBuildingIds=homes.filter {h->(buildingCounts[h.id]?.total?:0)>0}.mapNotNull {it.plateauId},
         canUndo = { p -> canRevokeRescue(roster,group,model.localId)&&currentCareEvents(care.filter { it.subjectId == p.id },roster).any { it.action == CareAction.RESCUED } },
         onRescue = { model.saveCare(it.id, CareAction.RESCUED, "本人の救助完了を確認") },
         onUndo = { p -> model.revokeRescues(p.id) },

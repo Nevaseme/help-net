@@ -38,7 +38,7 @@ export function createTsunamiMap(){
    const destination=[region.latitude,region.longitude];
    let saved=communityMarkers.get(region.id);
    if(!saved){
-    const marker=L.marker(destination,{icon:L.divIcon({className:'community-map-marker',html,iconSize:[136,112],iconAnchor:[68,112]}),title:label,keyboard:true,zIndexOffset:500}).addTo(map);
+    const marker=L.marker(destination,{pane:'community-cards',icon:L.divIcon({className:'community-map-marker',html,iconSize:[136,112],iconAnchor:[68,112]}),title:label,keyboard:true}).addTo(map);
     marker.on('click',()=>{const current=communities.find(r=>r.id===region.id);if(current&&!consumePick(current))selectCommunity(region.id);});
     saved={marker,html};communityMarkers.set(region.id,saved);
    }else{
@@ -74,6 +74,7 @@ export function createTsunamiMap(){
   map=L.map('tsunami-map',{preferCanvas:true,zoomSnap:.25,bounceAtZoomLimits:false,zoomAnimation:false,fadeAnimation:false,markerZoomAnimation:false,minZoom:4,maxZoom:20,scrollWheelZoom:false,zoomControl:false});
   L.control.zoom({position:'topright'}).addTo(map);
   map.createPane('building-selection');map.getPane('building-selection').style.zIndex='450';map.getPane('building-selection').style.pointerEvents='none';
+  const communityPane=map.createPane('community-cards');communityPane.style.zIndex='675';communityPane.style.pointerEvents='none';
   map.on('click',async event=>{
    const point={latitude:event.latlng.lat,longitude:event.latlng.lng};if(consumePick(point))return;
    const request=++buildingRequest;if(map.getZoom()<14)return;

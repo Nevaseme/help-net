@@ -97,13 +97,12 @@ fun SituationMap(
     val latestCoverage by rememberUpdatedState(onCoverage)
     val latestReportPoint by rememberUpdatedState(onReportPoint)
     val latestReport by rememberUpdatedState(onReport)
+    val reportMarkers=remember {mutableMapOf<String,Marker>()}
+    val reportIcons=remember {mutableMapOf<Int,Icon>()}
     val latestTsunami by rememberUpdatedState(tsunamiResult)
     val tsunamiEnglish by rememberUpdatedState(LocalUiLanguage.current=="en")
     val mapLabels=remember {MapLabelLanguage()}
     LaunchedEffect(ready,tsunamiEnglish){if(ready)controller?.style?.let {mapLabels.apply(it,tsunamiEnglish)}}
-    val neighborhoodMarkers=remember {mutableMapOf<Long,String>()}
-    val neighborhoodRendered=remember {mutableListOf<Marker>()}
-    val neighborhoodImages=remember {mutableMapOf<String,String>()}
     val latestNeighborhood by rememberUpdatedState(onNeighborhood)
     val neighborhoodEnglish=LocalUiLanguage.current=="en"
     var riskModel by remember { mutableStateOf<BuildingMapModel?>(null) }
@@ -186,7 +185,7 @@ fun SituationMap(
                     pick(MapPoint(marker.position.latitude, marker.position.longitude))
                     return@setOnMarkerClickListener true
                 }
-                neighborhoodMarkers[marker.id]?.let {latestNeighborhood(it);return@setOnMarkerClickListener true}
+                reportMarkers.entries.find {it.value.id==marker.id}?.let {latestReport(it.key);return@setOnMarkerClickListener true}
                 markers[marker.id]?.let { cluster ->
                     if (cluster.people.size == 1) {
                         val person = latestPeople.find { it.id == cluster.people.single().id } ?: cluster.people.single()
@@ -290,7 +289,7 @@ fun SituationMap(
             owner.lifecycle.removeObserver(observer)
             camera.map = null; controller = null
             view.release()
-            renderedMarkers.clear(); markers.clear(); iconCache.clear()
+            renderedMarkers.clear(); markers.clear(); iconCache.clear();reportMarkers.clear();reportIcons.clear()
         }
     }
     SideEffect {
@@ -307,42 +306,34 @@ fun SituationMap(
     Box(modifier.then(Modifier.clipToBounds())) {
         AndroidView(factory = { view }, modifier = Modifier.matchParentSize())
         if(ready) controller?.let { map ->
-            ReportMapMarkers(map,reports,Modifier.matchParentSize()) { report ->
-                latestReportPoint?.invoke(report.point) ?: latestReport(report.id)
-            }
+            MapNeighborhoodCards(map,reports,neighborhoods,neighborhoodEnglish,{id ->
+                val point=neighborhoods.find {it.row.id==id}?.point
+                if(latestReportPoint!=null&&point!=null)latestReportPoint?.invoke(point) else latestNeighborhood(id)
+            },{report -> latestReportPoint?.invoke(report.point) ?: latestReport(report.id)},Modifier.matchParentSize())
         }
     }
-    LaunchedEffect(ready,neighborhoods,neighborhoodEnglish) {
+    // Reports use the same native annotation layer as SOS and other people.
+    LaunchedEffect(ready,reports) {
         val map=controller?:return@LaunchedEffect
         if(!ready)return@LaunchedEffect
-        val liveNeighborhoods=neighborhoods.map {it.row.id}.toSet()
-        neighborhoodRendered.filter {neighborhoodMarkers[it.id] !in liveNeighborhoods}.toList().forEach {marker->map.removeMarker(marker);neighborhoodRendered.remove(marker);neighborhoodMarkers.remove(marker.id)}
-        neighborhoods.forEach {n->n.point?.let {point->
-            val d=context.resources.displayMetrics.density
-            // Legacy MapLibre markers center the bitmap on the coordinate. Keep the
-            // lower half transparent so the visible card's bottom is the anchor.
-            val bitmap=Bitmap.createBitmap((148*d).roundToInt(),(200*d).roundToInt(),Bitmap.Config.ARGB_8888)
-            val canvas=Canvas(bitmap);canvas.scale(d,d);val paint=Paint(Paint.ANTI_ALIAS_FLAG)
-            paint.color=Color.WHITE;canvas.drawRoundRect(1f,1f,147f,99f,10f,10f,paint)
-            paint.color=0xFF183447.toInt();paint.textSize=12f;paint.typeface=Typeface.create("sans-serif",Typeface.BOLD)
-            canvas.drawText(if(neighborhoodEnglish)n.row.nameEn else n.row.nameJa,8f,21f,paint)
-            paint.textSize=11f;paint.typeface=Typeface.create("sans-serif",Typeface.NORMAL)
-            canvas.drawText("SOS ${n.row.sos} · ${if(neighborhoodEnglish)"No response" else "応答なし"} ${n.row.unreported}",8f,44f,paint)
-            canvas.drawText("${if(neighborhoodEnglish)"Safe" else "無事"} ${n.row.safe} · ${if(neighborhoodEnglish)"Rescued" else "救助済み"} ${n.row.rescued}",8f,65f,paint)
-            canvas.drawText("${if(neighborhoodEnglish)"High urgency" else "高緊急度"} ${n.activeHigh}",8f,86f,paint)
-            // Match the saved Web map: bottom-anchored native marker at the fixed neighborhood point.
-            val placed=LatLng(point.latitude,point.longitude)
-            val existing=neighborhoodRendered.find {neighborhoodMarkers[it.id]==n.row.id}
-            val signature="${n.row}:$neighborhoodEnglish:${n.activeHigh}"
-            if(existing==null){
-                val marker=map.addMarker(MarkerOptions().position(placed).icon(IconFactory.getInstance(context).fromBitmap(bitmap)))
-                neighborhoodRendered.add(marker);neighborhoodMarkers[marker.id]=n.row.id
-            }else{
-                if(neighborhoodImages[n.row.id]!=signature)existing.icon=IconFactory.getInstance(context).fromBitmap(bitmap)
-                if(existing.position!=placed)existing.position=placed
+        val live=reports.map {it.id}.toSet()
+        reportMarkers.keys.filter {it !in live}.forEach {id->reportMarkers.remove(id)?.let(map::removeMarker)}
+        reports.forEach {report->
+            val resource=reportIcon(report.urgency)
+            val icon=reportIcons.getOrPut(resource) {
+                val d=context.resources.displayMetrics.density
+                val bitmap=Bitmap.createBitmap((48*d).roundToInt(),(48*d).roundToInt(),Bitmap.Config.ARGB_8888)
+                ContextCompat.getDrawable(context,resource)!!.mutate().let {drawable->
+                    drawable.setBounds((3*d).roundToInt(),(3*d).roundToInt(),(45*d).roundToInt(),(45*d).roundToInt())
+                    drawable.draw(Canvas(bitmap))
+                }
+                IconFactory.getInstance(context).fromBitmap(bitmap)
             }
-            neighborhoodImages[n.row.id]=signature
-        }}
+            val point=LatLng(report.point.latitude,report.point.longitude)
+            val existing=reportMarkers[report.id]
+            if(existing==null)reportMarkers[report.id]=map.addMarker(MarkerOptions().position(point).icon(icon).title(UiMessages.text(context,"通報")))
+            else {if(existing.icon!=icon)existing.icon=icon;if(existing.position!=point)existing.position=point}
+        }
     }
     LaunchedEffect(ready, people, showSafe, zoom, now) {
         val map = controller ?: return@LaunchedEffect
