@@ -165,7 +165,7 @@
     <string name="approved_building_details">Building details</string>
     <string name="approved_registered_people">No response / SOS</string>
     <string name="approved_no_registration">No registrations</string>
-    <string name="approved_legend">Legend</string>
+    <string name="approved_legend">Map legend</string>
     <string name="approved_phone_safety">Phone safety status</string>
     <string name="approved_zoom_in">Zoom in</string>
     <string name="approved_zoom_out">Zoom out</string>

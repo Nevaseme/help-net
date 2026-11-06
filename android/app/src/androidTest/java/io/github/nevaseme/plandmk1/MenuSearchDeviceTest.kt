@@ -24,7 +24,7 @@ class MenuSearchDeviceTest {
   if(InstrumentationRegistry.getArguments().getString("fictionalGroup")=="true"){
    check(android.os.Build.FINGERPRINT.contains("generic")||android.os.Build.MODEL.contains("sdk"))
    val app=inst.targetContext.applicationContext as PlanDApplication
-   inst.runOnMainSync{app.cloud.create("https://tasukeai-sync.tomodachi-takumi.workers.dev/","架空管理者","検索確認・架空Android")}
+   inst.runOnMainSync{app.cloud.create("https://tasukeai-sync.tomodachi-takumi.workers.dev/","架空管理者","検索確認・架空Android","SearchCheck123")}
    var end=android.os.SystemClock.elapsedRealtime()+60000
    while((app.cloud.state.value.groupName!="検索確認・架空Android"||app.cloud.state.value.busy)&&android.os.SystemClock.elapsedRealtime()<end)android.os.SystemClock.sleep(200)
    assertEquals("検索確認・架空Android",app.cloud.state.value.groupName)

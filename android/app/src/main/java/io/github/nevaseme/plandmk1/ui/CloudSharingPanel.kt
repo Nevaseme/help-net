@@ -41,6 +41,7 @@ fun CloudSharingPanel(model:PlanViewModel,ownName:String,onCommunication:()->Uni
     val nameStep by model.cloud.venueNameStep.collectAsStateWithLifecycle()
     val entryPositionMode by model.cloud.venueEntryPositionMode.collectAsStateWithLifecycle()
     val password by model.cloud.venuePasswordDraft.collectAsStateWithLifecycle()
+    val creationPassword by model.cloud.groupCreationPasswordDraft.collectAsStateWithLifecycle()
     val context=LocalContext.current
     val live=state.venue?.closed==false
     BackHandler(page!="overview"||changing){if(changing)changing=false else page="overview"}
@@ -104,6 +105,7 @@ fun CloudSharingPanel(model:PlanViewModel,ownName:String,onCommunication:()->Uni
                     Text(groupName)
                     Text(menuText(if(entryPositionMode=="ACTUAL")"位置情報を許可すると、現在地をグループに共有します。" else "京都の割当位置で参加します。"),style=MaterialTheme.typography.bodyMedium)
                     OutlinedTextField(name,{name=it},label={Text(menuText("あなたの名前"))},singleLine=true,enabled=!state.busy,modifier=Modifier.fillMaxWidth())
+                    if(entry=="create")OutlinedTextField(creationPassword,{model.cloud.groupCreationPasswordDraft.value=it},label={Text(menuText("参加パスワード"))},visualTransformation=PasswordVisualTransformation(),singleLine=true,enabled=!state.busy,modifier=Modifier.fillMaxWidth())
                     Button(onClick={model.cloud.joinVenue(endpoint,groupName,password,name)},enabled=!state.busy&&name.isNotBlank(),modifier=Modifier.fillMaxWidth()){Text(menuText("参加して安否を回答"))}
                     TextButton(onClick={model.cloud.venueNameStep.value=false}){Text(menuText("参加情報に戻る"))}
                 }
@@ -117,7 +119,8 @@ fun CloudSharingPanel(model:PlanViewModel,ownName:String,onCommunication:()->Uni
                     if(entry=="create")OutlinedTextField(groupName,{groupName=it},label={Text(menuText("グループ名"))},singleLine=true,enabled=!state.busy,modifier=Modifier.fillMaxWidth())
                     else OutlinedTextField(code,{code=it},label={Text(menuText("招待コード"))},enabled=!state.busy,modifier=Modifier.fillMaxWidth())
                     OutlinedTextField(name,{name=it},label={Text(menuText("あなたの名前"))},singleLine=true,enabled=!state.busy,modifier=Modifier.fillMaxWidth())
-                    Button(onClick={if(entry=="create")model.cloud.create(endpoint,name,groupName) else model.cloud.join(endpoint,name,code)},enabled=!state.busy&&name.isNotBlank()&&(if(entry=="create")groupName.isNotBlank() else code.isNotBlank()),modifier=Modifier.fillMaxWidth()){Text(menuText(if(entry=="create")"作成して訓練を準備" else "参加する"))}
+                    if(entry=="create")OutlinedTextField(creationPassword,{model.cloud.groupCreationPasswordDraft.value=it},label={Text(menuText("参加パスワード"))},visualTransformation=PasswordVisualTransformation(),singleLine=true,enabled=!state.busy,modifier=Modifier.fillMaxWidth())
+                    Button(onClick={if(entry=="create")model.cloud.create(endpoint,name,groupName,creationPassword) else model.cloud.join(endpoint,name,code)},enabled=!state.busy&&name.isNotBlank()&&(if(entry=="create")groupName.isNotBlank()&&creationPassword.isNotBlank()&&creationPassword.length<=128 else code.isNotBlank()),modifier=Modifier.fillMaxWidth()){Text(menuText(if(entry=="create")"作成して訓練を準備" else "参加する"))}
                 }
             }
             if(entry!="join")TextButton(onClick={entry="join";help=false},enabled=!state.busy){Text(menuText("グループ名・パスワードで参加"))}
@@ -185,7 +188,6 @@ fun CloudSyncButton(busy: Boolean, onSync: () -> Unit) {
 /** The administrator prepares, starts, and ends the drill in the group screen. */
 @Composable fun CloudVenueTraining(model:PlanViewModel) {
     val state by model.cloud.state.collectAsStateWithLifecycle()
-    val adminPassword by model.cloud.venueAdminPasswordDraft.collectAsStateWithLifecycle()
     val positionMode by model.cloud.venuePositionModeDraft.collectAsStateWithLifecycle()
     var confirming by remember {mutableStateOf(false)}
     var initialMinutes by rememberSaveable {mutableStateOf("3")}
@@ -198,33 +200,25 @@ fun CloudSyncButton(busy: Boolean, onSync: () -> Unit) {
             TextButton(enabled=!state.busy&&minutes.toIntOrNull() in 0..1440,onClick={minutes.toIntOrNull()?.let {model.cloud.setVenueClock(it)}}){Text(menuText(if(english)"Apply time" else "経過時間を変更"))}
             TextButton(onClick={confirming=true},enabled=!state.busy){Text(if(venue.presentationMode=="EARTHQUAKE"){if(english)"End earthquake" else "地震を終了する"}else menuText("訓練を終了する"))}
         }
-        else VenueSetupForm(adminPassword,{model.cloud.venueAdminPasswordDraft.value=it},state.busy,positionMode,{model.cloud.venuePositionModeDraft.value=it},initialMinutes,{initialMinutes=it},presentationMode,{presentationMode=it}){mode->model.cloud.startVenue(adminPassword,positionMode="KYOTO",elapsedMinutes=initialMinutes.toInt(),presentationMode=presentationMode)}
+        else VenueSetupForm(state.busy,initialMinutes,{initialMinutes=it},presentationMode,{presentationMode=it}){mode->model.cloud.startVenue("",positionMode="KYOTO",elapsedMinutes=initialMinutes.toInt(),presentationMode=presentationMode)}
     }
     if(confirming)AlertDialog(onDismissRequest={confirming=false},title={Text(if(state.venue?.presentationMode=="EARTHQUAKE"){if(LocalUiLanguage.current=="en")"End this earthquake?" else "地震を終了しますか？"}else menuText("訓練を終了しますか？"))},text={Text(menuText("記録は残ります。次回は新しい安否回答から始められます。"))},confirmButton={TextButton(onClick={confirming=false;model.cloud.endVenue()}){Text(menuText("終了する"))}},dismissButton={TextButton(onClick={confirming=false}){Text(menuText("キャンセル"))}})
 }
 
 /** Invalid input explains how to proceed; only an in-flight operation disables submission. */
-@Composable fun VenueSetupForm(password:String,onPassword:(String)->Unit,busy:Boolean,positionMode:String,onPositionMode:(String)->Unit,initialMinutes:String="3",onInitialMinutes:(String)->Unit={},presentationMode:String="DRILL",onPresentationMode:(String)->Unit={},onStart:(String)->Unit) {
+@Composable fun VenueSetupForm(busy:Boolean,initialMinutes:String="3",onInitialMinutes:(String)->Unit={},presentationMode:String="DRILL",onPresentationMode:(String)->Unit={},onStart:(String)->Unit) {
     val english=LocalUiLanguage.current=="en"
     fun tr(ja:String,en:String)=if(english)en else ja
-    val actualPosition=positionMode=="ACTUAL"
     var attempted by rememberSaveable {mutableStateOf(false)}
-    var visible by rememberSaveable {mutableStateOf(false)}
     val keyboard=LocalSoftwareKeyboardController.current
-    val invalid=password.isBlank() || password.length > 128
     val invalidMinutes=initialMinutes.toIntOrNull() !in 0..1440
-    fun submit(){if(!busy){attempted=true;if(!invalid&&!invalidMinutes){keyboard?.hide();onStart("KYOTO")}}}
+    fun submit(){if(!busy){attempted=true;if(!invalidMinutes){keyboard?.hide();onStart("KYOTO")}}}
     Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
         OutlinedTextField(initialMinutes,onInitialMinutes,singleLine=true,label={Text(menuText(tr("開始時の経過分数","Elapsed minutes at start")))},isError=attempted&&invalidMinutes,supportingText={if(attempted&&invalidMinutes)Text(menuText(tr("0〜1440分の整数で入力してください","Enter 0–1440 whole minutes")))},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number,imeAction=ImeAction.Next),modifier=Modifier.fillMaxWidth())
         Text(tr("モード","Mode"),style=MaterialTheme.typography.titleSmall)
         listOf("DRILL" to tr("訓練","Drill"),"EARTHQUAKE" to tr("地震","Earthquake")).forEach {(value,label)->
             Row(Modifier.fillMaxWidth().heightIn(min=48.dp).selectable(selected=presentationMode==value,enabled=!busy,role=Role.RadioButton,onClick={onPresentationMode(value)}),verticalAlignment=Alignment.CenterVertically){RadioButton(selected=presentationMode==value,onClick=null,enabled=!busy);Spacer(Modifier.width(8.dp));Text(label)}
         }
-        OutlinedTextField(password,onPassword,label={Text(menuText(tr("参加パスワード","Participation password")))},
-            visualTransformation=if(visible)VisualTransformation.None else PasswordVisualTransformation(),singleLine=true,enabled=!busy,
-            isError=attempted&&invalid,supportingText={Text(menuText(if(attempted&&invalid)tr("1〜128文字で入力してください（現在${password.length}文字）","Enter 1–128 characters (${password.length} entered).") else tr("1〜128文字。参加者に伝えるパスワードです。","1–128 characters. Share this with participants.")))},
-            trailingIcon={TextButton(onClick={visible=!visible}){Text(menuText(if(visible)tr("隠す","Hide") else tr("表示","Show")))}},
-            keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Password,imeAction=ImeAction.Done),keyboardActions=KeyboardActions(onDone={submit()}),modifier=Modifier.fillMaxWidth())
         Button(onClick=::submit,enabled=!busy,modifier=Modifier.fillMaxWidth()){Text(menuText(if(busy)tr("開始しています…","Starting…") else if(presentationMode=="EARTHQUAKE")tr("地震を開始する","Start earthquake")else tr("訓練を開始する","Start drill")))}
     }
 }

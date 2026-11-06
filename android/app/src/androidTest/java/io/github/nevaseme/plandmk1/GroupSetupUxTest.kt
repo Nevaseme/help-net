@@ -2,6 +2,10 @@ package io.github.nevaseme.plandmk1
 
 import androidx.compose.runtime.*
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.Modifier
@@ -16,42 +20,46 @@ import org.junit.Assert.*
 class GroupSetupUxTest {
     @get:Rule val compose=createEmptyComposeRule()
 
-    @Test fun blankPasswordExplainsRequirementAndSimplePasswordStartsSelectedMode() {
-        var password by mutableStateOf("")
-        var mode by mutableStateOf("KYOTO")
+    @Test fun existingGroupStartsBothModesWithoutPassword() {
+        var mode by mutableStateOf("DRILL")
         var starts=0
         var submitted=""
         shellComposeContent { PlanDMk1Theme {
-            Column(Modifier.verticalScroll(rememberScrollState())) {
-                VenueSetupForm(password,{password=it},false,mode,{mode=it}){starts++;submitted=it}
+            Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState()).testTag("group-start-form")) {
+                VenueSetupForm(false,presentationMode=mode,onPresentationMode={mode=it}){starts++;submitted=mode}
             }
         } }
-        val start=compose.onNodeWithText("デモを開始する")
-        start.assertIsEnabled().performScrollTo().performClick()
-        compose.onNodeWithText("1〜128文字で入力してください（現在0文字）").assertExists()
-        assertEquals(0,starts)
-        compose.onNodeWithText("参加パスワード").performTextReplacement("12345678")
-        compose.onNodeWithText("参加者の現在地").performScrollTo().performClick()
-        start.performScrollTo().performClick()
+        compose.onNodeWithText("Group password").assertDoesNotExist()
+        compose.onNodeWithText("Participation password").assertDoesNotExist()
+        compose.onNodeWithText("New participants (optional)").assertDoesNotExist()
+        shot("GROUP-start-drill")
+        compose.onNodeWithText("Start drill").assertIsEnabled().performScrollTo().performClick()
         assertEquals(1,starts)
-        assertEquals("ACTUAL",submitted)
-        compose.onNodeWithText("参加パスワード").performTextReplacement("1")
-        start.performScrollTo().performClick()
+        assertEquals("DRILL",submitted)
+        compose.onNodeWithText("Earthquake").performScrollTo().performClick()
+        shot("GROUP-start-earthquake")
+        compose.onNodeWithText("Start earthquake").assertIsEnabled().performScrollTo().performClick()
         assertEquals(2,starts)
-        compose.onNodeWithText("参加パスワード").performTextReplacement("x".repeat(129))
-        start.performScrollTo().performClick()
-        compose.onNodeWithText("1〜128文字で入力してください（現在129文字）").assertExists()
-        assertEquals(2,starts)
+        assertEquals("EARTHQUAKE",submitted)
+        val context=androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext
+        val config=android.content.res.Configuration(context.resources.configuration).apply{setLocale(java.util.Locale.ENGLISH)}
+        assertEquals("Map legend",context.createConfigurationContext(config).getString(R.string.approved_legend))
     }
 
     @Test fun inFlightStartShowsProgressAndPreventsAnotherSubmission() {
         var starts=0
         shellComposeContent {PlanDMk1Theme {
             Column(Modifier.verticalScroll(rememberScrollState())) {
-                VenueSetupForm("12345678",{},true,"KYOTO",{}){starts++}
+                VenueSetupForm(true){starts++}
             }
         }}
-        compose.onNodeWithText("開始しています…").performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithText("Starting…").performScrollTo().assertIsNotEnabled()
         assertEquals(0,starts)
+    }
+    private fun shot(name:String){
+        compose.waitForIdle()
+        val inst=androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
+        val file=java.io.File(inst.targetContext.filesDir,"venue-experience/$name.png");file.parentFile?.mkdirs()
+        val bitmap=compose.onNodeWithTag("group-start-form").captureToImage().asAndroidBitmap();file.outputStream().use{bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)}
     }
 }

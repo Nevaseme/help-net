@@ -26,6 +26,7 @@ class CloudController(private val app:PlanDApplication) {
     val synchronization=syncActivity.asStateFlow()
     // Transient form state survives LazyColumn disposal / keyboard resize; never persisted.
     val venuePasswordDraft=MutableStateFlow("")
+    val groupCreationPasswordDraft=MutableStateFlow("")
     val venueAdminPasswordDraft=MutableStateFlow("")
     val venuePositionModeDraft=MutableStateFlow("KYOTO")
     val venueNameStep=MutableStateFlow(false)
@@ -144,13 +145,13 @@ class CloudController(private val app:PlanDApplication) {
             }while(again&&group==session.groupId)
         }
     }
-    fun create(endpoint:String,name:String,groupName:String)=register(endpoint,name,groupName=groupName)
+    fun create(endpoint:String,name:String,groupName:String,password:String)=register(endpoint,name,groupName=groupName,groupPassword=password)
     fun retryRegistration() {
         val pending=settings.pending()?:return
         if(pending.path=="venue/join"){mutable.value=mutable.value.copy(error="会場訓練のパスワードを入力し、参加を再試行してください");return}
         fun field(key:String)=pending.body[key]?.jsonPrimitive?.content
         if(pending.path=="venue/recover"){recover(pending.endpoint,field("groupName").orEmpty(),field("code").orEmpty());return}
-        if(pending.path=="groups")register(pending.endpoint,field("activityName").orEmpty(),groupName=field("groupName"))
+        if(pending.path=="groups")register(pending.endpoint,field("activityName").orEmpty(),groupName=field("groupName"),groupPassword=groupCreationPasswordDraft.value)
         else register(pending.endpoint,field("activityName").orEmpty(),groupId=pending.path.split('/')[1],code=field("code"))
     }
     fun join(endpoint:String,name:String,invitation:String) {
@@ -158,14 +159,14 @@ class CloudController(private val app:PlanDApplication) {
         if(parts.size!=2){mutable.value=mutable.value.copy(error="招待コードをグループIDからまとめて貼り付けてください");return}
         register(endpoint,name,groupId=parts[0],code=parts[1])
     }
-    private fun register(endpoint:String,name:String,groupName:String?=null,groupId:String?=null,code:String?=null,venueName:String?=null,venuePassword:String?=null,recovery:String?=null) {
+    private fun register(endpoint:String,name:String,groupName:String?=null,groupId:String?=null,code:String?=null,venueName:String?=null,venuePassword:String?=null,recovery:String?=null,groupPassword:String?=null) {
         if(registering?.isActive==true||!beginOperation("グループに接続しています…"))return
         val previousGroup=app.installation.group.value
         registering=scope.launch {lock.withLock {
             try {
                 val session=withContext(Dispatchers.IO) {
                     val pending=if(recovery!=null)settings.beginRecovery(endpoint.trim(),app.installation.localId,venueName.orEmpty().trim(),recovery.trim()) else if(venueName!=null)settings.beginVenue(endpoint.trim(),app.installation.localId,name.trim(),venueName.trim()) else settings.begin(endpoint.trim(),app.installation.localId,name.trim(),groupName?.trim(),groupId,code)
-                    val submitted=if(venueName!=null&&recovery==null)pending.copy(body=JsonObject(pending.body+ ("password" to JsonPrimitive(venuePassword.orEmpty())))) else pending
+                    val submitted=if(groupName!=null&&groupPassword!=null)pending.copy(body=JsonObject(pending.body+("password" to JsonPrimitive(groupPassword)))) else if(venueName!=null&&recovery==null)pending.copy(body=JsonObject(pending.body+ ("password" to JsonPrimitive(venuePassword.orEmpty())))) else pending
                     val result=settings.submit(submitted,api)
                     require(result.deviceId==app.installation.localId&&result.token==pending.body.getValue("registrationToken").jsonPrimitive.content)
                     if(venueName==null)require(result.groupId==(groupId?:pending.body.getValue("requestId").jsonPrimitive.content))
@@ -173,7 +174,7 @@ class CloudController(private val app:PlanDApplication) {
                     require(member.memberId==result.memberId&&member.role==result.role)
                     RoomCloudJournal(app.database,result.groupId,result.deviceId).updateRoster(result.envelope(),result.deviceId)
                     rememberVenue(result.envelope())
-                    if(venueName!=null)settings.setVenueOnboarding(result.groupId,checkNotNull(result.venue).sessionId)
+                    if(venueName!=null&&result.venue?.closed==false)settings.setVenueOnboarding(result.groupId,result.venue.sessionId)
                     if(venueName==null&&app.store.get(result.groupId,result.deviceId)==null) {
                         app.store.get(previousGroup,result.deviceId)?.let {profile->
                             app.store.updateOwn(result.groupId,result.deviceId) {existing->existing?:profile.copy(groupId=result.groupId,name=name.trim(),safety=Safety.UNREPORTED)}
@@ -184,7 +185,7 @@ class CloudController(private val app:PlanDApplication) {
                 app.position.stop();app.sharing.stop();app.lab.stop(text="グループを変更したため停止しました")
                 app.installation.setGroup(session.groupId)
                 settings.cancelRejectedRegistration()
-                group=session.groupId;venuePasswordDraft.value="";venueNameStep.value=false;recoveryCode.value=null;refresh()
+                group=session.groupId;venuePasswordDraft.value="";groupCreationPasswordDraft.value="";venueNameStep.value=false;recoveryCode.value=null;refresh()
             }catch(e:CancellationException){throw e}
             catch(e:Exception){mutable.value=mutable.value.copy(error=safeError(e),status="接続を完了できませんでした")}
             finally {mutable.value=mutable.value.copy(busy=false,pendingRegistration=settings.pending()!=null)}
