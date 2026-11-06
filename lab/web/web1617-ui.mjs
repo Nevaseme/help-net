@@ -246,7 +246,7 @@ document.querySelector('[data-menu="settings"]').onclick=()=>{$('app-menu').clos
   setHtml(headingIcon,icon(v.status));headingStatus.textContent=t(statusLabels[v.status]);headingStatus.dataset.status=v.status;
   if(v.showStatus){
    careEditor.close();$('care-form').hidden=true;personAction.hidden=true;personFooter.hidden=true;historyDetails.hidden=true;$('history').replaceChildren();$('supersedes').replaceChildren();
-   setHtml($('detail-info'),`<p class="anonymous-person-status">${statusName(v.status)}</p>${v.status==='RESCUED'?`<p class="person-rescued-at">${local('救助日時','Rescued at')}：${escape(date(v.rescuedAt))}</p>`:''}${v.status==='RESCUED'&&member()?.role==='ADMIN'&&canWrite()?`<button id="person-revoke-rescue" class="secondary" type="button">${local('救助済みを取り消す','Revoke rescue')}</button><p id="person-rescue-feedback" class="feedback" role="status"></p>`:''}`);
+   setHtml($('detail-info'),`${v.status==='RESCUED'?'':`<p class="anonymous-person-status">${statusName(v.status)}</p>`}${v.status==='RESCUED'?`<p class="person-rescued-at">${local('救助日時','Rescued at')}：${escape(date(v.rescuedAt))}</p>`:''}${v.status==='RESCUED'&&member()?.role==='ADMIN'&&canWrite()?`<button id="person-revoke-rescue" class="secondary" type="button">${local('救助済みを取り消す','Revoke rescue')}</button><p id="person-rescue-feedback" class="feedback" role="status"></p>`:''}`);
    const revoke=$('person-revoke-rescue');if(revoke)revoke.onclick=()=>{if(busy)return;revoke.disabled=true;save(async()=>{const current=snapshot();await revokePersonRescue(getStore(),{groupId:current.group,incidentId:current.incidentId,authorId:current.id},id);},$('person-rescue-feedback')).finally(()=>{revoke.disabled=false;});};
    if(open&&!personSheet.open)personSheet.show();return;
   }

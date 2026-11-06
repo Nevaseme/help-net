@@ -79,6 +79,8 @@ try{for(const mode of ['DRILL','EARTHQUAKE']){
  for(const person of rescued){
   const row=page.locator(`#list [data-person="${person.deviceId}"]`);await row.waitFor();assert.match(await row.innerText(),/Rescued/);await row.click();
   const sheet=page.locator('#person-sheet');await sheet.waitFor({state:'visible'});assert.match(await sheet.innerText(),/Rescued at/);
+  assert.equal(await sheet.getByText('Rescued',{exact:true}).count(),1);
+  assert.equal(await sheet.locator('#person-sheet-title').innerText(),'Rescued person');
   await audit('rescued');await page.screenshot({path:out+'/'+mode+'-rescued.png'});await sheet.locator('.sheet-close').click();
  }
  for(const person of central.filter(p=>!p.positionUnknown&&!p.initialRescue&&p.safety!=='SAFE')){
