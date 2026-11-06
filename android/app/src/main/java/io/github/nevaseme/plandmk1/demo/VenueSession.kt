@@ -21,7 +21,7 @@ import kotlinx.serialization.Serializable
         require(placements.map {it.deviceId}.distinct().size==placements.size)
         require(positionMode in setOf("KYOTO","ACTUAL")&&startedAt>=0&&(simulationStartedAt==null||simulationStartedAt>=0))
         scenario?.let {s->
-            require(s.version==1&&s.sessionId==sessionId&&s.people.size<=128&&s.communities.size in 1..10)
+            require(s.version==1&&s.sessionId==sessionId&&s.people.size<=132&&s.communities.size in 1..10)
             s.communityLongitudeCuts?.let {cuts->require(cuts.size==2&&cuts.all {it.isFinite()}&&cuts[0]<cuts[1])}
             require(s.communities.map{it.id}.distinct().size==s.communities.size)
             for(c in s.communities)c.boundary?.let {ring->require(ring.size in 3..100&&ring.all {p->p.size==2&&p[0].isFinite()&&p[0] in -180.0..180.0&&p[1].isFinite()&&p[1] in -85.0..85.0})}

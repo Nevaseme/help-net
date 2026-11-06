@@ -9,7 +9,7 @@ export function compactScenario(sessionId,startedAt){
  const given=['Alex','Jamie','Sam','Jordan','Casey','Riley','Avery','Cameron','Robin','Drew','Quinn','Skyler'];
  const family=['Morgan','Taylor','Rivera','Lee','Brown','Chen','Wilson','Davis','Park','Reed','Evans'];
  const replaceable=replaceableResidents();
- const residents=[...layout.people.map(p=>({...p,...(replaceable.includes(p)?{replacementSlotId:32+replaceable.indexOf(p)}:{})})),...layout.slots.slice(0,32).map((p,i)=>({communityId:p.communityId,home:p.home,position:{latitude:p.latitude,longitude:p.longitude},safety:'SAFE',injury:'UNINJURED',note:'',observations:{impact:false,enclosed:false},replacementSlotId:i}))];
+ const residents=[...layout.people.map(p=>({...p,...(replaceable.includes(p)?{replacementSlotId:32+replaceable.indexOf(p)}:{})})),...layout.slots.slice(0,32).map((p,i)=>({communityId:p.communityId,home:p.home,position:{latitude:p.latitude,longitude:p.longitude},safety:'SAFE',injury:'UNINJURED',note:'',observations:{impact:false,enclosed:false},replacementSlotId:i})),...layout.slots.slice(36,40).map(p=>({communityId:p.communityId,home:p.home,position:{latitude:p.latitude,longitude:p.longitude},safety:'SOS',injury:'UNINJURED',note:'',observations:{impact:false,enclosed:false},initialRescue:true}))];
  const people=residents.map((person,i)=>{
   const {lastKnownAgeDays,...p}=structuredClone(person);
   if(p.lastKnownPosition)p.lastKnownPosition.acquiredAt=startedAt-lastKnownAgeDays*86400000;

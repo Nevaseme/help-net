@@ -34,7 +34,7 @@ test('current positions have the approved indoor/road balance and distinct atten
 });
 test('central six known SOS/no-response people plus two separate unknown examples',()=>{
  const start=Date.UTC(2026,10,6),s=createVenueScenario(crypto.randomUUID(),start),unknown=s.people.filter(p=>p.positionUnknown);
- assert.equal(s.people.filter(p=>p.safety==='SAFE').length,116);assert.equal(s.people.filter(p=>p.safety!=='SAFE'&&!p.positionUnknown).length,10);assert.equal(unknown.length,2);
+ assert.equal(s.people.filter(p=>p.safety==='SAFE').length,116);assert.equal(s.people.filter(p=>p.safety!=='SAFE'&&!p.positionUnknown&&!p.initialRescue).length,10);assert.equal(unknown.length,2);
  assert.deepEqual(unknown.map(p=>p.lastKnownPosition.acquiredAt),[start-7*86400000,start-3*86400000]);assert.ok(unknown.every(p=>p.position===null));
 });
 
@@ -66,4 +66,23 @@ test('initial report locations match their road/building category and each neigh
   assert.ok(!layout.people.some(person=>person.position?.latitude===p.latitude&&person.position?.longitude===p.longitude));
  }
  assert.equal(new Set(Object.values(layout.reportPoints).map(p=>p.communityId)).size,3);
+});
+
+test('central impact roles use separate interior home buildings away from the neighborhood perimeter',()=>{
+ const ring=layout.communities.find(c=>c.id==='demo-central').boundary;
+ const edgeDistance=p=>Math.min(...ring.map((a,i)=>{const b=ring[(i+1)%ring.length],v=[(b[0]-a[0])*91000,(b[1]-a[1])*111195],q=[(p.longitude-a[0])*91000,(p.latitude-a[1])*111195],t=Math.max(0,Math.min(1,(q[0]*v[0]+q[1]*v[1])/(v[0]**2+v[1]**2)));return Math.hypot(q[0]-t*v[0],q[1]-t*v[1]);}));
+ const people=layout.people.filter(p=>p.communityId==='demo-central'&&p.observations.impact);
+ assert.equal(people.length,3);assert.equal(new Set(people.map(p=>p.home.plateauId)).size,3);
+ for(const p of people){assert.ok(edgeDistance(p.position)>=20);assert.ok(inside(point(p.position),buildings.find(b=>b.id===p.home.plateauId).geometry));}
+ for(let i=0;i<people.length;i++)for(let j=i+1;j<people.length;j++)assert.ok(Math.hypot((people[i].position.longitude-people[j].position.longitude)*91000,(people[i].position.latitude-people[j].position.latitude)*111195)>40);
+});
+
+test('four rescued former-SOS residents add one distinct home to each central block',()=>{
+ const central=createVenueScenario(crypto.randomUUID()).people.filter(p=>p.communityId==='demo-central');
+ assert.equal(central.length,52);
+ for(const ring of layout.blocks['demo-central']){
+  const people=central.filter(p=>inside(point(p.home),{type:'Polygon',coordinates:[ring]}));
+  assert.equal(people.length,13);assert.equal(people.filter(p=>p.initialRescue&&p.safety==='SOS').length,1);
+ }
+ assert.equal(new Set(central.map(p=>p.home.plateauId)).size,52);
 });

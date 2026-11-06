@@ -12,7 +12,7 @@ class VenuePopulationTest {
         val device=UUID.randomUUID().toString()
         val home=DemoHome(UUID.randomUUID().toString(),"Home",35.0145,135.764,null)
         val patterns=listOf(false to false,true to true,true to false,false to false,true to true,false to true)
-        val people=(0 until 128).map { i->
+        val people=(0 until 132).map { i->
             val flags=patterns.getOrNull(i)?: (false to false)
             ScenarioPerson(UUID.randomUUID().toString(),"Resident $i",if(i<3)"SOS" else if(i<6)"UNREPORTED" else "SAFE","UNKNOWN","","demo-central",home,DemoObservations(flags.first,flags.second))
         }

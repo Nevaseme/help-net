@@ -23,17 +23,19 @@ try{for(const mode of ['DRILL','EARTHQUAKE']){
  s.close();return {envelope,records};},{mode,participants});
  assert.equal(fixture.envelope.venue.placements.length,participants);
  const central=fixture.envelope.venue.scenario.people.filter(p=>p.communityId==='demo-central');
- assert.equal(central.length+participants,48);
+ assert.equal(central.length+participants,52);
  assert.equal(central.filter(p=>p.positionUnknown).length,2);
- for(const status of ['SOS','UNREPORTED'])assert.equal(central.filter(p=>p.safety===status&&!p.positionUnknown).length,3);
+ for(const status of ['SOS','UNREPORTED'])assert.equal(central.filter(p=>p.safety===status&&!p.positionUnknown&&!p.initialRescue).length,3);
  assert.equal(central.filter(p=>p.safety==='SAFE').length,40-participants);
+ const rescued=central.filter(p=>p.initialRescue);assert.equal(rescued.length,4);assert.ok(rescued.every(p=>p.safety==='SOS'));
+ for(const p of rescued)assert.ok(fixture.records.some(r=>r.collection==='incidents'&&r.record.kind==='CARE'&&r.record.subjectId===p.deviceId&&r.record.action==='RESCUED'));
  if(participants===32&&mode==='DRILL'&&process.env.VENUE_WRITE_FIXTURE==='1')await writeFile('android/app/src/androidTest/assets/venue-experience-fixture.json',JSON.stringify(fixture,null,2));
  await page.reload();await page.waitForFunction(()=>document.body.dataset.page==='safety'&&!document.querySelector('#safe').disabled);assert.equal(await page.locator('html').getAttribute('lang'),'en');
  for(const name of ['buildings','residents','response'])assert.equal(await page.locator(`[data-tab="${name}"]`).isDisabled(),true);assert.equal(await page.locator('#menu-open').isDisabled(),true);
  assert.equal(await page.locator('header h1').innerText(),mode==='DRILL'?'Drill':'Earthquake');await audit('safety');await page.screenshot({path:out+'/'+mode+'-safety.png'});
  await page.locator('#safe').click();await page.locator('#status-update').click();const notice=page.locator('#venue-location-notice');await notice.waitFor({state:'visible'});assert.match(await notice.innerText(),/This is a demo\. Your location is set to Kyoto to make the experience easier to follow\./);await page.screenshot({path:out+'/'+mode+'-notice.png'});await notice.getByRole('button',{name:'Continue',exact:true}).click();
  await page.waitForFunction(()=>window.qaMap&&Object.values(window.qaMap._layers).some(l=>l.options?.className==='my-location-dot'));await page.waitForFunction(()=>window.qaVector?.isStyleLoaded(),null,{timeout:60000});await page.waitForTimeout(1200);await audit('map');await page.screenshot({path:out+'/'+mode+'-map.png'});
- const full=await page.locator('.person-map-marker').count();await page.locator('#map-show-safe').uncheck();await page.waitForTimeout(500);const focused=await page.locator('.person-map-marker').count();assert.ok(focused<full,`${full} > ${focused}`);console.log(JSON.stringify({mode,full,focused}));await page.screenshot({path:out+'/'+mode+'-hide-safe.png'});await page.locator('#map-show-safe').check();
+ const full=await page.locator('.person-map-marker').count();await page.locator('#map-show-safe').uncheck();await page.waitForTimeout(500);const focused=await page.locator('.person-map-marker').count();assert.equal(full,50);assert.equal(focused,6);assert.ok(focused<full,`${full} > ${focused}`);console.log(JSON.stringify({mode,full,focused}));await page.screenshot({path:out+'/'+mode+'-hide-safe.png'});await page.locator('#map-show-safe').check();
  assert.equal(await page.evaluate(()=>window.qaMap.getPane('my-location').style.zIndex),'650');
  assert.equal(await page.evaluate(()=>window.qaMap.getPane('my-location').style.pointerEvents),'none');
  assert.equal(await page.evaluate(()=>window.qaMap.getMaxZoom()),20);assert.equal(await page.evaluate(()=>window.qaMap.options.bounceAtZoomLimits),false);
@@ -64,7 +66,12 @@ try{for(const mode of ['DRILL','EARTHQUAKE']){
  await audit('report-preview');await page.screenshot({path:out+'/'+mode+'-report-preview.png'});
  await page.locator('#response-edit-form').evaluate(form=>form.closest('dialog').close());
  await page.locator('[data-tab="residents"]').click();
- for(const person of central.filter(p=>!p.positionUnknown&&p.safety!=='SAFE')){
+ for(const person of rescued){
+  const row=page.locator(`#list [data-person="${person.deviceId}"]`);await row.waitFor();assert.match(await row.innerText(),/Rescued/);await row.click();
+  const sheet=page.locator('#person-sheet');await sheet.waitFor({state:'visible'});assert.match(await sheet.innerText(),/Rescued at/);
+  await audit('rescued');await page.screenshot({path:out+'/'+mode+'-rescued.png'});await sheet.locator('.sheet-close').click();
+ }
+ for(const person of central.filter(p=>!p.positionUnknown&&!p.initialRescue&&p.safety!=='SAFE')){
   await page.locator(`#list [data-person="${person.deviceId}"]`).click();
   const sheet=page.locator('#person-sheet');await sheet.waitFor({state:'visible'});
   assert.equal(await sheet.locator('.obs-icon.impact').count(),Number(person.observations.impact));

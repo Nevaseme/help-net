@@ -18,6 +18,12 @@ def area(g):
   return abs(sum(x[0]*y[1]-y[0]*x[1] for x,y in zip(q,q[1:]+q[:1])))*.5*91000*111195
  return sum(a(p[0])-sum(a(h) for h in p[1:]) for p in (g['coordinates'] if g['type']=='MultiPolygon' else [g['coordinates']]))
 def distance(a,b):return math.hypot((a[0]-b[0])*91000,(a[1]-b[1])*111195)
+def boundary_distance(p,ring):
+ def segment(a,b):
+  v=((b[0]-a[0])*91000,(b[1]-a[1])*111195);q=((p[0]-a[0])*91000,(p[1]-a[1])*111195)
+  t=max(0,min(1,sum(x*y for x,y in zip(q,v))/sum(x*x for x in v)))
+  return math.hypot(q[0]-t*v[0],q[1]-t*v[1])
+ return min(segment(a,b) for a,b in zip(ring,ring[1:]+ring[:1]))
 def position(p):return {'latitude':p[1],'longitude':p[0]}
 def center(b):return ((b['bbox'][0]+b['bbox'][2])/2,(b['bbox'][1]+b['bbox'][3])/2)
 def spread(pool,count,avoid=()):
@@ -130,6 +136,14 @@ def build(roads):
    for xy,(status,impact,enclosed) in zip(chosen,patterns):
     p=next(p for p in candidates if (p['position']['longitude'],p['position']['latitude'])==xy)
     p.update(safety=status,injury='UNKNOWN',note='I need help.' if status=='SOS' else '',observations={'impact':impact,'enclosed':enclosed})
+   # Move the impact roles off the perimeter, using existing residents at their own homes.
+   # The six patterns, all coordinates and the indoor/home balance stay unchanged.
+   impact_people=[p for p in candidates if p['observations']['impact']]
+   inner=[p for p,b in zip(residents,resident_buildings) if p['safety']=='SAFE' and p['position'] and boundary_distance((p['position']['longitude'],p['position']['latitude']),boundary)>=20 and inside((p['position']['longitude'],p['position']['latitude']),b['geometry'])]
+   chosen=spread([(p['position']['longitude'],p['position']['latitude']) for p in inner],len(impact_people))
+   for old,xy in zip(impact_people,chosen):
+    new=next(p for p in inner if (p['position']['longitude'],p['position']['latitude'])==xy)
+    for key in ['safety','injury','note','observations']:old[key],new[key]=new[key],old[key]
   k=0
   for i,b in enumerate(attendee_buildings):
    h=home(b,f'attendee-home-{i+1:02}')
