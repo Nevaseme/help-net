@@ -1,10 +1,11 @@
-name: Publish PlanD demo
+name: Publish Help Net website
 
 on:
   push:
     branches: [main]
     paths:
       - 'demo/**'
+      - 'tools/build-pages.mjs'
       - '.github/workflows/demo-pages.yml'
   workflow_dispatch:
 
@@ -25,10 +26,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Build participant guide and preserve comparisons
+        run: node tools/build-pages.mjs
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: demo
-      - name: Deploy demo
+          path: output/pages
+      - name: Deploy Help Net
         id: deployment
         uses: actions/deploy-pages@v5

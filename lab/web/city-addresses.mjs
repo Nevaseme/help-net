@@ -1,5 +1,5 @@
 import {searchParcelAddresses,mergeParcelCandidates,clearParcelSearch} from './parcel-search.mjs';
-export const CITY_DATA='https://nevaseme.github.io/safety_confirm/data/cities/';
+export const CITY_DATA='https://nevaseme.github.io/help-net/data/cities/';
 export const CITY_CODES=['26100','22205','13103'];
 const numerals={'〇':0,'零':0,'一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9};
 function chome(s){if(/^\d+$/.test(s))return s;let value=0,digit=0;for(const c of s){if(c==='十'){value+=(digit||1)*10;digit=0;}else digit=numerals[c]??0;}return String(value+digit);}

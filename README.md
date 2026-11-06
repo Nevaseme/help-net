@@ -4,7 +4,9 @@
 
 製品名はHelp Net（旧称：Tasukeai／PlanD／案D）。開発用の識別名や過去の記録との対応は[開発資料](docs/README.md)を参照。
 
-[地図デモを見る](https://nevaseme.github.io/safety_confirm/)
+[参加案内 / Join Help Net](https://nevaseme.github.io/help-net/)
+
+[過去の画面比較](https://nevaseme.github.io/help-net/comparison.html)
 
 - [Androidアプリ](android/)
 - [PWA・中継サーバーの実験](lab/)
