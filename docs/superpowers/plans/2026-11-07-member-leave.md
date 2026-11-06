@@ -52,4 +52,14 @@ Cloudflare deployment `54a7001fadbc48dbaa2ccab9fa535e77`、Worker SHA256 `701fec
 
 続く利用者の指示により、Androidも1.7.0 / versionCode 103へ更新。上記の「Androidは1.5.89を維持」はPWA単独更新時点の記録。今回は版番号だけを変更し、機能・API・保存形式は変更しない。
 
-assembleDebug成功。実機へ更新インストール（データ消去なし）し、インストール済み1.7.0 / 103とMainActivityの起動を確認。UI階層にEarthquake・Map・Safety・Map legendが表示された。APKは327,709,913 bytes、SHA256 `ae49f18be6568d5a91236b9449f37b83ed33d21e23215dfe1147e3a65fbc5e88`。配布APKと参加案内の公開確認はこの後に実施する。
+assembleDebug成功。実機へ更新インストール（データ消去なし）し、インストール済み1.7.0 / 103とMainActivityの起動を確認。UI階層にEarthquake・Map・Safety・Map legendが表示された。APKは327,709,913 bytes、SHA256 `ae49f18be6568d5a91236b9449f37b83ed33d21e23215dfe1147e3a65fbc5e88`。
+
+GitHub Release `android-v1.7.0`へ公開し、公開アセットのSHA256と実機に入れたAPKが一致。ダウンロードURLはHTTP 200、サイズ一致。参加案内はcommit `902c9aa`、Pages run `42247775590`成功。公開ページで1.7.0のAPKリンク、320/390/900pxで英語初期表示・日英切替・選択保持・手順開閉・横はみ出しなし・JavaScript例外なしを確認。
+
+## スライドの旧URL救済
+
+利用者承認により `Nevaseme/safety_confirm` を転送専用の別リポジトリとして作成。commit `2b6b9a17f0e3fea31e122a6a6ac9a424f3d45405` の `help-net/index.html` をPagesで公開。旧リポジトリ名の再利用で旧GitHubリポジトリURLから現リポジトリへの自動転送は終了する旨を説明し、承認済み。
+
+`https://nevaseme.github.io/safety_confirm/help-net/` はHTTP 200。米国英語・幅390pxのChromeで、JavaScript有効／無効の双方で `https://nevaseme.github.io/help-net/` へ自動遷移することを確認。遷移先のTomodachi/Boeing、英語表示、Android 1.7.0のAPKリンクを確認。現在のHelp Netリポジトリ・PWA本体・保存データは移動しない。
+
+案内に掲載したApple公式URLも米国英語設定のChromeで確認。英語の「Turn a website into an app in Safari on iPhone」が表示され、Share、Add to Home Screen、Open as Web App、Addの手順が説明されている。
