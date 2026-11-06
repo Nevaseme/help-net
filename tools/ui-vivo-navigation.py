@@ -1,5 +1,6 @@
+from android_device import adb_command
 import subprocess,xml.etree.ElementTree as E,re,time,json,pathlib
-adb=[r'C:/Users/TAKUMI/AppData/Local/Android/Sdk/platform-tools/adb.exe','-s','10AE9Y3GDY000JU']
+adb = adb_command()
 def tree():
     subprocess.check_output(adb+['shell','uiautomator','dump','/sdcard/pland-ui-quality.xml'])
     return E.fromstring(subprocess.check_output(adb+['shell','cat','/sdcard/pland-ui-quality.xml']))

@@ -1,8 +1,9 @@
 """Read-only menu navigation checks on an installed app; does not edit records."""
+from android_device import adb_command
 import json,pathlib,re,subprocess,sys,time
 import xml.etree.ElementTree as ET
 serial=sys.argv[1]
-adb=[r'C:/Users/TAKUMI/AppData/Local/Android/Sdk/platform-tools/adb.exe','-s',serial]
+adb = adb_command(serial)
 out=pathlib.Path('output/menu-1536')/serial;out.mkdir(parents=True,exist_ok=True)
 def call(*args):return subprocess.check_output(adb+list(args))
 def tree():

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {mkdir,writeFile} from 'node:fs/promises';
-import {chromium} from 'file:///C:/Users/TAKUMI/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
+import {chromium} from '../../tools/browser-runtime.mjs';
 import {startVenueServer} from './venue-server.mjs';
 const server=process.env.PARCEL_TEST_URL?null:await startVenueServer({cityFixture:true});
 const base=process.env.PARCEL_TEST_URL||server.base,out=process.env.PARCEL_TEST_OUTPUT||'output/parcel-browser-local';await mkdir(out,{recursive:true});

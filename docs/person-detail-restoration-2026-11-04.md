@@ -17,7 +17,7 @@ User reference: attached person-detail screenshot and the previously adopted Web
 - Local and public `building-map.browser.mjs`: real roof tap → linked resident → person details → building; person header symbol, fixed footer, loaded building attributes; no fictional labels; Japanese/English; readable address width at 390px and 320px; no page errors or visible JavaScript error banner.
 - Visual comparison found an address-width defect missed by structural assertions. Fixed action button width, added width checks and repeated screenshots. Observation cards use the original saved icons.
 - `demo-map.browser.mjs` passed, including offline restart and unchanged SOS/phone coordinates after home edits.
-- Public screenshots: `C:/Users/TAKUMI/.codex/visualizations/2026/10/24/01a16c0c-f86e-7220-ad05-e96afa7746d4/person-reference-public/`.
+- Public screenshots: `<local-evidence>/person-reference-public/`.
 - No physical iPhone test this turn. Only emulator-5554 was connected; vivo was not updated.
 
 Cloudflare deployment succeeded with existing bindings preserved. Bundle SHA-256: `1c28cc308621306e055906e4cd137915b01f23bb8caeeb5988fb0e8864e6ce98`. PWA cache: `pland-lab-v1.6.31-r54-person-detail-baseline`.

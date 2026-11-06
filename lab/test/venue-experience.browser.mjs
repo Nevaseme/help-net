@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {mkdir,writeFile} from 'node:fs/promises';
-import {chromium} from 'file:///C:/Users/TAKUMI/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
+import {chromium} from '../../tools/browser-runtime.mjs';
 import {startVenueServer} from './venue-server.mjs';
 const participants=Number(process.env.VENUE_PARTICIPANTS||1);
 const out=process.env.VENUE_OUTPUT||process.env.TEMP+'/pland-venue-20261106';await mkdir(out,{recursive:true});

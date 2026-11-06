@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import {mkdir,writeFile} from 'node:fs/promises';
-import {chromium} from 'file:///C:/Users/TAKUMI/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
+import {chromium} from '../../tools/browser-runtime.mjs';
 import {startVenueServer} from './venue-server.mjs';
 const server=await startVenueServer(),base=process.env.MAP_TEST_URL||server.base;
-const out=process.env.MAP_TEST_OUTPUT||'C:/Users/TAKUMI/AppData/Local/Temp/pland-current-map-qa';await mkdir(out,{recursive:true});
+const out=process.env.MAP_TEST_OUTPUT||'output/qa/pland-current-map-qa';await mkdir(out,{recursive:true});
 const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe'});
 const ctx=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:'block',permissions:['geolocation'],geolocation:{latitude:35.6668,longitude:139.7495,accuracy:18}}),page=await ctx.newPage(),errors=[],checks=[];
 page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(25000);

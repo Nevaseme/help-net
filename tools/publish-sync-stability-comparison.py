@@ -1,7 +1,7 @@
 from pathlib import Path
 import shutil
 
-source=Path('C:/Users/TAKUMI/.codex/visualizations/2026/10/24/01a16c0c-f86e-7220-ad05-e96afa7746d4/sync-1544/android')
+source=Path('output/qa/sync-1544/android')
 assets=Path('demo/assets/sync-1544');assets.mkdir(parents=True,exist_ok=True)
 for name in ['group-before','group-after','settings','training']:
  shutil.copyfile(source/(name+'.png'),assets/(name+'.png'))

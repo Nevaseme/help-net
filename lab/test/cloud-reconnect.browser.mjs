@@ -8,7 +8,7 @@ import {pathToFileURL} from 'node:url';
 import {setTimeout as delay} from 'node:timers/promises';
 import {Journal} from '../../cloud-sync/src/journal.mjs';
 import {handle} from '../../cloud-sync/src/http.mjs';
-const {chromium}=await import(pathToFileURL(process.env.PLAYWRIGHT_MODULE||'C:/Users/TAKUMI/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs').href);
+import {chromium} from '../../tools/browser-runtime.mjs';
 const out=resolve(process.env.PWA_TEST_OUTPUT||process.env.TEMP+'/pland-reconnect-proof');await mkdir(out,{recursive:true});
 const groups=new Map(),errors=[],checks=[];let stage='setup';
 const env={SIGNUP_LIMITER:{limit:async()=>({success:true})},GROUPS:{getByName(group){

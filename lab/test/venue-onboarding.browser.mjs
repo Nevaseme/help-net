@@ -3,7 +3,7 @@ import {mkdir,writeFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {startVenueServer} from './venue-server.mjs';
-const {chromium}=await import(pathToFileURL('C:/Users/TAKUMI/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs').href);
+import {chromium} from '../../tools/browser-runtime.mjs';
 const local=await startVenueServer(),base=process.env.PWA_TEST_URL||local.base;
 const out=resolve(process.env.PWA_TEST_OUTPUT||'.superpowers/sdd/2026-10-31-venue-demo/pwa-proof');await mkdir(out,{recursive:true});
 const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe'});

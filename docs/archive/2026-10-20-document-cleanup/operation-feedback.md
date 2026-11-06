@@ -69,7 +69,7 @@
 
 ### 3：Androidの表示統一
 
-対象プロジェクト：`C:/Users/TAKUMI/AndroidStudioProjects/PlanDMk1`。以下は `app/src/main/java/io/github/nevaseme/plandmk1/` 配下。
+対象プロジェクト：`<legacy-android-projects>/PlanDMk1`。以下は `app/src/main/java/io/github/nevaseme/plandmk1/` 配下。
 
 - [x] `lab/LabController.kt`に接続開始と参加確認済みの区別、15秒の接続待機期限、停止理由を追加する。既存のセッション世代による遅延通知の無視を維持する。
 - [x] `PlanViewModel.kt`で操作別の保存状態を公開し、保存と通信の結果を分ける。

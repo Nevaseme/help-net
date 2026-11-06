@@ -2,8 +2,8 @@
 
 2026-10-26。既存の `demo/` とGitHub Pagesを使用するため、新規のモバイル雛形は作成していない。資料の配置はプロジェクトの指定に合わせる。
 
-- Source visual truth: `C:/Users/TAKUMI/.codex/generated_images/01a1730a-acec-7d41-8e9b-4af7419e2c8b/exec-770af5cb-931d-4a49-89b6-38a0667aea3b.png`
-- Implementation screenshot: `C:/Users/TAKUMI/.codex/visualizations/2026/10/25/01a1730a-acec-7d41-8e9b-4af7419e2c8b/response-local-final.png`
+- Source visual truth: `<local-generated-images>/01a1730a-acec-7d41-8e9b-4af7419e2c8b/exec-770af5cb-931d-4a49-89b6-38a0667aea3b.png`
+- Implementation screenshot: `<local-evidence>/response-local-final.png`
 - Summary screenshot: 同じフォルダーの `summary-local-final.png`。
 - Implementation: `http://127.0.0.1:4175/?demo=response#response-demo`
 - Viewport: PC既定1265×713、スマートフォン390×844、画像比較用390×954（上の比較説明110px＋アプリ844px）。

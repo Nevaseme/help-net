@@ -1,6 +1,7 @@
 """Read displayed controls and exercise non-storing production UI fixtures on vivo."""
+from android_device import adb_command
 import subprocess, pathlib, xml.etree.ElementTree as ET, re, time, json
-ADB=[r'C:/Users/TAKUMI/AppData/Local/Android/Sdk/platform-tools/adb.exe','-s','10AE9Y3GDY000JU']
+ADB = adb_command()
 OUT=pathlib.Path('output/ui-quality/vivo-legend-private'); OUT.mkdir(parents=True,exist_ok=True)
 def call(*args):return subprocess.check_output(ADB+list(args))
 def tree():
