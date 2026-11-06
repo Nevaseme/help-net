@@ -34,7 +34,7 @@ vivoの通常UIで検証用グループ Team-1102-6F27 を新規作成し、京�
 - 修正後ログ：`.implementation/vivo-pwa-create-green.log`
 - ビルドログ：`.implementation/vivo-pwa-create-green-build.log`
 - 公開PWA操作スクリプト：`.implementation/vivo-pwa-flow.mjs`（ローカル検証用、参加情報は環境変数）
-- ブラウザー結果・画面：`C:/Users/TAKUMI/.codex/visualizations/2026/10/24/01a16c0c-f86e-7220-ad05-e96afa7746d4/vivo-pwa-flow-1102/`
+- ブラウザー結果・画面：`<local-evidence>/vivo-pwa-flow-1102/`
 
 ブラウザー結果は `results.json`、PWA地図は `03-three-people-map.png`、更新後vivo一覧は `04-vivo-three-people.png`。グループのパスワードや端末の認証情報を手順書に保存しない。
 

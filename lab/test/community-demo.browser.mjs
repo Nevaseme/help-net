@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {mkdir,writeFile} from 'node:fs/promises';
-import {chromium} from 'file:///C:/Users/TAKUMI/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
+import {chromium} from '../../tools/browser-runtime.mjs';
 import {startVenueServer} from './venue-server.mjs';
 const server=await startVenueServer(),browser=await chromium.launch({headless:true,executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe'});
 const base=process.env.COMMUNITY_TEST_URL||server.base;const out=process.env.COMMUNITY_TEST_OUTPUT||'.implementation/community-browser';await mkdir(out,{recursive:true});

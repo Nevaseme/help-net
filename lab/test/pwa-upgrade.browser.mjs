@@ -5,7 +5,7 @@ import http from 'node:http';
 import {resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {Miniflare,convertV4MiniflareOptions} from '../../cloud-sync/node_modules/miniflare/dist/src/index.js';
-const {chromium}=await import(pathToFileURL(process.env.PLAYWRIGHT_MODULE||'C:/Users/TAKUMI/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs').href);
+import {chromium} from '../../tools/browser-runtime.mjs';
 const out=resolve('output/playwright/pwa-upgrade-1.6.1');await mkdir(out,{recursive:true});
 const old=await readFile('.implementation/pwa-1.6.0-standalone.mjs','utf8'),current=await readFile('cloud-sync/dist/standalone.mjs','utf8');
 assert.ok(old.includes('PWA 1.6.0'));assert.ok(current.includes('PWA 1.6.1'));

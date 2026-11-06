@@ -20,7 +20,7 @@ Read the referenced chat `01a1730a-acec-7d41-8e9b-4af7419e2c8b` and its saved We
 - Regression `lab/test/demo-map.browser.mjs`: passed, including home move with unchanged SOS location, synchronization, offline restart and simulated observations.
 - Regression `lab/test/community-demo.browser.mjs`: passed, including group/password → name → safety → map, 14 people, building links, injury update, regional report, offline SOS delivery and second-drill isolation.
 - Chromium mobile viewport: 390×844 and narrow 320px. Browser plugin unavailable; used existing authorized isolated Playwright workflow. No new physical iPhone or native Android testing in this patch.
-- Screenshots saved outside repository under `C:/Users/TAKUMI/.codex/visualizations/2026/10/24/01a16c0c-f86e-7220-ad05-e96afa7746d4/building-map-public/`.
+- Screenshots saved outside repository under `<local-evidence>/building-map-public/`.
 
 ## Deployment
 

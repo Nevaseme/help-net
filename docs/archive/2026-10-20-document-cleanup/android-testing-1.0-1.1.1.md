@@ -12,7 +12,7 @@
 
 検証：JVM23件成功、API37エミュレーターの通信・サービス10項目を確認（通常9項目＋通知拒否の別起動1項目）。ビルド・v2署名検証成功、Lintエラー0件・警告33件。エミュレーターは起動直後のOS応答遅延で一度試験プロセスが停止しましたが、起動完了後の再実行で成功しています。
 
-成果物は `C:/Users/TAKUMI/projects/planD/artifacts/PlanD-Mk1-1.1.1-debug.apk`、今回のログ・結果は `artifacts/nearby-permission` に保存しています。実機には確認に使った1.1版を入れており、1.1.1は別途APKとして用意しています。
+成果物は `./artifacts/PlanD-Mk1-1.1.1-debug.apk`、今回のログ・結果は `artifacts/nearby-permission` に保存しています。実機には確認に使った1.1版を入れており、1.1.1は別途APKとして用意しています。
 
 実機2台の通信、消灯中の実際の受信・中継、長時間省電力、API 24実行は引き続き未確認です。
 
@@ -70,7 +70,7 @@ Android 14 / V2417AでAPK更新、共有開始、権限許可、失敗表示、�
 |実機Android 14|Nearbyの8038エラーで共有開始できず。権限許可済みの確認と再試行まで実施|
 |レビュー修正|取り消した接続の遅延コールバック、グループ保存中の開始を再現→修正→合格。開始直後の停止によるFGS起動期限エラーも再現→修正→合格|
 
-成果物：`C:/Users/TAKUMI/projects/planD/artifacts/PlanD-Mk1-1.1-debug.apk`。ログは同フォルダーの `background-sharing` に保存。
+成果物：`./artifacts/PlanD-Mk1-1.1-debug.apk`。ログは同フォルダーの `background-sharing` に保存。
 
 ### 実装判断
 
@@ -142,4 +142,4 @@ A→BでSOSを共有したらAを終了し、Bを再起動する。B→Cだけ�
 
 エミュレーターだけを指定する場合は、Gradle実行前に `$env:ANDROID_SERIAL = "emulator-5554"` を設定してください。計測テストはテスト用情報を書き込み、地図テストは保存地域を作り直します。
 
-APKと確認画像・ログの控えは `C:/Users/TAKUMI/projects/planD/artifacts` にあります。
+APKと確認画像・ログの控えは `./artifacts` にあります。

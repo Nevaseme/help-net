@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {mkdir,writeFile,readFile} from 'node:fs/promises';import {pathToFileURL} from 'node:url';import {startVenueServer} from './venue-server.mjs';
-const {chromium}=await import(pathToFileURL('C:/Users/TAKUMI/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs').href);
-const server=await startVenueServer(),base=process.env.PWA_TEST_URL||server.base,out='C:/Users/TAKUMI/.codex/visualizations/2026/10/24/01a16c0c-f86e-7220-ad05-e96afa7746d4/address-pin-1543/pwa';await mkdir(out,{recursive:true});
+import {chromium} from '../../tools/browser-runtime.mjs';
+const server=await startVenueServer(),base=process.env.PWA_TEST_URL||server.base,out='output/qa/address-pin-1543/pwa';await mkdir(out,{recursive:true});
 const browser=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true,args:['--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
 const context=await browser.newContext({viewport:{width:400,height:860}}),page=await context.newPage(),errors=[],checks=[];
 page.on('pageerror',e=>errors.push(e.message));page.on('requestfailed',r=>{if(r.url().includes('/data/cities/')&&!r.failure()?.errorText.includes('ABORTED'))console.log('Fetch failure',r.url(),r.failure()?.errorText);});page.setDefaultTimeout(45000);
