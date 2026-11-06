@@ -5,7 +5,13 @@ import io.github.nevaseme.plandmk1.core.*
 data class IncidentUiState(
     val groupId: String = "", val selection: String = "", val options: List<IncidentView> = emptyList(),
     val current: IncidentView? = null, val residents: List<Resident> = emptyList(), val care: List<CareEvent> = emptyList(),
+    val loadingVenue: Boolean = false,
 ) { val canEdit get() = current != null && !current.closed }
+
+internal fun preferredLiveIncident(options: List<IncidentView>, saved: String?, expectedVenue: String?): String =
+    if(expectedVenue!=null) options.firstOrNull { !it.closed && it.start.eventId == expectedVenue }?.start?.eventId.orEmpty()
+    else options.firstOrNull { !it.closed && it.start.eventId == saved }?.start?.eventId
+        ?: options.firstOrNull { !it.closed }?.start?.eventId.orEmpty()
 
 fun projectIncidentUi(group: String, profile: List<Resident>, legacyCare: List<CareEvent>, journal: List<IncidentEvent>, preferred: String?, optionsOverride:List<IncidentView>?=null): IncidentUiState {
     val options=optionsOverride?:incidentOptions(journal); val active=options.filter { !it.closed }

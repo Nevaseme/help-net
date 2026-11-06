@@ -38,14 +38,15 @@ class PlanViewModel(application: Application) : AndroidViewModel(application) {
             val options=managedIncidentOptions(journal,authorityState.first,authorityState.second)
             val savedSelection=canonicalIncidentId(authorityState.first,authorityState.second,app.installation.incidentSelection(g))
             // Past events remain available as history, never as a live map selection.
-            val preferred=options.firstOrNull {!it.closed&&it.start.eventId==savedSelection}?.start?.eventId
-                ?:options.firstOrNull {!it.closed}?.start?.eventId.orEmpty()
+            val expectedVenue=authorityState.third?.takeIf {it.groupId==g&&!it.closed}?.incidentId
+            val preferred=preferredLiveIncident(options,savedSelection,expectedVenue)
             val displayed=authorityState.third?.takeIf {it.active(g,preferred)}?.displayResidents()?:residents
             val demo=authorityState.third?.takeIf {it.active(g,preferred)}
             val projectedJournal=journal+demo?.scenarioJournal().orEmpty()
             val projectedOptions=if(demo!=null)managedIncidentOptions(projectedJournal,authorityState.first,authorityState.second)else options
             val clockOptions=projectedOptions.map {v->demo?.projectClock(v)?:v}
             val state=projectIncidentUi(g,displayed,care,projectedJournal,preferred,clockOptions)
+                .copy(loadingVenue=expectedVenue!=null&&preferred.isEmpty())
             if(savedSelection!=state.selection) {
                 try {app.installation.selectIncident(g,state.selection)}
                 catch(e: Exception) {message.value=e.localizedMessage;return@combine projectIncidentUi(g,residents,care,journal,"",options)}
@@ -161,11 +162,13 @@ class PlanViewModel(application: Application) : AndroidViewModel(application) {
         val h=chosen?:DemoHome(buildingId,address.trim().ifBlank {if(same)old!!.address else lookup.nearestTown(lat,lon)?.address?.plus("付近")?:"地図で選択した住居"},lat,lon,plateau,floor,room,displayName?:old?.displayName,reference?.searchReference)
         app.deviceRecords.append(DeviceRecord(group.value,java.util.UUID.randomUUID().toString(),localId,1,System.currentTimeMillis(),"DEMO_HOME",sessionId=session,home=h))
     }
+    fun safetySaveKey(group: String = this.group.value, incident: String = incidentUi.value.selection) = "safety:$group:$incident"
     fun setSafety(safety: Safety, memo: String = "") {
-        if (!saveOperations.begin("safety")) return
         val targetGroup=group.value;val incident=incidentUi.value.takeIf { it.groupId==targetGroup }?.selection.orEmpty()
+        val key=safetySaveKey(targetGroup,incident)
+        if (!saveOperations.begin(key)) return
         viewModelScope.launch {
-            saveOperations.complete("safety", if (safety == Safety.SOS) "SOS" else "無事", persist = {
+            saveOperations.complete(key, if (safety == Safety.SOS) "SOS" else "無事", persist = {
                 val authorName=ownForOperation(targetGroup)?.name ?: app.quakes.roster(targetGroup)?.members?.find {localId in it.deviceIds}?.activityName
                 check(!authorName.isNullOrBlank()) { "先にグループへ参加してください" }
                 app.store.answerWithMemo(IncidentEvent(targetGroup,java.util.UUID.randomUUID().toString(),incident,localId,authorName,1,System.currentTimeMillis(),IncidentKind.ANSWER,safety=safety), if (safety == Safety.SOS) memo else "",app.cloud.venue(targetGroup))
@@ -174,11 +177,12 @@ class PlanViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun saveSosMemo(answerId: String, text: String) {
-        if (!saveOperations.begin("safety")) return
         val g = group.value
         val incident = incidentUi.value.takeIf { it.groupId == g }?.selection.orEmpty()
+        val key=safetySaveKey(g,incident)
+        if (!saveOperations.begin(key)) return
         viewModelScope.launch {
-            saveOperations.complete("safety", "SOSメモ", persist = {
+            saveOperations.complete(key, "SOSメモ", persist = {
                 app.store.saveSosMemo(g, incident, localId, answerId, text, System.currentTimeMillis())
             }, publish = { app.recordsChanged() })
         }

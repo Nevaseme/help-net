@@ -87,7 +87,7 @@ private fun PlanAppContent(model: PlanViewModel) {
     val saveStates by model.saveStates.collectAsStateWithLifecycle()
     var showVenueNotice by rememberSaveable(group,incident.selection){mutableStateOf(false)}
     LaunchedEffect(group,incident.groupId,incident.selection,firstAnswer,tab,picking) { if(firstAnswer&&tab!=0){tab=0;lastMain=0;picking=false;awaitingSavedAnswer=true} }
-    LaunchedEffect(firstAnswer, saveStates["safety"]?.phase) {
+    LaunchedEffect(firstAnswer, saveStates[model.safetySaveKey(group,incident.selection)]?.phase) {
         if(firstAnswer)awaitingSavedAnswer=true
         if (!firstAnswer && awaitingSavedAnswer && incident.current?.answers?.containsKey(model.localId)==true) { showVenueNotice=activeVenue?.positionMode=="KYOTO";tab = 1; lastMain = 1; awaitingSavedAnswer = false }
     }
@@ -192,6 +192,18 @@ private fun PlanAppContent(model: PlanViewModel) {
         else {tab=lastMain;if(appSettingsChild){appSettingsChild=false;languageSettings=true}}
     }
     BackHandler(enabled = picking || tab !in listOf(0, 1, 8, 10)) {goBack()}
+    if(incident.groupId==group&&incident.loadingVenue) {
+        Column(Modifier.fillMaxSize().padding(24.dp),verticalArrangement=Arrangement.Center,horizontalAlignment=Alignment.CenterHorizontally) {
+            CircularProgressIndicator()
+            Spacer(Modifier.height(16.dp))
+            Text(if(uiLanguage=="en")"Loading safety check…" else "安否確認を読み込み中…")
+            cloudState.syncError?.let {
+                Text(menuText(it))
+                TextButton(onClick={model.cloud.sync()}){Text(if(uiLanguage=="en")"Retry" else "再試行")}
+            }
+        }
+        return
+    }
     Box {
         Scaffold(
             topBar = { Column(Modifier.background(MaterialTheme.colorScheme.surface).statusBarsPadding()) {

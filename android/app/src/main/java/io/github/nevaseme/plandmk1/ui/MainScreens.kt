@@ -57,7 +57,7 @@ import io.github.nevaseme.plandmk1.core.*
             AnswerPanel(first, when (answer?.safety?:own?.safety) { Safety.SAFE -> MapSafety.SAFE; Safety.SOS -> MapSafety.SOS; else -> null }, memo, saving,
                 save = { state, text -> model.setSafety(if (state == MapSafety.SAFE) Safety.SAFE else Safety.SOS, text) },
                 saveMemo = answer?.takeIf { it.safety == Safety.SOS }?.let { current -> { text -> model.saveSosMemo(current.eventId, text) } },
-                feedback = { OperationFeedback(model, "safety") })
+                feedback = { OperationFeedback(model, model.safetySaveKey(incident.groupId,incident.selection)) })
         }
     }
 }
