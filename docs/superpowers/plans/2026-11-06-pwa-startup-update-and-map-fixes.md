@@ -28,6 +28,9 @@
 - The name-entry panel stays visible until safety initialization finishes; errors remain visible and the button is restored for retry.
 - The startup browser test intentionally holds the registration response and then the incident-record response. Both phases keep their loading status visible; afterward Safety opens. A saved unanswered incident also opens before network synchronization completes. No legacy status flash returns.
 - The user chose to keep `Use device setting` as the initial appearance setting.
+- Published 1.6.65 / r111: deployment `cd9a1367e7234a669e0f352a0838da8d`, Worker SHA-256 `1f70f3da28a1435726c751d8799a31fd09177e0141489e245d81bbfb7bc5179c`. All four changed public files match the local build. The delayed-join/delayed-record browser regression passed against these public files, including visible loading, saved-session startup before network completion, and zero status flashes.
+- GitHub Pages deployment for the final city metadata succeeded. The public Kyoto building index now contains finite compressed byte lengths for all 242 chunks. No repeat full download was needed: only index metadata changed after the successful 3,538-file download.
+- iPhone verification of the new Loading display remains with the user; the earlier 1.6.64 flicker fix was confirmed on their iPhone.
 
 ## Limits / pending approval
 
