@@ -47,3 +47,9 @@ Android実機は1.5.89 / code102へ更新済み。通常のMainActivityへ戻し
 更新案内の既存ブラウザー試験成功（controllerchangeの見逃し検出、未保存入力保護、同版の誤通知なし）。公開3資産がビルド結果と一致し、Chromeで参加画面・PWA 1.7.0表示・JavaScript例外なしを確認した。
 
 Cloudflare deployment `54a7001fadbc48dbaa2ccab9fa535e77`、Worker SHA256 `701fec35b9cfae13ccd116a8cd0f6702085b40eda49281f2883cbecca127a59f`。既存設定と保存領域を維持。
+
+## Android 1.7.0への版統一
+
+続く利用者の指示により、Androidも1.7.0 / versionCode 103へ更新。上記の「Androidは1.5.89を維持」はPWA単独更新時点の記録。今回は版番号だけを変更し、機能・API・保存形式は変更しない。
+
+assembleDebug成功。実機へ更新インストール（データ消去なし）し、インストール済み1.7.0 / 103とMainActivityの起動を確認。UI階層にEarthquake・Map・Safety・Map legendが表示された。APKは327,709,913 bytes、SHA256 `ae49f18be6568d5a91236b9449f37b83ed33d21e23215dfe1147e3a65fbc5e88`。配布APKと参加案内の公開確認はこの後に実施する。
