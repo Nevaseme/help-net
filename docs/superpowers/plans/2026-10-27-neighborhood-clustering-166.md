@@ -46,7 +46,7 @@
 - 一般住民・西町内会・ズーム13.97では、表示中6人が2人ずつのクラスタ2個と個別2人に分かれる。人数ではなく、位置と縮尺で分かれることを確認。
 - 自治体職員は安否個人記号0件で市全域の3町内会を表示。西町内会の資材詳細は水8本・毛布3枚と公開可能な通常通報だけ。
 - 390×844のスマートフォンと1400×950のPCで確認。PC比較の最初の保存画像は地図が欠けていたため採用せず、実際に表示された画面を再撮影し、3画面の描画と記号を確認した。
-- 保存画像：`neighborhood-166-medium-local.png`、`neighborhood-166-wide-local.png`、`neighborhood-166-compare-native-local.jpg`。保存先はC:/Users/TAKUMI/.codex/visualizations/2026/10/25/01a1730a-acec-7d41-8e9b-4af7419e2c8b/。
+- 保存画像：`neighborhood-166-medium-local.png`、`neighborhood-166-wide-local.png`、`neighborhood-166-compare-native-local.jpg`。保存先は<local-evidence>/。
 - 全30試験と変更3モジュールの構文確認が成功。別担当のコードレビューで重要な未解決事項なし。変更に関する文書とコードの不一致は見つからず、ブラウザーエラーもなし。
 
 ## 公開確認

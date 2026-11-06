@@ -3,7 +3,7 @@ import {readFile,mkdir} from 'node:fs/promises';
 import {resolve,extname} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import assert from 'node:assert/strict';
-const {chromium}=await import(pathToFileURL(process.env.PLAYWRIGHT_MODULE||'C:/Users/TAKUMI/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs').href);
+import {chromium} from '../../tools/browser-runtime.mjs';
 const root=resolve('lab/web'),out=resolve('output/playwright/person-status');await mkdir(out,{recursive:true});
 const mime={'.html':'text/html','.mjs':'text/javascript','.js':'text/javascript','.css':'text/css','.json':'application/json','.svg':'image/svg+xml','.png':'image/png'};
 const server=createServer(async(req,res)=>{try{const name=new URL(req.url,'http://local').pathname;if(name.startsWith('/api/'))throw Error();const path=resolve(root,'.'+(name==='/'?'/index.html':name));if(!path.startsWith(root))throw Error();let data=await readFile(path);if(name==='/tsunami-map.mjs')data=Buffer.from(data.toString().replace("selectBuilding=callback;","selectBuilding=callback;window.testBuildingSelect=callback;").replace("L.control.zoom({position:'topright'}).addTo(map);","window.testLeafletMap=map;L.control.zoom({position:'topright'}).addTo(map);"));res.writeHead(200,{'content-type':mime[extname(path)]||'application/octet-stream'});res.end(data);}catch{res.writeHead(404);res.end('not found');}});

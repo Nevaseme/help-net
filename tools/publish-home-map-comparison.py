@@ -1,6 +1,6 @@
 from pathlib import Path
 import shutil
-evidence=Path('C:/Users/TAKUMI/.codex/visualizations/2026/10/24/01a16c0c-f86e-7220-ad05-e96afa7746d4/home-1540')
+evidence=Path('output/qa/home-1540')
 out=Path('demo/assets/home-map-1540');out.mkdir(parents=True,exist_ok=True)
 for name in ['map','home-picker','group']:
  shutil.copyfile(evidence/'android/emulator-5554'/f'{name}.png',out/f'android-{name}.png')

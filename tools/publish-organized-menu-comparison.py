@@ -1,6 +1,6 @@
 from pathlib import Path
 import shutil
-evidence=Path('C:/Users/TAKUMI/.codex/visualizations/2026/10/24/01a16c0c-f86e-7220-ad05-e96afa7746d4/menu-1539')
+evidence=Path('output/qa/menu-1539')
 out=Path('demo/assets/menu-organization-1539');out.mkdir(parents=True,exist_ok=True)
 for platform in ['android','pwa']:
     for name in ['menu','settings-light','training']:

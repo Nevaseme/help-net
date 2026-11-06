@@ -1,7 +1,7 @@
 """Read-only home picker/group checks. Does not save a home or change group records."""
 import pathlib,sys,json,time
 source=pathlib.Path('tools/ui-menu-navigation.py').read_text(encoding='utf-8').split("call('shell','am','start','-n'")[0]
-source=source.replace("pathlib.Path('output/menu-1536')", "pathlib.Path('C:/Users/TAKUMI/.codex/visualizations/2026/10/24/01a16c0c-f86e-7220-ad05-e96afa7746d4/home-1540/android')")
+source=source.replace("pathlib.Path('output/menu-1536')", "pathlib.Path('output/qa/home-1540/android')")
 exec(source)
 def capture(name):
  root=tree();out.joinpath(name+'.xml').write_text(ET.tostring(root,encoding='unicode'),encoding='utf-8');out.joinpath(name+'.png').write_bytes(call('exec-out','screencap','-p'));print(name,flush=True);return root

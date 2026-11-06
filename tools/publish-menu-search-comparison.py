@@ -1,6 +1,6 @@
 from pathlib import Path
 import shutil
-source=Path('C:/Users/TAKUMI/.codex/visualizations/2026/10/24/01a16c0c-f86e-7220-ad05-e96afa7746d4/menu-search-1542')
+source=Path('output/qa/menu-search-1542')
 assets=Path('demo/assets/menu-search-1542');assets.mkdir(parents=True,exist_ok=True)
 for original,name in [('android/tower.png','android-search.png'),('android/settings.png','android-settings.png'),('android/ward.png','android-address.png'),('pwa/facility-search.png','pwa-search.png'),('pwa/settings.png','pwa-settings.png'),('pwa/address-search.png','pwa-address.png')]:shutil.copyfile(source/original,assets/name)
 columns=''

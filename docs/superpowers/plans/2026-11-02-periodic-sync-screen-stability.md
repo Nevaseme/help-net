@@ -23,7 +23,7 @@
 ## 証拠と公開
 
 - テストログ: `.implementation/polling-emulator-final.log`、`polling-actions.log`、`polling-vivo.log`、`polling-green-build.log`。
-- 画像・比較結果: `C:/Users/TAKUMI/.codex/visualizations/2026/10/24/01a16c0c-f86e-7220-ad05-e96afa7746d4/sync-1544/`。vivoの画像は非公開。
+- 画像・比較結果: `<local-evidence>/sync-1544/`。vivoの画像は非公開。
 - `demo/cloud-sharing.html`の旧44列を残し、右端に架空グループのAndroid1.5.44実装画面を追加。公開確認結果は同フォルダーの`comparison-verification.json`に記録。
 - GitHub Pages main `375215a`へ公開。ローカル・公開双方の45列、追加4画像、折りたたみ操作、390px幅表示、JavaScriptエラー0を確認。検証後、vivoを通常起動しグループ画面へ戻した。
 - 初回の修正後試験ではテスト自身がアプリ起動時の接続初期化を待たず同期を開始して失敗した。接続済みになるまで待つよう試験を修正し、上記の最終成功を確認した。初回の失敗を成功扱いしていない。

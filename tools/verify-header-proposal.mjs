@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {mkdir,writeFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
-const {chromium}=await import(pathToFileURL('C:/Users/TAKUMI/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs').href);
+import {chromium} from './browser-runtime.mjs';
 const out='output/header-proposal-v2';await mkdir(out,{recursive:true});
 const url=process.env.PROPOSAL_URL||pathToFileURL(resolve('demo/header-proposal.html')).href;
 const browser=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true});const page=await browser.newPage({viewport:{width:1150,height:1260}});const errors=[];page.on('pageerror',e=>errors.push(e.message));

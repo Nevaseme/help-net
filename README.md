@@ -14,7 +14,7 @@
 
 `android/` をAndroid Studioで開く。最小SDKは24。
 
-作業場所は `C:\Users\TAKUMI\projects\planD` に統一する。別のworktreeや旧Android Studioフォルダーは編集・公開元に使わない。
+作業場所は `.` に統一する。別のworktreeや旧Android Studioフォルダーは編集・公開元に使わない。
 
 ```powershell
 cd android

@@ -1,6 +1,6 @@
 # Help Net: error.txt 残件修正
 
-対象は利用者が指定したチャットの最新版 `C:/Users/TAKUMI/.codex/worktrees/building-vulnerability/planD`。Android 1.5.68 (81)、PWA 1.6.40 / cache r70。元の `plan.txt` と旧 AndroidStudioProjects は変更していない。
+対象は利用者が指定したチャットの最新版 `<local-worktrees>/building-vulnerability/planD`。Android 1.5.68 (81)、PWA 1.6.40 / cache r70。元の `plan.txt` と旧 AndroidStudioProjects は変更していない。
 
 ## 今回の実装
 

@@ -75,9 +75,9 @@
 
 ```powershell
 $env:PYTHONPATH='.implementation/address-geometry-deps'
-C:/Users/TAKUMI/Tools/Python/Python312/python.exe -X utf8 tools/building_analysis/build_kyoto_parcel_matches.py
-C:/Users/TAKUMI/Tools/Python/Python312/python.exe -X utf8 -m unittest discover -s tools/building_analysis -p test_kyoto_parcel_matches.py -v
-C:/Users/TAKUMI/Tools/Python/Python312/python.exe -X utf8 tools/building_analysis/verify_kyoto_parcel_matches.py
+python -X utf8 tools/building_analysis/build_kyoto_parcel_matches.py
+python -X utf8 -m unittest discover -s tools/building_analysis -p test_kyoto_parcel_matches.py -v
+python -X utf8 tools/building_analysis/verify_kyoto_parcel_matches.py
 ```
 
 初回は公開ZIPを取得し、以後は固定ハッシュと展開物を照合して再利用する。ハッシュが変わった場合は自動的に最新データへ更新せず停止する。`--mesh-prefix 523546` を付けると建物処理だけをデモ周辺に限定できる。gzip の時刻を固定し、同じ入力から同じ配布バイト列を生成する。

@@ -71,7 +71,7 @@ Androidの単体テスト296件、操作テスト5件、ビルド・lint成功�
 ## 前回までの対応履歴（PWA 1.6.43時点）
 
 
-対象は利用者指定の最新版 `C:/Users/TAKUMI/.codex/worktrees/building-vulnerability/planD`。公開PWA 1.6.43（cache r82）、Android 1.5.71（84）。`error.txt`は指摘資料として読み、`plan.txt`と旧AndroidStudioProjectsは変更していない。以下は実装と確認の範囲を分けた回答。重複する行はまとめている。
+対象は利用者指定の最新版 `<local-worktrees>/building-vulnerability/planD`。公開PWA 1.6.43（cache r82）、Android 1.5.71（84）。`error.txt`は指摘資料として読み、`plan.txt`と旧AndroidStudioProjectsは変更していない。以下は実装と確認の範囲を分けた回答。重複する行はまとめている。
 
 ## 今回の追記への回答
 

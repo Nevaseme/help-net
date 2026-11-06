@@ -1,6 +1,6 @@
 # 統合後の作業場所と確認手順
 
-作業場所: `C:\Users\TAKUMI\projects\planD`。Android Studioでは、この中の `android/` を開く。
+作業場所: `.`。Android Studioでは、この中の `android/` を開く。
 旧worktreeは退避用として保持する。旧 `AndroidStudioProjects/PlanDMk1` は同期しない。
 
 ## ローカル確認

@@ -1,6 +1,7 @@
+import {adbExecutable} from '../../tools/browser-runtime.mjs';
 import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
-import {chromium} from 'file:///C:/Users/TAKUMI/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
+import {chromium} from '../../tools/browser-runtime.mjs';
 const base=process.env.ADDRESS_PWA_BASE||'https://tasukeai-sync.tomodachi-takumi.workers.dev';
 const browser=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true});
 let child,output='';
@@ -12,7 +13,7 @@ try{
   const session=await client.register('create',{groupName:'架空住所同期'+Date.now(),activityName:'架空PWA'});
   window.addressQA={s,id,client,group:session.groupId};return session.groupId+':'+(await client.invitation(session.groupId)).code;
  });
- child=spawn('C:/Users/TAKUMI/AppData/Local/Android/Sdk/platform-tools/adb.exe',['-s',process.env.ADDRESS_ANDROID_SERIAL||'emulator-5554','shell','am','instrument','-w','-r','-e','class','io.github.nevaseme.plandmk1.AddressCloudInteropTest','-e','cloudEndpoint',base,'-e','browserInvite',invite,'io.github.nevaseme.plandmk1.test/androidx.test.runner.AndroidJUnitRunner'],{windowsHide:true});
+ child=spawn(adbExecutable(),['-s',process.env.ADDRESS_ANDROID_SERIAL||'emulator-5554','shell','am','instrument','-w','-r','-e','class','io.github.nevaseme.plandmk1.AddressCloudInteropTest','-e','cloudEndpoint',base,'-e','browserInvite',invite,'io.github.nevaseme.plandmk1.test/androidx.test.runner.AndroidJUnitRunner'],{windowsHide:true});
  child.stdout.on('data',b=>output+=b);child.stderr.on('data',b=>output+=b);const done=new Promise((resolve,reject)=>{child.on('close',resolve);child.on('error',reject);});
  let received=false;
  for(let i=0;i<80;i++){

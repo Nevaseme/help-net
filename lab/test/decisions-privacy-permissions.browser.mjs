@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {mkdir,writeFile} from 'node:fs/promises';
-import {chromium} from 'file:///C:/Users/TAKUMI/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
+import {chromium} from '../../tools/browser-runtime.mjs';
 import {startVenueServer} from './venue-server.mjs';
 const out=process.env.DECISION_TEST_OUTPUT||'output/decision-fixes';await mkdir(out,{recursive:true});
 const server=process.env.DECISION_TEST_URL?null:await startVenueServer({cityFixture:true}),base=process.env.DECISION_TEST_URL||server.base;
