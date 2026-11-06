@@ -1,0 +1,9 @@
+const versions=[{"id": "helpnet-group-start-pwa", "title": "Help Net · PWA 1.6.58 参加と開始の分離", "summary": "参加パスワードはグループ作成時に設定し、参加時だけ入力します。管理者が地震・訓練を開始すると、所属メンバーの安否確認が自動で始まります。", "scenes": [["pwa-create", "グループ作成", "作成時に参加パスワードを設定。"], ["pwa-drill", "訓練の開始", "パスワード欄のない訓練開始画面。"], ["pwa-earthquake", "地震の開始", "パスワード欄のない地震開始画面。"], ["pwa-member", "参加者の画面", "管理者の開始を自動取得した参加者の安否確認画面。"]]}];
+for(const version of versions){
+ const section=document.createElement('section');section.className='view';section.id=version.id;
+ section.innerHTML='<header class="comparison-caption" style="height:auto;min-height:126px"><h1></h1><p></p></header><nav aria-label="配置修正の確認画像" style="display:flex;flex-wrap:wrap;gap:8px;margin:12px 0"></nav><img style="display:block;width:100%;height:auto;border-radius:16px"><p><a href="https://tasukeai-sync.tomodachi-takumi.workers.dev/" target="_blank" rel="noopener">Webアプリを開く</a></p>';
+ section.querySelector('h1').textContent=version.title;section.querySelector('header p').textContent=version.summary;
+ for(const [file,label,alt] of version.scenes){const button=document.createElement('button');button.type='button';button.textContent=label;button.style.cssText='min-height:48px;padding:8px 12px;border:1px solid #617786;border-radius:8px;cursor:pointer;font:inherit';button.onclick=()=>{for(const peer of section.querySelectorAll('nav button')){const active=peer===button;peer.setAttribute('aria-pressed',String(active));peer.style.background=active?'#155eef':'#fff';peer.style.color=active?'#fff':'#183447';}const img=section.querySelector('img');img.src=`helpnet-group-start/${file}.png`;img.alt=alt;};section.querySelector('nav').append(button);}
+ document.getElementById('board').append(section);section.querySelector('nav button').click();
+ if(location.hash===`#${version.id}`)section.scrollIntoView({inline:'start',block:'start'});
+}

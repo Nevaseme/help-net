@@ -18,7 +18,7 @@ export class GroupJournal extends DurableObject {
   try{
    let body;
    switch(operation){
-    case 'directoryConfigure':case 'directoryAccess':body=await this.journal[operation](args,async(group,method,input,auth)=>{
+    case 'directoryCreate':case 'directoryConfigure':case 'directoryAccess':body=await this.journal[operation](args,async(group,method,input,auth)=>{
      const result=await this.groups.getByName(group).dispatch(method,auth,input);
      if(result.status!==200)throw new ApiError(result.status,result.body.error.code,result.body.error.message);
      return result.body;

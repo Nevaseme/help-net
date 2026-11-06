@@ -63,13 +63,41 @@ for(const chosen of ['12345678','1','11111111','あ',' Password '])test(`chosen 
  assert.equal((await join(chosen+'wrong')).status,403);
  assert.equal((await join(chosen)).status,200);
 });
-test('blank, non-string and oversized passwords remain invalid',async t=>{
+test('whitespace-only, non-string and oversized participation passwords remain invalid',async t=>{
  const f=fixture(t),admin=await setup(f);
- for(const value of ['', '   ',null,12345678,'x'.repeat(129)]){
+ for(const value of ['   ',null,12345678,'x'.repeat(129)]){
   const r=await f.call(`/groups/${admin.groupId}/venue`,{requestId:id(),password:value,areaId:'kyoto-gosho-south'},admin.token);
   assert.equal(r.status,400);assert.equal(r.body.error.code,'invalid_venue_password');
  }
 });
+for(const mode of ['DRILL','EARTHQUAKE'])test(`${mode} starts for existing members without a password and does not allow blank-password joins`,async t=>{
+ const f=fixture(t),admin=await setup(f),g=admin.groupId;
+ const started=await f.call(`/groups/${g}/venue`,{requestId:id(),areaId:'kyoto-gosho-south',presentationMode:mode},admin.token);
+ assert.equal(started.status,200);assert.equal(started.body.venue.presentationMode,mode);
+ assert.equal(started.body.venue.scenario.people.length,96);assert.equal(started.body.venue.placements.length,1);
+ assert.equal(f.get(g).venueConfig().passwordHash,null);
+ const join=await f.call('/venue/join',{groupName:'会場テスト',password:'',activityName:'Uninvited',deviceId:id(),registrationToken:token()});assert.equal(join.status,403);
+ const denied=await f.call(`/groups/${g}/venue`,{requestId:id(),areaId:'kyoto-gosho-south'});assert.notEqual(denied.status,200);
+});
+
+test('starting later incidents without a password retains participation credentials, members and history',async t=>{
+ const f=fixture(t),admin=await setup(f),g=admin.groupId,j=f.get(g);
+ await f.call(`/groups/${g}/venue`,{requestId:id(),areaId:'kyoto-gosho-south',password},admin.token);
+ const credentials={salt:j.venueConfig().salt,hash:j.venueConfig().passwordHash};
+ const member=(await f.call('/venue/join',{groupName:'会場テスト',password,activityName:'Existing member',deviceId:id(),registrationToken:token()})).body;
+ for(const options of [{privateTraining:true,title:'Practice',area:'Kyoto'}, {presentationMode:'EARTHQUAKE'}]){
+  const previous=j.venueConfig().sessionId;
+  j.append(await j.identity(admin.token),{collection:'quakes',record:{groupId:g,eventId:id(),actorDeviceId:admin.deviceId,operatedAt:Date.now(),action:'END',training:true,targetId:previous}});
+  const history=j.history('quakes');
+  const started=await f.call(`/groups/${g}/venue`,{requestId:id(),areaId:'kyoto-gosho-south',password:'',...options},admin.token);
+  assert.equal(started.status,200);assert.ok(started.body.venue.placements.some(p=>p.deviceId===member.deviceId));
+  assert.deepEqual(j.history('quakes').slice(0,history.length),history);assert.equal(j.venueConfig().salt,credentials.salt);assert.equal(j.venueConfig().passwordHash,credentials.hash);
+ }
+ assert.equal((await f.call('/venue/check',{groupName:'会場テスト',password})).status,200);
+ assert.equal((await f.call('/venue/check',{groupName:'会場テスト',password:''})).status,403);
+ const denied=await f.call(`/groups/${g}/venue`,{requestId:id(),areaId:'kyoto-gosho-south',password:''},member.token);assert.equal(denied.status,403);
+});
+
 test('venue creates persistent fictional scenario without consuming audience identities',async t=>{
  const f=fixture(t),admin=await setup(f),g=admin.groupId,requestId=id();
  const input={requestId,password,areaId:'kyoto-gosho-south'};
@@ -169,9 +197,8 @@ test('recovery retains one member and placement, revokes previous credential, an
  assert.equal(revoked.body.roster.members.length,2,'history retained');
 });
 
-test('empty passwords, invitation after closure, expired code and idle member session are rejected',async t=>{
+test('invitation after closure, expired code and idle member session are rejected',async t=>{
  const f=fixture(t),admin=await setup(f),g=admin.groupId,sessionId=id();
- assert.equal((await f.call(`/groups/${g}/venue`,{requestId:sessionId,password:'',areaId:'kyoto-gosho-south'},admin.token)).status,400);
  await f.call(`/groups/${g}/venue`,{requestId:sessionId,password,areaId:'kyoto-gosho-south'},admin.token);
  const original=(await f.call('/venue/join',{groupName:'会場テスト',password,activityName:'本人',deviceId:id(),registrationToken:token()})).body;
  const code=(await f.call(`/groups/${g}/access`,{action:'issue'},original.token)).body.code;
@@ -200,7 +227,7 @@ function fixture(t){
  // Use production HTTP and journal operations; the real Worker/RPC case is tested separately.
  const env={SIGNUP_LIMITER:{limit:async()=>({success:true})},GROUPS:{getByName:name=>({dispatch:async(op,auth,args)=>{
   try {const j=get(name);let body;
-   if(op.startsWith('directory'))body=await j[op](args,(group,method,body,auth)=>get(group)[method](auth,body));
+   if(op.startsWith('directory'))body=await j[op](args,(group,method,body,auth)=>method==='create'?get(group).create(body):get(group)[method](auth,body));
    else body=await (op==='create'||op==='join'?j[op](args):j[op](auth,args));
    return {status:200,body};
   }catch(e){return {status:e.status??503,body:{error:{code:e.code??'storage_unavailable',message:e.message}}};}
@@ -292,12 +319,12 @@ test('knowing the shared venue password cannot replace the administrator device 
  const publicBody=JSON.stringify(f.get(admin.groupId).snapshot());assert(!publicBody.includes(password));assert(!publicBody.includes(config.passwordHash));assert(!publicBody.includes(admin.token));
 });
 
-test('ending a public venue refuses new password joins without deleting previous records',async t=>{
+test('ending an incident still permits group membership without changing previous records',async t=>{
  const f=fixture(t),admin=await setup(f),requestId=id();await f.call(`/groups/${admin.groupId}/venue`,{requestId,password,areaId:'kyoto-gosho-south'},admin.token);
  const j=f.get(admin.groupId);j.append(await j.identity(admin.token),{collection:'quakes',record:{groupId:admin.groupId,eventId:id(),actorDeviceId:admin.deviceId,operatedAt:Date.now(),action:'END',training:true,targetId:requestId}});
- assert.equal((await f.call('/venue/check',{groupName:'会場テスト',password})).status,409);
- assert.equal((await f.call('/venue/join',{groupName:'会場テスト',password,activityName:'終了後',deviceId:id(),registrationToken:token()})).status,409);
- assert.equal(j.snapshot().roster.members.length,1);assert.equal(j.history('quakes').length,2);
+ assert.equal((await f.call('/venue/check',{groupName:'会場テスト',password})).status,200);
+ assert.equal((await f.call('/venue/join',{groupName:'会場テスト',password,activityName:'終了後',deviceId:id(),registrationToken:token()})).status,200);
+ assert.equal(j.snapshot().roster.members.length,2);assert.equal(j.history('quakes').length,2);assert.equal(j.venueSnapshot().placements.length,1);
 });
 
 test('private training assigns administrator and invited members without a public password or home writes',async t=>{

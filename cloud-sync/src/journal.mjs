@@ -1,6 +1,6 @@
 import {ApiError,requireValue,uuid,canonical,collections,validateShape,validateContext} from './validation.mjs';
 import {importRelayKey,verifyRelayProof} from './relay-proof.mjs';
-import {venueMethods} from './venue.mjs';
+import {venueMethods,participationCredentials} from './venue.mjs';
 import {repairSeededBlockedRoad} from './venue-scenario.mjs';
 import {demoAuthMethods} from './demo-auth.mjs';
 import {municipalityByCode} from '../../lab/web/municipalities.mjs';
@@ -45,10 +45,12 @@ export class Journal {
   requireValue(input&&uuid(input.groupId)&&uuid(input.deviceId)&&text(input.activityName,60)&&text(input.groupName,80)&&/^[a-f0-9]{64}$/.test(input.registrationToken));
   const token=input.registrationToken,tokenHash=await hashSecret(token),memberId=crypto.randomUUID();
   if(this.meta('groupId'))return this.registrationReplay(input.deviceId,token,tokenHash);
+  const credentials=input.password===undefined?null:await participationCredentials(input.password);
   this.s.transaction(()=>{
    requireValue(!this.meta('groupId'),'group_exists',409);
    this.s.run('INSERT INTO metadata(key,value) VALUES (?,?)','groupId',input.groupId);
    this.s.run('INSERT INTO metadata(key,value) VALUES (?,?)','groupName',input.groupName.trim());
+   if(credentials)this.s.run('INSERT INTO metadata(key,value) VALUES (?,?)','participationCredentials',JSON.stringify(credentials));
    this.addMember(input.deviceId,memberId,input.activityName,'ADMIN',tokenHash);
   });await this.s.flush();return {...this.snapshot(),deviceId:input.deviceId,memberId,role:'ADMIN',token};
  }

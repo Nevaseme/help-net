@@ -46,7 +46,7 @@ export class CloudClient {
  }
  async register(kind,input){
   const pendingKey='cloud-registration:'+kind;let pending;
-  const durableInput=kind==='venue'?{groupName:input.groupName,activityName:input.activityName}:input;
+  const durableInput=['venue','create'].includes(kind)?{groupName:input.groupName,activityName:input.activityName}:input;
   const candidate={input:durableInput,sourceGroup:await this.store.read('meta','group'),body:{...durableInput,deviceId:this.deviceId,registrationToken:token(),...(kind==='create'?{requestId:crypto.randomUUID()}:{})}};
   // Tabs share one IndexedDB transaction when claiming a pending registration.
   await this.store.update('meta',pendingKey,old=>{
@@ -56,7 +56,7 @@ export class CloudClient {
   const clearPending=()=>this.store.update('meta',pendingKey,old=>old?.body?.registrationToken===pending.body.registrationToken?null:undefined);
   const path=kind==='create'?'/groups':kind==='recover'?'/venue/recover':kind==='venue'?'/venue/join':`/groups/${encodeURIComponent(input.groupId)}/join`;
   let result;
-  try{result=await this.request(path,{body:kind==='venue'?{...pending.body,password:input.password}:pending.body});}
+  try{result=await this.request(path,{body:['venue','create'].includes(kind)?{...pending.body,...(input.password!==undefined?{password:input.password}:{})}:pending.body});}
   catch(error){
    // A definite rejection created no membership; allow a corrected invitation.
    // Network/5xx failures retain the request because the server may have committed it.
@@ -69,7 +69,7 @@ export class CloudClient {
   await this.store.update('meta','cloud-session:'+session.groupId,()=>session);
   await this.store.importCloudRoster(result,this.deviceId);
   await saveVenue(this.store,result);await saveMunicipality(this.store,result);
-  if(kind==='venue'||kind==='recover')await this.store.update('meta','venue-onboarding:'+session.groupId,()=>result.venue.sessionId);
+  if((kind==='venue'||kind==='recover')&&result.venue&&!result.venue.closed)await this.store.update('meta','venue-onboarding:'+session.groupId,()=>result.venue.sessionId);
   // Joining carries only this device's profile; the new group starts without a safety answer.
   if(!['venue','recover'].includes(kind)&&pending.sourceGroup&&pending.sourceGroup!==session.groupId&&!await this.store.get(session.groupId,this.deviceId)){
    const own=await this.store.get(pending.sourceGroup,this.deviceId);

@@ -15,8 +15,9 @@ test('forty same-IP concurrent venue joins survive real Worker directory RPC and
  const id=()=>crypto.randomUUID(),token=()=>id().replaceAll('-','')+id().replaceAll('-','');
  const call=async(path,body,auth)=>{const response=await mf.dispatchFetch('https://sync.test/api/v1'+path,{method:body===undefined?'GET':'POST',headers:{'Content-Type':'application/json','CF-Connecting-IP':'192.0.2.5','X-PlanD-Records-Version':'2',...(auth?{Authorization:'Bearer '+auth}:{})},...(body===undefined?{}:{body:JSON.stringify(body)})});return {status:response.status,body:await response.json()};};
  const groupName='並行参加の架空会場',password='fictional-runtime-pass';
- const created=await call('/groups',{requestId:id(),deviceId:id(),groupName,activityName:'管理者',registrationToken:token()});assert.equal(created.status,200);const admin=created.body;
- const requestId=id();assert.equal((await call(`/groups/${admin.groupId}/venue`,{requestId,password,areaId:'kyoto-gosho-south'},admin.token)).status,200);
+ const created=await call('/groups',{requestId:id(),deviceId:id(),groupName,password,activityName:'管理者',registrationToken:token()});assert.equal(created.status,200,JSON.stringify(created.body));const admin=created.body;
+ assert.equal((await call('/venue/check',{groupName,password})).status,200,'group can be joined before an incident starts');
+ const requestId=id();assert.equal((await call(`/groups/${admin.groupId}/venue`,{requestId,areaId:'kyoto-gosho-south'},admin.token)).status,200);
  const checked=await Promise.all(Array.from({length:40},()=>call('/venue/check',{groupName,password})));assert.ok(checked.every(r=>r.status===200),JSON.stringify(checked.filter(r=>r.status!==200)));
  const inputs=Array.from({length:40},(_,n)=>({groupName,password,deviceId:id(),activityName:'参加者'+n,registrationToken:token()}));
  const joined=await Promise.all(inputs.map(input=>call('/venue/join',input)));assert.ok(joined.every(r=>r.status===200),JSON.stringify(joined.filter(r=>r.status!==200)));
@@ -25,6 +26,6 @@ test('forty same-IP concurrent venue joins survive real Worker directory RPC and
  const replay=await call('/venue/join',inputs[0]);assert.equal(replay.status,200);assert.equal(replay.body.memberId,joined[0].body.memberId);assert.equal(replay.body.venue.incidentId,requestId);
  const after=await call(`/groups/${admin.groupId}/roster`,undefined,admin.token);assert.deepEqual(after.body.venue,before.body.venue);
  const ended=await call(`/groups/${admin.groupId}/records`,{records:[{collection:'quakes',record:{groupId:admin.groupId,eventId:id(),actorDeviceId:admin.deviceId,operatedAt:Date.now(),action:'END',training:true,targetId:requestId}}]},admin.token);assert.equal(ended.status,200,JSON.stringify(ended.body));
- assert.equal((await call('/venue/check',{groupName,password})).status,409);
+ assert.equal((await call('/venue/check',{groupName,password})).status,200);
  assert.equal((await call(`/groups/${admin.groupId}/roster`,undefined,admin.token)).body.venue.closed,true);
 });

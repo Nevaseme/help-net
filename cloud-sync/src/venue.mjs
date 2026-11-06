@@ -17,9 +17,14 @@ async function passwordHash(password,salt){
  return hex(await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',iterations:100000,salt:enc.encode(salt)},key,256));
 }
 const area={id:'kyoto-gosho-south',name:'御所南〜烏丸御池',south:35.011,north:35.018,west:135.758,east:135.767};
+export async function participationCredentials(password){const salt=hex(crypto.getRandomValues(new Uint8Array(16)));return {salt,passwordHash:await passwordHash(password,salt)};}
 function slots(){return compactSlots();}
 
 export const venueMethods={
+ groupParticipationCredentials(){
+  const saved=this.meta('participationCredentials');if(saved)return JSON.parse(saved);
+  const old=this.venueConfig();return old?.passwordHash?{salt:old.salt,passwordHash:old.passwordHash}:null;
+ },
  venueInit(){
   this.s.run('CREATE TABLE IF NOT EXISTS venue_names (name TEXT PRIMARY KEY,group_id TEXT NOT NULL)');
   this.s.run('CREATE TABLE IF NOT EXISTS venue_attempts (key TEXT PRIMARY KEY,bucket INTEGER NOT NULL,count INTEGER NOT NULL)');
@@ -55,12 +60,15 @@ export const venueMethods={
   const presentationMode=input.presentationMode??'DRILL';requireValue(['DRILL','EARTHQUAKE'].includes(presentationMode),'invalid_presentation_mode',400);
   const elapsedMinutes=input.elapsedMinutes??(privateTraining?0:3);requireValue(Number.isInteger(elapsedMinutes)&&elapsedMinutes>=0&&elapsedMinutes<=1440,'invalid_demo_minutes',400);
   requireValue(input.positionMode===undefined||['KYOTO','ACTUAL'].includes(input.positionMode),'invalid_position_mode',400);
-  if(!privateTraining)validateDemoPassword(input.password);
+  const previous=this.venueConfig(),credentials=this.groupParticipationCredentials(),settingPassword=!credentials&&!privateTraining&&input.password!==undefined&&input.password!=='';
+  if(settingPassword)validateDemoPassword(input.password);
   if(privateTraining)requireValue(typeof input.title==='string'&&input.title.trim().length>0&&input.title.length<=80&&typeof input.area==='string'&&input.area.trim().length>0&&input.area.length<=120);
-  const salt=hex(crypto.getRandomValues(new Uint8Array(16))),hash=privateTraining?null:await passwordHash(input.password,salt);
+  const salt=settingPassword?hex(crypto.getRandomValues(new Uint8Array(16))):credentials?.salt??null;
+  const hash=settingPassword?await passwordHash(input.password,salt):credentials?.passwordHash??null;
   this.s.transaction(()=>{
    const previous=this.venueConfig();if(previous?.sessionId===input.requestId)return;
    requireValue(!previous||this.venueSnapshot().closed,'venue_already_active',409,'現在の会場デモを終了してから、新しいデモを開始してください。');
+   if(hash)this.s.run('INSERT INTO metadata(key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value','participationCredentials',JSON.stringify({salt,passwordHash:hash}));
    const config={sessionId:input.requestId,areaId:input.areaId,privateTraining,presentationMode,positionMode:input.positionMode??'KYOTO',startedAt:this.now(),simulationStartedAt:this.now()-elapsedMinutes*60000,salt,passwordHash:hash,slots:slots(),scenario:privateTraining?null:createVenueScenario(input.requestId,this.now())};
    this.s.run('INSERT INTO metadata(key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value','venue',JSON.stringify(config));
    this.append(actor,{collection:'quakes',record:{groupId:this.meta('groupId'),eventId:input.requestId,actorDeviceId:actor.deviceId,operatedAt:this.now(),action:'TRAINING_START',training:true,title:privateTraining?input.title.trim():presentationMode==='EARTHQUAKE'?'地震の安否確認':'安否確認の訓練',area:privateTraining?input.area.trim():config.positionMode==='ACTUAL'?'参加者の現在地':area.name}});
@@ -69,29 +77,34 @@ export const venueMethods={
   });await this.s.flush();return this.snapshot();
  },
  async checkVenue(_token,input){
-  this.mustExist();const config=this.venueConfig();
-  requireValue(config&&!config.privateTraining&&normalize(input?.groupName)===normalize(this.meta('groupName')),'invalid_venue_credentials',403,'グループ名またはパスワードを確認してください。');
-  let valid=false;try {valid=(await passwordHash(input.password,config.salt))===config.passwordHash;}catch{}
+  this.mustExist();const config=this.venueConfig(),credentials=this.groupParticipationCredentials();
+  requireValue(credentials&&normalize(input?.groupName)===normalize(this.meta('groupName')),'invalid_venue_credentials',403,'グループ名またはパスワードを確認してください。');
+  let valid=false;try {valid=(await passwordHash(input.password,credentials.salt))===credentials.passwordHash;}catch{}
   requireValue(valid,'invalid_venue_credentials',403,'グループ名またはパスワードを確認してください。');
-  requireValue(!this.venueSnapshot().closed,'venue_closed',409,'この会場デモは終了しています。');
-  return {groupId:this.meta('groupId'),groupName:this.meta('groupName'),sessionId:config.sessionId,positionMode:config.positionMode??'KYOTO'};
+  return {groupId:this.meta('groupId'),groupName:this.meta('groupName'),sessionId:config&&!this.venueSnapshot().closed?config.sessionId:null,positionMode:config?.positionMode??'KYOTO'};
  },
  async joinVenue(_token,input){
   const checked=await this.checkVenue(null,input);
   requireValue(uuid(input.deviceId)&&typeof input.activityName==='string'&&input.activityName.trim().length>0&&input.activityName.length<=60&&/^[a-f0-9]{64}$/.test(input.registrationToken));
   const hash=await sha(input.registrationToken),memberId=crypto.randomUUID();
   this.s.transaction(()=>{
-   requireValue(this.venueConfig()?.sessionId===checked.sessionId&&!this.venueSnapshot().closed,'venue_changed',409);
+   const active=this.venueConfig()&&!this.venueSnapshot().closed;
    const existing=this.s.all('SELECT member_id,token_hash FROM devices WHERE device_id=?',input.deviceId)[0];
-   if(existing){requireValue(existing.token_hash===hash,'device_exists',409);this.assignVenue(input.deviceId,existing.member_id,this.snapshot().roster.members.find(m=>m.memberId===existing.member_id).activityName);}
-   else {this.addMember(input.deviceId,memberId,input.activityName,'MEMBER',hash);this.assignVenue(input.deviceId,memberId,input.activityName.trim());}
+   if(existing){requireValue(existing.token_hash===hash,'device_exists',409);if(active)this.assignVenue(input.deviceId,existing.member_id,this.snapshot().roster.members.find(m=>m.memberId===existing.member_id).activityName);}
+   else {this.addMember(input.deviceId,memberId,input.activityName,'MEMBER',hash);if(active)this.assignVenue(input.deviceId,memberId,input.activityName.trim());}
   });
   return this.registrationReplay(input.deviceId,input.registrationToken,hash);
+ },
+ async directoryCreate(args,call){
+  const name=normalize(args.groupName);requireValue(name.length>0&&name.length<=80);validateDemoPassword(args.password);
+  const current=this.s.all('SELECT group_id FROM venue_names WHERE name=?',name)[0];requireValue(!current||current.group_id===args.groupId,'venue_name_exists',409,'同じ名前のグループがあります。別の名前を使用してください。');
+  const result=await call(args.groupId,'create',args,null);
+  this.s.run('INSERT INTO venue_names(name,group_id) VALUES (?,?) ON CONFLICT(name) DO NOTHING',name,args.groupId);await this.s.flush();return result;
  },
  async directoryConfigure(args,call){
   const authorized=await call(args.groupId,'authorizeVenue',null,args.token),name=normalize(authorized.groupName);
   requireValue(name.length>0&&name.length<=80);
-  if(args.input?.privateTraining===true)return call(args.groupId,'configureVenue',args.input,args.token);
+  if(args.input?.privateTraining===true||args.input?.password===undefined||args.input?.password==='')return call(args.groupId,'configureVenue',args.input,args.token);
   this.s.transaction(()=>{
    const current=this.s.all('SELECT group_id FROM venue_names WHERE name=?',name)[0];
    requireValue(!current||current.group_id===args.groupId,'venue_name_exists',409,'同じ名前の会場デモがあります。別の名前のグループを使用してください。');
