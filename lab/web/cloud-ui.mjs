@@ -119,15 +119,19 @@ export async function attachCloudUi({store,id,getGroup,setGroup,refresh,tab,onJo
   try{const result=await client.sync(group);if(epoch!==generation||getGroup()!==group)return;await refresh({background:true});status(result.error?`端末保存済み・送信待ち ${result.pending}件：${result.error}`:`共有サーバーへ保存済み${result.pending?`・送信待ち ${result.pending}件`:''}${result.foreign?`・中継元の確認待ち ${result.foreign}件`:''}`,result.error||result.pending?'送信待ち':result.foreign?'確認待ち':'共有済み');setText($('receipts'),`この回のサーバー保存確認：${result.sent}件／取得：${result.received}件`);}catch(e){if(epoch===generation)status(!navigator.onLine||/fetch|network|load failed/i.test(e.message)?'接続を待っています。記録はこの端末に保存され、通信が戻ると再送します。':`端末の記録は保存済みです。再接続を待っています：${e.message}`,'接続待ち');}finally{inFlight=null;await controls();resetTimer();}})();return inFlight;
  }
  async function register(kind,input){
-  if(busy)return;busy=true;await controls();status('グループに参加しています…','登録中');
+  if(busy)return;busy=true;const button=kind==='create'?$('group-create-form').querySelector('button'):kind==='recover'?$('group-next'):$('group-join'),label=button.textContent;
+  button.disabled=true;button.setAttribute('aria-busy','true');setText(button,document.documentElement.lang==='en'?'Loading…':'読み込み中…');$('group-join-feedback').setAttribute('role','status');setText($('group-join-feedback'),document.documentElement.lang==='en'?'Joining the group…':'グループに参加しています…');
+  await controls();status('グループに参加しています…','登録中');
   try{await inFlight;const session=await client.register(kind,input);generation++;stopped=false;await setGroup(session.groupId);window.dispatchEvent(new CustomEvent('group-change'));$('group').value=session.groupId;$('name').value=session.activityName;
-   groupPage='overview';$('group-join-password').value='';$('group-create-password').value='';createGroup.open=false;$('cloud-membership').open=false;groupDetails.append($('cloud-membership'));step(false);
+   setText($('group-join-feedback'),document.documentElement.lang==='en'?'Loading safety check…':'安否確認を読み込み中…');
    for(const key of ['group-access','group-profile'])document.dispatchEvent(new CustomEvent('form-saved',{detail:{form:$(key)}}));
    // Registration already contains the roster. Pull the incident proof needed for
    // the first safety screen; do not wait for a second roster and upload pass.
    try{await client.pull(session);}catch{}
-   await refresh();await onJoined?.();status(kind==='recover'?'参加を復元しました。安否をもう一度回答してください。':'グループに参加しました。','参加済み');$('group-recovery-code').value='';
-  }catch(e){status(e.message,'登録を確認');setText($('group-join-feedback'),e.message);}finally{busy=false;await controls();run();}
+   await refresh();await onJoined?.();
+   groupPage='overview';$('group-join-password').value='';$('group-create-password').value='';createGroup.open=false;$('cloud-membership').open=false;groupDetails.append($('cloud-membership'));step(false);
+   status(kind==='recover'?'参加を復元しました。安否をもう一度回答してください。':'グループに参加しました。','参加済み');$('group-recovery-code').value='';
+  }catch(e){status(e.message,'登録を確認');$('group-join-feedback').setAttribute('role','alert');setText($('group-join-feedback'),e.message);}finally{busy=false;button.removeAttribute('aria-busy');setText(button,label);await controls();run();}
  }
  $('cloud-sync').onclick=()=>{stopped=false;run(true);};
  $('group-open-safety').onclick=()=>tab?.('safety');

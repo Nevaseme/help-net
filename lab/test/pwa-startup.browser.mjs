@@ -10,13 +10,26 @@ try{
  await context.addInitScript(()=>{navigator.serviceWorker.register=async()=>({waiting:null,update:async()=>{}});window.safetyBadges=[];new MutationObserver(()=>{const badge=document.querySelector('#own .badge');if(badge)window.safetyBadges.push(badge.textContent);}).observe(document,{childList:true,subtree:true});});
  let releaseRoster,rosterRequests=0;const held=new Promise(r=>releaseRoster=r);
  await page.route('**/api/v1/groups/*/roster',async route=>{rosterRequests++;await held;await route.continue();});
+ let releaseJoin,releasePull;const joinHeld=new Promise(r=>releaseJoin=r),pullHeld=new Promise(r=>releasePull=r);
+ await page.route('**/api/v1/venue/join',async route=>{await joinHeld;await route.continue();});
+ await page.route('**/api/v1/groups/*/records?*',async route=>{await pullHeld;await route.continue();});
  await page.goto(server.base);await page.locator('#group-join-identity').fill('Startup check');await page.locator('#group-join-password').fill('Startup123');await page.locator('#group-next').click();await page.locator('#group-join-name').fill('Participant');await page.locator('#group-join').click();
+ await page.waitForFunction(()=>document.querySelector('#group-join-feedback').textContent==='Joining the group…');
+ assert.equal(await page.locator('#group-join').innerText(),'Loading…');assert.equal(await page.locator('#group-join').isDisabled(),true);assert.equal(await page.locator('#group-join-feedback').isVisible(),true);releaseJoin();
+ await page.waitForFunction(()=>document.querySelector('#group-join-feedback').textContent==='Loading safety check…');
+ assert.equal(await page.locator('#group-join-feedback').isVisible(),true);releasePull();
  let gatedBeforeFullSync=false;
  try{await page.waitForFunction(()=>document.body.dataset.page==='safety'&&!document.querySelector('#safe').disabled,{},{timeout:3500});gatedBeforeFullSync=true;}catch{}finally{releaseRoster();}
  await page.waitForFunction(()=>document.body.dataset.page==='safety'&&!document.querySelector('#safe').disabled);
+ const initialBadges=await page.evaluate(()=>window.safetyBadges);
+ let releaseApi;const apiHeld=new Promise(r=>releaseApi=r);
+ await page.route('**/api/v1/**',async route=>{await apiHeld;await route.continue();});
+ let restoredWithoutNetwork=false;
+ try{await page.reload();await page.waitForFunction(()=>document.body.dataset.page==='safety'&&!document.querySelector('#safe').disabled,{},{timeout:3500});restoredWithoutNetwork=true;}finally{releaseApi();await page.unroute('**/api/v1/**');}
  await page.locator('#safe').click();await page.locator('#status-update').click();await page.locator('#venue-location-notice').waitFor();await page.getByRole('button',{name:'Continue',exact:true}).click();
  await page.locator('[data-tab="safety"]').click();await page.locator('#sos').click();await page.locator('#status-update').click();await page.waitForFunction(()=>document.querySelector('#own-status-feedback').textContent==='Saved');
- const result={gatedBeforeFullSync,rosterRequests,safetyBadges:await page.evaluate(()=>window.safetyBadges),appearance:await page.locator('html').getAttribute('data-appearance')};console.log(JSON.stringify(result));
+ const result={loadingVisibleDuringJoinAndPull:true,gatedBeforeFullSync,restoredWithoutNetwork,rosterRequests,safetyBadges:[...initialBadges,...await page.evaluate(()=>window.safetyBadges)],appearance:await page.locator('html').getAttribute('data-appearance')};console.log(JSON.stringify(result));
  assert.equal(gatedBeforeFullSync,true,'initial safety entry must not wait for a redundant full roster refresh');
+ assert.equal(restoredWithoutNetwork,true,'a saved unanswered incident must be available before network sync');
  assert.deepEqual(result.safetyBadges,[],'legacy status badges must never flash during refresh');
 }finally{await browser.close();await server.close();}

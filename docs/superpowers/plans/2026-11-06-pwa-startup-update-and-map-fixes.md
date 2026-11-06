@@ -20,7 +20,14 @@
 - Actual public Kyoto download: all 3,538 files / 286,538,547 bytes saved in 382.7 seconds. With network disabled, the city package and map style returned successfully (55 style layers). Evidence: `output/helpnet-city-download-result.json`.
 - This test also exposed missing compressed byte sizes in Kyoto's building index, making the pre-download size estimate NaN. Sizes were added from existing files, and the generator now emits them. No building geometry, coordinates, residents or chunk content changed. A regression test verifies that the actual published dataset produces a finite size estimate.
 - PWA 1.6.64 published: deployment `a721b3c3ab2a4d96b0eaf3d6e564c27d`, Worker SHA-256 `d086a7b35a491a31af84f6da2fb02cb354ea6baa84bdf3da4f412ed9285f2391`. All seven changed public files matched local build output. The startup/flash regression also passed against these public assets.
-- User confirmed that relaunching into 1.6.63 restored map visibility. Final iPhone confirmation of the 1.6.64 startup/flash fix is still pending.
+- User confirmed that relaunching into 1.6.63 restored map visibility. On 1.6.64, the user confirmed that flicker stopped but reported that the transition after entering a name was still slow. Do not claim that the iPhone latency is resolved based on the local blocked-roster test.
+
+## Follow-up: PWA 1.6.65
+
+- The join button immediately shows `Loading…` and is disabled. A visible status says `Joining the group…`, then `Loading safety check…` while incident records are being retrieved. Both phases have Japanese text as well.
+- The name-entry panel stays visible until safety initialization finishes; errors remain visible and the button is restored for retry.
+- The startup browser test intentionally holds the registration response and then the incident-record response. Both phases keep their loading status visible; afterward Safety opens. A saved unanswered incident also opens before network synchronization completes. No legacy status flash returns.
+- The user chose to keep `Use device setting` as the initial appearance setting.
 
 ## Limits / pending approval
 
