@@ -22,7 +22,7 @@ import {placeBuildings,validHome,currentBuildingCare,BUILDING_ACTIONS} from './p
 const $=id=>document.getElementById(id), esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const labels={UNREPORTED:'未報告',SAFE:'無事',SOS:'SOS'},time=x=>x?usDateTime(x):'今回未回答';
 // Check updates independently of group sync and first-screen initialization.
-setupAppUpdates({version:'1.7.1'}).catch(()=>{});
+setupAppUpdates({version:'1.7.2'}).catch(()=>{});
 const profile=new URL(location.href).searchParams.get('profile')==='C'?'C':'B';
 let store,id,group='demo',records=[],events=[],selected=null,socket=null,engine=null,generation=0,queue=Promise.resolve(),queued=0,receipts=0,dirty=false;
 let syncError='';
@@ -278,8 +278,9 @@ bindStaticUiLanguage(document.querySelector('.app-notes'));
 designUi=createWeb1617Ui({map:tsunamiMap,selectBuilding:value=>{tab('property');$('building-registry').open=true;[...$('building-list').querySelectorAll('[data-building]')].find(b=>b.dataset.building===value)?.click();},snapshot:()=>({records,events,view,id,roster,group,incidentId,placeRows,venue}),getStore:()=>store,refreshSnapshot:refresh,changed,tab,selectPerson:value=>{selected=value;}});
 bindStaticUiLanguage(trainingPage);
 const defaultTitles={ 'training-title':['安否確認の訓練','Safety drill'], 'incident-title':['地震の安否確認','Earthquake safety check'] };
-function updateIncidentLanguage(){document.querySelector("footer").textContent="Help Net · PWA 1.7.1 · "+t("この端末に記録を保存");$("menu-close").setAttribute("aria-label",t("閉じる"));$("app-menu").querySelector("nav")?.setAttribute("aria-label",t("メニュー"));for(const [id,values] of Object.entries(defaultTitles)){const input=$(id);if(values.includes(input.value))input.value=values[document.documentElement.lang==='en'?1:0];}if(store)task(refresh);}
+function updateIncidentLanguage(){document.querySelector("footer").textContent="Help Net · PWA 1.7.2 · "+t("この端末に記録を保存");$("menu-close").setAttribute("aria-label",t("閉じる"));$("app-menu").querySelector("nav")?.setAttribute("aria-label",t("メニュー"));for(const [id,values] of Object.entries(defaultTitles)){const input=$(id);if(values.includes(input.value))input.value=values[document.documentElement.lang==='en'?1:0];}if(store)task(refresh);}
 observeUiLanguage(updateIncidentLanguage);updateIncidentLanguage();
+$('startup-status').textContent=document.documentElement.lang==='ja'?'読み込み中…':'Loading…';
 await task(async()=>{
  cloudMode=!!document.querySelector('meta[name="tasukeai-cloud"]');
  try{cloudMode||=localStorage.getItem('tasukeai-cloud-origin')==='1';}catch{}
@@ -293,11 +294,19 @@ await task(async()=>{
  attachCityOffline({store,getGroup:()=>group,host:document.querySelector('.appearance-settings').parentElement});
  if($('cloud-map-preview'))$('cloud-map-preview').onclick=()=>tab('buildings');$('tsunami-back').onclick=()=>tab('settings');
  if($('cloud-map-preview'))$('cloud-map-preview').textContent='地図を見る';
- document.querySelector('footer').textContent='Help Net · PWA 1.7.1 · '+t('この端末に記録を保存');
+ document.querySelector('footer').textContent='Help Net · PWA 1.7.2 · '+t('この端末に記録を保存');
  await refresh();
  if(document.body.classList.contains('registration-needed'))openSettings('group');else if(!startupNavigationChosen)await afterJoining();
+ document.body.dataset.startup='ready';
+ if(activePage==='buildings')tsunamiMap.show();
  if('serviceWorker'in navigator){$('offline').textContent=cloudMode?t('オフライン起動の準備ができました。接続できるときに記録を共有します。'):'オフライン起動の準備ができました。通信には同じWi-Fiと実験サーバーが必要です。';}
 });
+if(document.body.dataset.startup!=='ready'){
+ document.body.dataset.startup='error';
+ $('startup-status').textContent=document.documentElement.lang==='ja'?'アプリを開けませんでした。もう一度お試しください。':'Could not open Help Net. Please try again.';
+ $('startup-retry').textContent=document.documentElement.lang==='ja'?'再試行':'Retry';
+ $('startup-retry').hidden=false;$('startup-retry').onclick=()=>location.reload();
+}
 
 
 
