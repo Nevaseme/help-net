@@ -1,27 +1,9 @@
-# Help Net
+Help Net
 
-災害時の安否や救助の記録を端末間で共有するアプリ。開発中。
+災害時の安否確認、位置情報、通報、救助活動の情報をグループ内で共有するアプリです。
 
-製品名はHelp Net（旧称：Tasukeai／PlanD／案D）。開発用の識別名や過去の記録との対応は[開発資料](docs/README.md)を参照。
+アプリを使う
 
-[参加案内 / Join Help Net](https://nevaseme.github.io/help-net/)
+Help Netの参加案内
 
-[過去の画面比較](https://nevaseme.github.io/help-net/comparison.html)
-
-- [Androidアプリ](android/)
-- [PWA・中継サーバーの実験](lab/)
-- [設計・開発資料](docs/)
-
-## ビルド
-
-`android/` をAndroid Studioで開く。最小SDKは24。
-
-作業場所はこのリポジトリのルートに統一する。別のworktreeや旧Android Studioフォルダーは編集・公開元に使わない。
-
-```powershell
-cd android
-.\gradlew.bat :app:assembleDebug
-```
-
-PWAは `lab/web/`、公開用APIと配信処理は `cloud-sync/`、比較サイトは `demo/`。
-本フォルダーからの確認・公開手順は [統合後の作業手順](docs/workspace.md) を参照。
+Androidアプリをダウンロード
